@@ -1,0 +1,11 @@
+MNEMONIC = '<mnemonic here>'
+
+ETHERSCAN_KEY = <etherscan key here>
+
+ALCHEMY_RINKEBY_KEY = <alchemy rinkeby key here>
+ALCHEMY_KOVAN_KEY = <alchemy kovan key here>
+
+ALCHEMY_RINKEBY_URL = <alchemy rinkeby url with key here>
+ALCHEMY_KOVAN_URL = <alchemy kovan url with key here>
+
+GANACHE_CLI = ganache-cli -p <port number here> --chainId <chain ID here> --mnemonic "<mnemonic here>" -e <account balance here>
