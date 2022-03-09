@@ -151,7 +151,7 @@ abstract contract MultiSig {
         }
     }
 
-    function __setState(uint256 _safeId) private {
+    function __setSafe(uint256 _safeId) private {
         require(safeLock == false, "This safe is locked.");
         safe.signers = safes[_safeId].signers;
         safe.confirmed = safes[_safeId].confirmed;
@@ -181,10 +181,10 @@ abstract contract MultiSig {
 
     modifier safeKey(uint256 _safeId) {
         safeLock = false;
-        __setState(_safeId);
+        __setSafe(_safeId);
         _;
         __updateSafe(_safeId);
-        __setState(0);
+        __setSafe(0);
         safeLock = true;
     }
 
