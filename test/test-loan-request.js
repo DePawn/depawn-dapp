@@ -16,44 +16,13 @@ describe("LoanRequest", function () {
         [borrower, lender, nonMember, ..._] = await hre.ethers.getSigners();
         const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");
 
-        loanRequestContract = await LoanRequestFactory.deploy(rate, duration);
+        loanRequestContract = await LoanRequestFactory.deploy();
         await loanRequestContract.deployed();
+        await loanRequestContract.createLoan(rate, duration);
     });
 
-    it("LoanRequest should not allow current member add lender.", async function () {
-        await truffleAssert.reverts(
-            loanRequestContract.setLender(borrower.address, loanId, rate),
-            "You are already a signer."
-        );
-    });
-
-    it("LoanRequest should allow only lender to add lender.", async function () {
-        await loanRequestContract.connect(lender).setLender(borrower.address, loanId, rate);
-        const contractLender = await loanRequestContract.getLender(borrower.address, loanId);
-
-        assert.equal(contractLender, lender.address, "Contract lender does not match lender.");
-    });
-
-    it("LoanRequest should only let borrower sign if there is lender.", async function () {
-        await truffleAssert.reverts(
-            loanRequestContract.sign(borrower.address, loanId),
-            "Lender must be set."
-        );
-
-        await loanRequestContract.connect(lender).setLender(borrower.address, loanId, rate);
-        await loanRequestContract.sign(borrower.address, loanId);
-
-        const borrowerSignStatus = await loanRequestContract.getSignStatus(
-            borrower.address,
-            borrower.address,
-            loanId
-        );
-
-        assert.isTrue(borrowerSignStatus, "Borrower sign status is not true.");
-    });
-
-    it("LoanRequest should allow lender to automatically sign.", async function () {
-        await loanRequestContract.connect(lender).setLenderToSign(borrower.address, loanId, rate);
+    it("LoanRequest should allow borrower to add lender and automatically sign for borrower.", async function () {
+        await loanRequestContract.setLender(lender.address, loanId, rate);
 
         const borrowerSignStatus = await loanRequestContract.getSignStatus(
             borrower.address,
@@ -67,15 +36,31 @@ describe("LoanRequest", function () {
             loanId
         );
 
-        assert.isFalse(borrowerSignStatus, "Borrower sign status is not false.");
-        assert.isTrue(lenderSignStatus, "Lender sign status is not true.");
+        assert.isTrue(borrowerSignStatus, "Borrower sign status is not true.");
+        assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it.only("LoanRequest should remove lender if borrower changes rate.", async function () {
-        await loanRequestContract.connect(lender).setLenderToSign(borrower.address, loanId, rate);
+    it.only("LoanRequest should not allow non-borrower to add lender.", async function () {
+        // Will assume lender is borrower and fail for new loan request by lender's address.
+        await truffleAssert.reverts(
+            loanRequestContract.connect(lender).setLender(lender.address, loanId, rate),
+            "No loans exist for this borrower."
+        );
 
-        const newRate = ethers.BigNumber.from('15');
-        await loanRequestContract.setRate(loanId, newRate);
+        // Need to create a loan request for lender so we can observe onlyNonSigner check. 
+        await loanRequestContract.connect(lender).createLoan(rate, duration);
+
+        await truffleAssert.reverts(
+            loanRequestContract.connect(lender).setLender(lender.address, loanId, rate),
+            "You are already a signer."
+        );
+    })
+
+    it("LoanRequest should remove lender if borrower changes duration.", async function () {
+        await loanRequestContract.connect(lender).setLender(borrower.address, loanId, rate, duration);
+
+        const newDuration = ethers.BigNumber.from('15');
+        await loanRequestContract.setDuration(loanId, newDuration);
 
         let lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
         const lenderSignStatus = await loanRequestContract.getSignStatus(
@@ -88,5 +73,10 @@ describe("LoanRequest", function () {
         assert.notEqual(lender.address, lenderAddress, "Lender address did not change.");
         assert.equal("0x", lenderAddress, "Lender address is not '0x00'.");
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
+    });
+
+    it("LoanRequest should remove borrower signature if lender changes duration.", async function () {
+        await loanRequestContract.connect(lender).setLender(borrower.address, loanId, rate, duration);
+
     })
 })

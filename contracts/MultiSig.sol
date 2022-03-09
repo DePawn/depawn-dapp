@@ -87,7 +87,7 @@ abstract contract MultiSig {
     function _sign(uint256 _safeId)
         internal
         safeKey(_safeId)
-        onlySigner
+        onlySigners
         onlyWhenMembersSet
         returns (bool)
     {
@@ -99,32 +99,37 @@ abstract contract MultiSig {
         return (safe.confirmed);
     }
 
-    function _unsign(uint256 _safeId) internal safeKey(_safeId) onlySigner {
+    function _unsign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
+        safe.signStatus[safe.signers[0]] = false;
         safe.signStatus[safe.signers[1]] = false;
         safe.signStatus[safe.signers[2]] = false;
-
-        safe.signers[1] = address(0);
-        safe.signers[2] = address(0);
 
         __setConfirmedStatus();
 
         emit Unsigned(msg.sender, safe.confirmed);
     }
 
+    function _removeLender(uint256 _safeId)
+        internal
+        safeKey(_safeId)
+        onlySigners
+    {
+        safe.signers[1] = address(0);
+        safe.signers[2] = address(0);
+    }
+
     function _setLender(uint256 _safeId, address _lender)
         internal
         safeKey(_safeId)
-        onlyNonSigner
-        onlyUnstaffed(safe.signers[1], _lender)
     {
         require(_lender != address(0), "Lender cannot be address 0.");
         safe.signers[1] = _lender;
+        safe.signStatus[safe.signers[1]] = false;
     }
 
     function _setArbiter(uint256 _safeId, address _arbiter)
         internal
         safeKey(_safeId)
-        onlyNonSigner
         onlyUnstaffed(safe.signers[2], _arbiter)
     {
         require(_arbiter != address(0), "Arbiter cannot be address 0.");
@@ -188,12 +193,14 @@ abstract contract MultiSig {
         safeLock = true;
     }
 
-    modifier onlySigner() {
+    modifier onlySigners() {
+        require(msg.sender != address(0), "Address 0 is invalid.");
         require(_isSigner() == true, "You are not a valid signer.");
         _;
     }
 
     modifier onlyNonSigner() {
+        require(msg.sender != address(0), "Address 0 is invalid.");
         require(_isSigner() == false, "You are already a signer.");
         _;
     }
