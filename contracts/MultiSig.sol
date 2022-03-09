@@ -109,13 +109,16 @@ abstract contract MultiSig {
         emit Unsigned(msg.sender, safe.confirmed);
     }
 
-    function _removeLender(uint256 _safeId)
+    function _removeSignature(uint256 _safeId)
         internal
         safeKey(_safeId)
         onlySigners
     {
-        safe.signers[1] = address(0);
-        safe.signers[2] = address(0);
+        safe.signStatus[msg.sender] = false;
+
+        __setConfirmedStatus();
+
+        emit Unsigned(msg.sender, safe.confirmed);
     }
 
     function _setLender(uint256 _safeId, address _lender)
@@ -123,8 +126,18 @@ abstract contract MultiSig {
         safeKey(_safeId)
     {
         require(_lender != address(0), "Lender cannot be address 0.");
+        require(_lender != msg.sender, "Lender cannot be self.");
         safe.signers[1] = _lender;
         safe.signStatus[safe.signers[1]] = false;
+    }
+
+    function _removeLender(uint256 _safeId)
+        internal
+        safeKey(_safeId)
+        onlySigners
+    {
+        safe.signers[1] = address(0);
+        safe.signers[2] = address(0);
     }
 
     function _setArbiter(uint256 _safeId, address _arbiter)

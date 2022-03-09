@@ -10,7 +10,6 @@ contract LoanRequest is MultiSig {
         UNDEFINED,
         EMPTY,
         MEMBERS_SET,
-        MEMBERS_SIGNED,
         CONFIRMED,
         FUNDED_ONLY,
         HAS_721_ONLY,
@@ -19,6 +18,8 @@ contract LoanRequest is MultiSig {
 
     struct LoanStatus {
         uint256 safeId;
+        address nft;
+        uint256 initialLoanValue;
         uint256 rate;
         uint64 duration;
         Status status;
@@ -37,7 +38,7 @@ contract LoanRequest is MultiSig {
 
     constructor() MultiSig(2) {}
 
-    function createLoan(uint256 _rate, uint64 _duration) public {
+    function createLoanRequest(uint256 _rate, uint64 _duration) public {
         require(_duration != 0, "Duration must be nonzero.");
 
         uint256 _safeId = safes.length;
@@ -69,6 +70,35 @@ contract LoanRequest is MultiSig {
         return super._getSignStatus(_safeId, _signer);
     }
 
+    function setRate(uint256 _loanId, uint64 _rate)
+        external
+        onlyHasLoan(msg.sender)
+        onlyBorrower(_loanId)
+        onlyNotConfirmed(msg.sender, _loanId)
+    {
+        if (_rate != borrowerLoans[msg.sender][_loanId].rate) {
+            uint256 _safeId = borrowerLoans[msg.sender][_loanId].safeId;
+            _unsign(_safeId);
+
+            // Borrower signs
+            if (
+                borrowerLoans[msg.sender][_loanId].rate != 0 &&
+                borrowerLoans[msg.sender][_loanId].duration != 0
+            ) {
+                (bool success, ) = address(this).delegatecall(
+                    abi.encodeWithSignature(
+                        "sign(address,uint256)",
+                        msg.sender,
+                        _loanId
+                    )
+                );
+                require(success);
+            }
+
+            borrowerLoans[msg.sender][_loanId].rate = _rate;
+        }
+    }
+
     function setDuration(uint256 _loanId, uint64 _duration)
         external
         onlyHasLoan(msg.sender)
@@ -79,27 +109,22 @@ contract LoanRequest is MultiSig {
             uint256 _safeId = borrowerLoans[msg.sender][_loanId].safeId;
             _unsign(_safeId);
 
+            // Borrower signs
+            if (
+                borrowerLoans[msg.sender][_loanId].rate != 0 &&
+                borrowerLoans[msg.sender][_loanId].duration != 0
+            ) {
+                (bool success, ) = address(this).delegatecall(
+                    abi.encodeWithSignature(
+                        "sign(address,uint256)",
+                        msg.sender,
+                        _loanId
+                    )
+                );
+                require(success);
+            }
+
             borrowerLoans[msg.sender][_loanId].duration = _duration;
-            borrowerLoans[msg.sender][_loanId].status = Status.EMPTY;
-        }
-    }
-
-    function setRate(
-        address _borrower,
-        uint256 _loanId,
-        uint64 _rate
-    )
-        external
-        onlyHasLoan(_borrower)
-        onlyLender(_borrower, _loanId)
-        onlyNotConfirmed(_borrower, _loanId)
-    {
-        if (_rate != borrowerLoans[_borrower][_loanId].rate) {
-            uint256 _safeId = borrowerLoans[_borrower][_loanId].safeId;
-            _unsign(_safeId);
-
-            borrowerLoans[_borrower][_loanId].rate = _rate;
-            borrowerLoans[_borrower][_loanId].status = Status.MEMBERS_SET;
         }
     }
 
@@ -120,7 +145,6 @@ contract LoanRequest is MultiSig {
         onlyNotConfirmed(msg.sender, _loanId)
     {
         uint256 _safeId = borrowerLoans[msg.sender][_loanId].safeId;
-        console.logUint(_loanId);
 
         // Set lender
         _setLender(_safeId, _lender);
@@ -130,14 +154,19 @@ contract LoanRequest is MultiSig {
         borrowerLoans[msg.sender][_loanId].status = Status.MEMBERS_SET;
 
         // Borrower signs
-        (bool success, ) = address(this).delegatecall(
-            abi.encodeWithSignature(
-                "sign(address,uint256)",
-                msg.sender,
-                _loanId
-            )
-        );
-        require(success);
+        if (
+            borrowerLoans[msg.sender][_loanId].rate != 0 &&
+            borrowerLoans[msg.sender][_loanId].duration != 0
+        ) {
+            (bool success, ) = address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    msg.sender,
+                    _loanId
+                )
+            );
+            require(success);
+        }
     }
 
     function removeLender(uint256 _loanId)
@@ -156,11 +185,20 @@ contract LoanRequest is MultiSig {
         onlyNotSigned(_borrower, _loanId)
     {
         uint256 _safeId = borrowerLoans[_borrower][_loanId].safeId;
-        bool _confirmed = super._sign(_safeId);
+        bool _confirmed = _sign(_safeId);
 
         if (_confirmed) {
             borrowerLoans[_borrower][_loanId].status = Status.CONFIRMED;
         }
+    }
+
+    function removeSignature(address _borrower, uint256 _loanId)
+        external
+        onlyHasLoan(_borrower)
+        onlyNotConfirmed(_borrower, _loanId)
+    {
+        uint256 _safeId = borrowerLoans[_borrower][_loanId].safeId;
+        _removeSignature(_safeId);
     }
 
     modifier onlyBorrower(uint256 _loanId) {
