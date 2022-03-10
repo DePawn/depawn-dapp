@@ -73,36 +73,12 @@ contract LoanRequest is MultiSig {
             loanRequests[_borrower][_loanId].duration != 0;
     }
 
-    function getCollateral(address _borrower, uint256 _loanId)
+    function getLoans(address _borrower)
         external
         view
-        returns (address)
+        returns (LoanStatus[] memory)
     {
-        return loanRequests[_borrower][_loanId].collateral;
-    }
-
-    function getInitialLoanValue(address _borrower, uint256 _loanId)
-        external
-        view
-        returns (uint256)
-    {
-        return loanRequests[_borrower][_loanId].initialLoanValue;
-    }
-
-    function getRate(address _borrower, uint256 _loanId)
-        external
-        view
-        returns (uint256)
-    {
-        return loanRequests[_borrower][_loanId].rate;
-    }
-
-    function getDuration(address _borrower, uint256 _loanId)
-        external
-        view
-        returns (uint256)
-    {
-        return loanRequests[_borrower][_loanId].duration;
+        return loanRequests[_borrower];
     }
 
     function getLender(address _borrower, uint256 _loanId)

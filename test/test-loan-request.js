@@ -267,6 +267,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
 describe("0-1 :: LoanRequest components functions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember, nft;
+    let loanRequests;
 
     const collateral = ethers.constants.AddressZero;
     const initialLoanValue = ethers.constants.Zero;
@@ -274,6 +275,7 @@ describe("0-1 :: LoanRequest components functions", function () {
     const duration = ethers.constants.Two;
     const initialLender = ethers.constants.AddressZero;
     const loanId = ethers.constants.Zero;
+
 
     beforeEach(async () => {
         [borrower, lender, nonMember, nft, ..._] = await hre.ethers.getSigners();
@@ -290,11 +292,12 @@ describe("0-1 :: LoanRequest components functions", function () {
             duration,
             initialLender
         );
+        loanRequests = await loanRequestContract.getLoans(borrower.address);
     });
 
     it("0-1-00 :: LoanRequest collateral should only be changed by borrower.", async function () {
         // Verify current collateral
-        const currentCollateral = await loanRequestContract.getCollateral(borrower.address, loanId);
+        const currentCollateral = loanRequests[loanId].collateral;
         assert.equal(collateral, currentCollateral, "Current collateral should equal collateral.");
 
         // Verify nonMember cannot change collateral
@@ -308,13 +311,14 @@ describe("0-1 :: LoanRequest components functions", function () {
         await loanRequestContract.setCollateral(loanId, newCollateral);
 
         // Verify collateral changed
-        const changedCollateral = await loanRequestContract.getCollateral(borrower.address, loanId);
+        loanRequests = await loanRequestContract.getLoans(borrower.address);
+        const changedCollateral = loanRequests[loanId].collateral;
         assert.notEqual(collateral, changedCollateral, "Changed collateral should not equal collateral.");
     });
 
     it("0-1-01 :: LoanRequest initial loan value should only be changed by borrower.", async function () {
         // Verify current initial loan value
-        const currentInitialLoanValue = await loanRequestContract.getInitialLoanValue(borrower.address, loanId);
+        const currentInitialLoanValue = loanRequests[loanId].initialLoanValue;
         assert.equal(initialLoanValue.toNumber(), currentInitialLoanValue.toNumber(), "Current initial loan value should equal initial loan value.");
 
         // Verify nonMember cannot change initial loan value
@@ -328,13 +332,14 @@ describe("0-1 :: LoanRequest components functions", function () {
         await loanRequestContract.setInitialLoanValue(loanId, newInitialLoanValue);
 
         // Verify initial loan value changed
-        const changedInitialLoanValue = await loanRequestContract.getInitialLoanValue(borrower.address, loanId);
+        loanRequests = await loanRequestContract.getLoans(borrower.address);
+        const changedInitialLoanValue = loanRequests[loanId].initialLoanValue;
         assert.notEqual(initialLoanValue.toNumber(), changedInitialLoanValue.toNumber(), "Changed initial loan value should not equal initial loan value.");
     });
 
     it("0-1-02 :: LoanRequest rate should only be changed by borrower.", async function () {
         // Verify current rate
-        const currentRate = await loanRequestContract.getRate(borrower.address, loanId);
+        const currentRate = loanRequests[loanId].rate;
         assert.equal(rate, currentRate.toNumber(), "Current rate should equal rate.");
 
         // Verify nonMember cannot change rate
@@ -348,13 +353,14 @@ describe("0-1 :: LoanRequest components functions", function () {
         await loanRequestContract.setRate(loanId, newRate);
 
         // Verify rate changed
-        const changedRate = await loanRequestContract.getRate(borrower.address, loanId);
+        loanRequests = await loanRequestContract.getLoans(borrower.address);
+        const changedRate = loanRequests[loanId].rate;
         assert.notEqual(rate, changedRate.toNumber(), "Changed rate should not equal rate.");
     });
 
     it("0-1-03 :: LoanRequest duration should only be changed by borrower.", async function () {
         // Verify current durations
-        const currentDuration = await loanRequestContract.getDuration(borrower.address, loanId);
+        const currentDuration = loanRequests[loanId].duration;
         assert.equal(duration, currentDuration.toNumber(), "Current duration should equal duration.");
 
         // Verify nonMember cannot change duration
@@ -368,7 +374,8 @@ describe("0-1 :: LoanRequest components functions", function () {
         await loanRequestContract.setDuration(loanId, newDuration);
 
         // Verify duration changed
-        const changedDuration = await loanRequestContract.getDuration(borrower.address, loanId);
+        loanRequests = await loanRequestContract.getLoans(borrower.address);
+        const changedDuration = loanRequests[loanId].duration;
         assert.notEqual(duration, changedDuration.toNumber(), "Changed duration should not equal duration.");
     });
 });

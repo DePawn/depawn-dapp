@@ -5,7 +5,7 @@ require("@nomiclabs/hardhat-waffle");
 module.exports = {
   solidity: "0.8.5",
   paths: {
-    artifacts: './dapp/artifacts'
+    artifacts: './exchange-dapp/artifacts'
   },
   defaultNetwork: 'hardhat',
   networks: {
