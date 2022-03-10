@@ -5,3 +5,4 @@ dist
 cache
 .cache
 .env
+package-lock.json
