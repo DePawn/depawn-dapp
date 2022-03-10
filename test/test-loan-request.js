@@ -4,7 +4,7 @@ const hre = require("hardhat");
 const { ethers } = require('ethers');
 
 
-describe("LoanRequest --- signer functions", function () {
+describe("0-0 :: LoanRequest signer functions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember;
 
@@ -16,7 +16,7 @@ describe("LoanRequest --- signer functions", function () {
     const loanId = ethers.constants.Zero;
 
     beforeEach(async () => {
-        [borrower, lender, otherMember, nonMember, ..._] = await hre.ethers.getSigners();
+        [borrower, lender, nonMember, ..._] = await hre.ethers.getSigners();
         const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");
 
         loanRequestContract = await LoanRequestFactory.deploy();
@@ -30,8 +30,7 @@ describe("LoanRequest --- signer functions", function () {
         );
     });
 
-    // TEST ID: 0.0.00
-    it("LoanRequest should allow borrower to add lender and automatically sign for borrower.", async function () {
+    it("0-0-00 :: LoanRequest should allow borrower to add lender and automatically sign for borrower.", async function () {
         await loanRequestContract.setLender(lender.address, loanId, rate);
 
         const borrowerSignStatus = await loanRequestContract.getSignStatus(
@@ -50,10 +49,9 @@ describe("LoanRequest --- signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    //TEST ID: 0.0.01
-    it("LoanRequest should not allow non-borrower to add lender.", async function () {
+    it("0-0-01 :: LoanRequest should not allow non-borrower to add lender.", async function () {
         await truffleAssert.reverts(
-            loanRequestContract.connect(lender).setLender(otherMember.address, loanId, rate),
+            loanRequestContract.connect(lender).setLender(nonMember.address, loanId, rate),
             "No loans exist for this borrower."
         );
         // Will assume lender is borrower and fail for new loan request by lender's address.
@@ -63,8 +61,7 @@ describe("LoanRequest --- signer functions", function () {
         );
     });
 
-    //TEST ID: 0.0.02
-    it("LoanRequest should not allow borrower to add self as lender.", async function () {
+    it("0-0-02 :: LoanRequest should not allow borrower to add self as lender.", async function () {
         await truffleAssert.reverts(
             loanRequestContract.setLender(borrower.address, loanId, rate),
             "Lender cannot be self."
@@ -83,8 +80,7 @@ describe("LoanRequest --- signer functions", function () {
         );
     });
 
-    //TEST ID: 0.0.03
-    it("LoandRequest should remove signer signature at request.", async function () {
+    it("0-0-03 :: LoanRequest should remove signer signature at request.", async function () {
         // Validate borrower signoff removal
         await loanRequestContract.setLender(lender.address, loanId, rate);
         let borrowerAddress = borrower.address;
@@ -124,8 +120,7 @@ describe("LoanRequest --- signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    //TEST ID: 0.0.04
-    it("LoanRequest should remove lender signature if borrower changes duration.", async function () {
+    it("0-0-04 :: LoanRequest should remove lender signature if borrower changes duration.", async function () {
         await loanRequestContract.setLender(lender.address, loanId, rate);
         await loanRequestContract.removeSignature(borrower.address, loanId);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
@@ -164,8 +159,7 @@ describe("LoanRequest --- signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    //TEST ID: 0.0.05
-    it("LoanRequest should remove lender signature if borrower changes rate.", async function () {
+    it("0-0-05 :: LoanRequest should remove lender signature if borrower changes rate.", async function () {
         await loanRequestContract.setLender(lender.address, loanId, rate);
         await loanRequestContract.removeSignature(borrower.address, loanId);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
@@ -205,9 +199,9 @@ describe("LoanRequest --- signer functions", function () {
     });
 })
 
-describe("LoanRequest --- criteria functions", function () {
+describe("0-1 :: LoanRequest components functions", function () {
     let loanRequestContract;
-    let borrower, lender, nonMember;
+    let borrower, lender, nonMember, nft;
 
     const collateral = ethers.constants.AddressZero;
     const initialLoanValue = ethers.constants.Zero;
@@ -217,7 +211,9 @@ describe("LoanRequest --- criteria functions", function () {
     const loanId = ethers.constants.Zero;
 
     beforeEach(async () => {
-        [borrower, lender, otherMember, nonMember, ..._] = await hre.ethers.getSigners();
+        [borrower, lender, nonMember, nft, ..._] = await hre.ethers.getSigners();
+        nft = nft.address;
+
         const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");
 
         loanRequestContract = await LoanRequestFactory.deploy();
@@ -231,8 +227,47 @@ describe("LoanRequest --- criteria functions", function () {
         );
     });
 
-    // TEST ID: 0.1.00
-    it("LoanRequest rate should only be changed by borrower.", async function () {
+    it("0-1-00 :: LoanRequest collateral should only be changed by borrower.", async function () {
+        // Verify current collateral
+        const currentCollateral = await loanRequestContract.getCollateral(borrower.address, loanId);
+        assert.equal(collateral, currentCollateral, "Current collateral should equal collateral.");
+
+        // Verify nonMember cannot change collateral
+        const newCollateral = nft;
+        await truffleAssert.reverts(
+            loanRequestContract.connect(nonMember).setCollateral(loanId, newCollateral),
+            "No loans exist for this borrower."
+        );
+
+        // Change collateral
+        await loanRequestContract.setCollateral(loanId, newCollateral);
+
+        // Verify collateral changed
+        const changedCollateral = await loanRequestContract.getCollateral(borrower.address, loanId);
+        assert.notEqual(collateral, changedCollateral, "Changed collateral should not equal collateral.");
+    });
+
+    it("0-1-01 :: LoanRequest initial loan value should only be changed by borrower.", async function () {
+        // Verify current initial loan value
+        const currentInitialLoanValue = await loanRequestContract.getInitialLoanValue(borrower.address, loanId);
+        assert.equal(initialLoanValue.toNumber(), currentInitialLoanValue.toNumber(), "Current initial loan value should equal initial loan value.");
+
+        // Verify nonMember cannot change initial loan value
+        const newInitialLoanValue = ethers.constants.One;
+        await truffleAssert.reverts(
+            loanRequestContract.connect(nonMember).setInitialLoanValue(loanId, newInitialLoanValue),
+            "No loans exist for this borrower."
+        );
+
+        // Change initial loan value
+        await loanRequestContract.setInitialLoanValue(loanId, newInitialLoanValue);
+
+        // Verify initial loan value changed
+        const changedInitialLoanValue = await loanRequestContract.getInitialLoanValue(borrower.address, loanId);
+        assert.notEqual(initialLoanValue.toNumber(), changedInitialLoanValue.toNumber(), "Changed initial loan value should not equal initial loan value.");
+    });
+
+    it("0-1-02 :: LoanRequest rate should only be changed by borrower.", async function () {
         // Verify current rate
         const currentRate = await loanRequestContract.getRate(borrower.address, loanId);
         assert.equal(rate, currentRate.toNumber(), "Current rate should equal rate.");
@@ -252,8 +287,7 @@ describe("LoanRequest --- criteria functions", function () {
         assert.notEqual(rate, changedRate.toNumber(), "Changed rate should not equal rate.");
     });
 
-    // TEST ID: 0.1.01
-    it("LoanRequest duration should only be changed by borrower.", async function () {
+    it("0-1-03 :: LoanRequest duration should only be changed by borrower.", async function () {
         // Verify current durations
         const currentDuration = await loanRequestContract.getDuration(borrower.address, loanId);
         assert.equal(duration, currentDuration.toNumber(), "Current duration should equal duration.");
@@ -272,19 +306,4 @@ describe("LoanRequest --- criteria functions", function () {
         const changedDuration = await loanRequestContract.getDuration(borrower.address, loanId);
         assert.notEqual(duration, changedDuration.toNumber(), "Changed duration should not equal duration.");
     });
-
-    // it("Do something.", async function () {
-    //     hexLoanId = ethers.utils.hexZeroPad(ethers.utils.hexValue(loanId), 34);
-    //     hexRate = ethers.utils.hexZeroPad(ethers.utils.hexValue(rate), 34);
-    //     hexDuration = ethers.utils.hexZeroPad(ethers.utils.hexValue(duration), 34);
-    //     hexData = ethers.utils.hexConcat([hexLoanId, hexRate, hexDuration]);
-
-    //     const gh = await borrower.sendTransaction({
-    //         to: loanRequestContract.address,
-    //         data: hexData
-    //     });
-
-    //     console.log(gh);
-    // })
-
 })

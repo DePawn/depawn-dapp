@@ -10,10 +10,12 @@ contract LoanRequest is MultiSig {
         UNDEFINED,
         EMPTY,
         MEMBERS_SET,
-        CONFIRMED,
-        FUNDED_ONLY,
-        HAS_721_ONLY,
-        FUNDED_AND_HAS_721
+        COMPONENTS_SET,
+        FUNDING_SET,
+        COLLATERAL_SET,
+        ASSETS_SET,
+        COMPLETED,
+        APPROVED
     }
 
     struct LoanStatus {
@@ -38,10 +40,6 @@ contract LoanRequest is MultiSig {
 
     constructor() MultiSig(2) {}
 
-    fallback(bytes calldata _input) external returns (bytes memory _output) {
-        _output = _input;
-    }
-
     function createLoanRequest(
         address _collateral,
         uint256 _initialLoanValue,
@@ -55,26 +53,33 @@ contract LoanRequest is MultiSig {
         uint256 _loanId = loanRequests[msg.sender].length;
         _createSafe();
 
-        if (_lender != address(0)) {
-            _setLender(_safeId, _lender);
-        }
-
+        // Set loan request parameters
         loanRequests[msg.sender].push();
         loanRequests[msg.sender][_loanId].safeId = _safeId;
         loanRequests[msg.sender][_loanId].collateral = _collateral;
         loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
-        loanRequests[msg.sender][_loanId].status = Status.EMPTY;
+        __setLoanStatus(_loanId);
+
+        // Set lender
+        if (_lender != address(0)) _setLender(_safeId, _lender);
     }
 
-    function getLender(address _borrower, uint256 _loanId)
+    function getCollateral(address _borrower, uint256 _loanId)
         external
         view
         returns (address)
     {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        return _getLender(_safeId);
+        return loanRequests[_borrower][_loanId].collateral;
+    }
+
+    function getInitialLoanValue(address _borrower, uint256 _loanId)
+        external
+        view
+        returns (uint256)
+    {
+        return loanRequests[_borrower][_loanId].initialLoanValue;
     }
 
     function getRate(address _borrower, uint256 _loanId)
@@ -93,6 +98,15 @@ contract LoanRequest is MultiSig {
         return loanRequests[_borrower][_loanId].duration;
     }
 
+    function getLender(address _borrower, uint256 _loanId)
+        external
+        view
+        returns (address)
+    {
+        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        return _getLender(_safeId);
+    }
+
     function getSignStatus(
         address _signer,
         address _borrower,
@@ -100,6 +114,72 @@ contract LoanRequest is MultiSig {
     ) external view returns (bool) {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         return super._getSignStatus(_safeId, _signer);
+    }
+
+    function setCollateral(uint256 _loanId, address _collateral)
+        external
+        onlyHasLoan(msg.sender)
+        onlyBorrower(_loanId)
+        onlyNotConfirmed(msg.sender, _loanId)
+    {
+        if (_collateral != loanRequests[msg.sender][_loanId].collateral) {
+            uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
+            _unsign(_safeId);
+
+            // Borrower signs
+            if (
+                loanRequests[msg.sender][_loanId].rate != 0 &&
+                loanRequests[msg.sender][_loanId].duration != 0
+            ) {
+                (bool success, ) = address(this).delegatecall(
+                    abi.encodeWithSignature(
+                        "sign(address,uint256)",
+                        msg.sender,
+                        _loanId
+                    )
+                );
+                if (!success) {
+                    // Borrower already signed off
+                }
+            }
+
+            loanRequests[msg.sender][_loanId].collateral = _collateral;
+        }
+    }
+
+    function setInitialLoanValue(uint256 _loanId, uint256 _initialLoanValue)
+        external
+        onlyHasLoan(msg.sender)
+        onlyBorrower(_loanId)
+        onlyNotConfirmed(msg.sender, _loanId)
+    {
+        if (
+            _initialLoanValue !=
+            loanRequests[msg.sender][_loanId].initialLoanValue
+        ) {
+            uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
+            _unsign(_safeId);
+
+            // Borrower signs
+            if (
+                loanRequests[msg.sender][_loanId].rate != 0 &&
+                loanRequests[msg.sender][_loanId].duration != 0
+            ) {
+                (bool success, ) = address(this).delegatecall(
+                    abi.encodeWithSignature(
+                        "sign(address,uint256)",
+                        msg.sender,
+                        _loanId
+                    )
+                );
+                if (!success) {
+                    // Borrower already signed off
+                }
+            }
+
+            loanRequests[msg.sender][_loanId]
+                .initialLoanValue = _initialLoanValue;
+        }
     }
 
     function setRate(uint256 _loanId, uint64 _rate)
@@ -187,7 +267,7 @@ contract LoanRequest is MultiSig {
 
         // Set loan status
         loanRequests[msg.sender][_loanId].rate = _rate;
-        loanRequests[msg.sender][_loanId].status = Status.MEMBERS_SET;
+        __setLoanStatus(_loanId);
 
         // Borrower signs
         if (
@@ -203,6 +283,73 @@ contract LoanRequest is MultiSig {
             );
             require(success);
         }
+    }
+
+    function __setLoanStatus(uint256 _loanId) private returns (Status) {
+        // Skip if APPROVED
+        if (loanRequests[msg.sender][_loanId].status == Status.APPROVED) {
+            return loanRequests[msg.sender][_loanId].status;
+        }
+
+        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
+        address _lender = _getLender(_safeId);
+
+        // COMPLETED
+        if (
+            loanRequests[msg.sender][_loanId].collateral != address(0) &&
+            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
+            loanRequests[msg.sender][_loanId].rate != 0 &&
+            loanRequests[msg.sender][_loanId].duration != 0 &&
+            _lender != address(0)
+        ) {
+            loanRequests[msg.sender][_loanId].status = Status.COMPLETED;
+        }
+        // ASSETS SET
+        else if (
+            loanRequests[msg.sender][_loanId].collateral != address(0) &&
+            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
+            loanRequests[msg.sender][_loanId].rate != 0 &&
+            loanRequests[msg.sender][_loanId].duration != 0 &&
+            _lender != address(0)
+        ) {
+            loanRequests[msg.sender][_loanId].status = Status.ASSETS_SET;
+        }
+        // COLLATERAL SET
+        else if (
+            loanRequests[msg.sender][_loanId].collateral != address(0) &&
+            loanRequests[msg.sender][_loanId].rate != 0 &&
+            loanRequests[msg.sender][_loanId].duration != 0 &&
+            _lender != address(0)
+        ) {
+            loanRequests[msg.sender][_loanId].status = Status.COLLATERAL_SET;
+        }
+        /// FUNDING SET
+        else if (
+            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
+            loanRequests[msg.sender][_loanId].rate != 0 &&
+            loanRequests[msg.sender][_loanId].duration != 0 &&
+            _lender != address(0)
+        ) {
+            loanRequests[msg.sender][_loanId].status = Status.FUNDING_SET;
+        }
+        // COMPONENTS SET
+        else if (
+            loanRequests[msg.sender][_loanId].rate != 0 &&
+            loanRequests[msg.sender][_loanId].duration != 0 &&
+            _lender != address(0)
+        ) {
+            loanRequests[msg.sender][_loanId].status = Status.COMPONENTS_SET;
+        }
+        // MEMBERS_SET
+        else if (_lender != address(0)) {
+            loanRequests[msg.sender][_loanId].status = Status.MEMBERS_SET;
+        }
+        // EMPTY
+        else {
+            loanRequests[msg.sender][_loanId].status = Status.EMPTY;
+        }
+
+        return loanRequests[msg.sender][_loanId].status;
     }
 
     function removeLender(uint256 _loanId)
@@ -223,8 +370,8 @@ contract LoanRequest is MultiSig {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         bool _confirmed = _sign(_safeId);
 
-        if (_confirmed) {
-            loanRequests[_borrower][_loanId].status = Status.CONFIRMED;
+        if (_confirmed && __setLoanStatus(_loanId) == Status.COMPLETED) {
+            loanRequests[_borrower][_loanId].status = Status.APPROVED;
         }
     }
 
@@ -265,7 +412,7 @@ contract LoanRequest is MultiSig {
 
     modifier onlyNotMembersSet(uint256 _loanId) {
         require(
-            loanRequests[msg.sender][_loanId].status != Status.MEMBERS_SET,
+            loanRequests[msg.sender][_loanId].status < Status.MEMBERS_SET,
             "Members have been set."
         );
         _;

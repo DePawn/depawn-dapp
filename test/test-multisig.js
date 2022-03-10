@@ -3,7 +3,7 @@ const truffleAssert = require("truffle-assertions");
 const hre = require("hardhat");
 
 
-describe("MultiSig via LoanRequest", function () {
+describe("MultiSig", function () {
     let loanRequestContract;
     let owner0, owner1, contractOwner, nonOwner0;
     const required = 2;
