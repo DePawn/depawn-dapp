@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.5;
 
+import "hardhat/console.sol";
+
 abstract contract MultiSig {
     uint256 public required;
 
@@ -84,19 +86,11 @@ abstract contract MultiSig {
         safes[_safeId].signers[0] = msg.sender;
     }
 
-    function _sign(uint256 _safeId)
-        internal
-        safeKey(_safeId)
-        onlySigners
-        onlyWhenMembersSet
-        returns (bool)
-    {
+    function _sign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
+        require(safe.signers[0] != address(0), "Borrower must be set.");
+        require(safe.signers[1] != address(0), "Lender must be set.");
         safe.signStatus[msg.sender] = true;
-        __setConfirmedStatus();
-
         emit Signed(msg.sender, safe.confirmed);
-
-        return (safe.confirmed);
     }
 
     function _unsign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
@@ -109,6 +103,28 @@ abstract contract MultiSig {
         emit Unsigned(msg.sender, safe.confirmed);
     }
 
+    function _removeSignature(uint256 _safeId)
+        internal
+        safeKey(_safeId)
+        onlySigners
+    {
+        safe.signStatus[msg.sender] = false;
+
+        __setConfirmedStatus();
+
+        emit Unsigned(msg.sender, safe.confirmed);
+    }
+
+    function _setLender(uint256 _safeId, address _lender)
+        internal
+        safeKey(_safeId)
+    {
+        require(_lender != address(0), "Lender cannot be address 0.");
+        require(_lender != msg.sender, "Lender cannot be self.");
+        safe.signers[1] = _lender;
+        safe.signStatus[safe.signers[1]] = false;
+    }
+
     function _removeLender(uint256 _safeId)
         internal
         safeKey(_safeId)
@@ -118,22 +134,21 @@ abstract contract MultiSig {
         safe.signers[2] = address(0);
     }
 
-    function _setLender(uint256 _safeId, address _lender)
-        internal
-        safeKey(_safeId)
-    {
-        require(_lender != address(0), "Lender cannot be address 0.");
-        safe.signers[1] = _lender;
-        safe.signStatus[safe.signers[1]] = false;
-    }
-
     function _setArbiter(uint256 _safeId, address _arbiter)
         internal
         safeKey(_safeId)
-        onlyUnstaffed(safe.signers[2], _arbiter)
     {
+        require(
+            safe.signers[2] == address(0),
+            "Current signer cannot already be set."
+        );
         require(_arbiter != address(0), "Arbiter cannot be address 0.");
         safe.signers[2] = _arbiter;
+        safe.signStatus[_arbiter] = true;
+    }
+
+    function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
+        __setConfirmedStatus();
     }
 
     function __setConfirmedStatus() private {
@@ -196,32 +211,6 @@ abstract contract MultiSig {
     modifier onlySigners() {
         require(msg.sender != address(0), "Address 0 is invalid.");
         require(_isSigner() == true, "You are not a valid signer.");
-        _;
-    }
-
-    modifier onlyNonSigner() {
-        require(msg.sender != address(0), "Address 0 is invalid.");
-        require(_isSigner() == false, "You are already a signer.");
-        _;
-    }
-
-    modifier onlyUnstaffed(address _currentSigner, address _newSigner) {
-        require(
-            _currentSigner == address(0),
-            "Current signer cannot already be set."
-        );
-        require(_newSigner != address(0), "New signer cannot be address 0.");
-        _;
-    }
-
-    modifier onlyConfirmed() {
-        require(safe.confirmed == true, "MultiSig not confirmed.");
-        _;
-    }
-
-    modifier onlyWhenMembersSet() {
-        require(safe.signers[0] != address(0), "Borrower must be set.");
-        require(safe.signers[1] != address(0), "Lender must be set.");
         _;
     }
 }
