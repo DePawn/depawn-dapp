@@ -480,9 +480,6 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
             lender.address
         );
 
-        const loans = await loanRequestContract.getLoans(borrower.address);
-        console.log(loans[0].collateral);
-
         // Signoff and create new contract
         const tx = await loanRequestContract.connect(lender).sign(borrower.address, loanId);
         const receipt = await tx.wait();
