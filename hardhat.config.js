@@ -7,7 +7,7 @@ module.exports = {
   paths: {
     artifacts: './dapp/artifacts'
   },
-  defaultNetwork: 'localhost',
+  defaultNetwork: 'hardhat',
   networks: {
     hardhat: {
       forking: {
