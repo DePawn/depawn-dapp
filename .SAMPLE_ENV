@@ -9,3 +9,5 @@ ALCHEMY_RINKEBY_URL = <alchemy rinkeby url with key here>
 ALCHEMY_KOVAN_URL = <alchemy kovan url with key here>
 
 GANACHE_CLI = ganache-cli -p <port number here> --chainId <chain ID here> --mnemonic "<mnemonic here>" -e <account balance here>
+
+MAINNET_PINNED_BLOCK_FORK=
