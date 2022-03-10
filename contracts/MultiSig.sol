@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.5;
 
+import "hardhat/console.sol";
+
 abstract contract MultiSig {
     uint256 public required;
 
@@ -84,15 +86,10 @@ abstract contract MultiSig {
         safes[_safeId].signers[0] = msg.sender;
     }
 
-    function _sign(uint256 _safeId)
-        internal
-        safeKey(_safeId)
-        onlySigners
-        onlyWhenMembersSet
-    {
+    function _sign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
+        require(safe.signers[0] != address(0), "Borrower must be set.");
+        require(safe.signers[1] != address(0), "Lender must be set.");
         safe.signStatus[msg.sender] = true;
-        __setConfirmedStatus();
-
         emit Signed(msg.sender, safe.confirmed);
     }
 
@@ -140,11 +137,17 @@ abstract contract MultiSig {
     function _setArbiter(uint256 _safeId, address _arbiter)
         internal
         safeKey(_safeId)
-        onlyUnstaffed(safe.signers[2], _arbiter)
     {
+        require(
+            safe.signers[2] == address(0),
+            "Current signer cannot already be set."
+        );
         require(_arbiter != address(0), "Arbiter cannot be address 0.");
         safe.signers[2] = _arbiter;
         safe.signStatus[_arbiter] = true;
+    }
+
+    function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
         __setConfirmedStatus();
     }
 
@@ -208,27 +211,6 @@ abstract contract MultiSig {
     modifier onlySigners() {
         require(msg.sender != address(0), "Address 0 is invalid.");
         require(_isSigner() == true, "You are not a valid signer.");
-        _;
-    }
-
-    modifier onlyNonSigner() {
-        require(msg.sender != address(0), "Address 0 is invalid.");
-        require(_isSigner() == false, "You are already a signer.");
-        _;
-    }
-
-    modifier onlyUnstaffed(address _currentSigner, address _newSigner) {
-        require(
-            _currentSigner == address(0),
-            "Current signer cannot already be set."
-        );
-        require(_newSigner != address(0), "New signer cannot be address 0.");
-        _;
-    }
-
-    modifier onlyWhenMembersSet() {
-        require(safe.signers[0] != address(0), "Borrower must be set.");
-        require(safe.signers[1] != address(0), "Lender must be set.");
         _;
     }
 }

@@ -11,6 +11,7 @@ contract LoanRequest is MultiSig {
         uint256 initialLoanValue;
         uint256 rate;
         uint64 duration;
+        address loanContract;
     }
 
     mapping(address => LoanStatus[]) loanRequests;
@@ -30,8 +31,6 @@ contract LoanRequest is MultiSig {
         uint64 _duration,
         address _lender
     ) public {
-        require(_duration != 0, "Duration must be nonzero.");
-
         uint256 _safeId = safes.length;
         uint256 _loanId = loanRequests[msg.sender].length;
         _createSafe();
@@ -243,11 +242,7 @@ contract LoanRequest is MultiSig {
      *   Borrower sets the loan's lender and rates. The borrower will
      *   automatically sign off.
      */
-    function setLender(
-        address _lender,
-        uint256 _loanId,
-        uint256 _rate
-    )
+    function setLender(uint256 _loanId, address _lender)
         external
         onlyHasLoan(msg.sender)
         onlyBorrower(_loanId)
@@ -255,9 +250,6 @@ contract LoanRequest is MultiSig {
     {
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
         _setLender(_safeId, _lender);
-
-        // Set loan status
-        loanRequests[msg.sender][_loanId].rate = _rate;
 
         // Borrower signs
         address(this).delegatecall(
@@ -294,8 +286,9 @@ contract LoanRequest is MultiSig {
         _sign(_safeId);
 
         // Conditionally create contract
-        if (isReady(_borrower, _loanId))
+        if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
+        }
     }
 
     function removeSignature(address _borrower, uint256 _loanId)
@@ -312,21 +305,20 @@ contract LoanRequest is MultiSig {
         onlyHasLoan(_borrower)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        require(
-            _getConfirmed(_safeId) == true,
-            "Only confirmed contracts can be accessed."
-        );
         address _lender = _getLender(_safeId);
+        _setConfirmedStatus(_safeId);
 
-        LoanContract loanContract = new LoanContract(
+        LoanContract _loanContract = new LoanContract(
             [_borrower, _lender],
             loanRequests[_borrower][_loanId].collateral,
             loanRequests[_borrower][_loanId].initialLoanValue,
             loanRequests[_borrower][_loanId].rate,
             loanRequests[_borrower][_loanId].duration
         );
+        address _loanContractAddress = address(_loanContract);
+        loanRequests[_borrower][_loanId].loanContract = _loanContractAddress;
 
-        emit DeployedLoanContract(address(loanContract), _borrower, _lender);
+        emit DeployedLoanContract(_loanContractAddress, _borrower, _lender);
     }
 
     modifier onlyBorrower(uint256 _loanId) {
