@@ -16,7 +16,7 @@ const privateKey = web3Wallet.bip44Wallet[0][0].privateKey;
 module.exports = {
   solidity: "0.8.5",
   paths: {
-    artifacts: './dapp/artifacts'
+    artifacts: './exchange-dapp/artifacts'
   },
   defaultNetwork: 'hardhat',
   networks: {
