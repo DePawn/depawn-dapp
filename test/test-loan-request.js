@@ -197,7 +197,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
 
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
-})
+});
 
 describe("0-1 :: LoanRequest components functions", function () {
     let loanRequestContract;
@@ -306,4 +306,85 @@ describe("0-1 :: LoanRequest components functions", function () {
         const changedDuration = await loanRequestContract.getDuration(borrower.address, loanId);
         assert.notEqual(duration, changedDuration.toNumber(), "Changed duration should not equal duration.");
     });
-})
+});
+
+describe("0-2 :: LoanRequest signed off functions", function () {
+    let loanRequestContract;
+    let borrower, lender, nonMember;
+
+    const collateral = ethers.constants.AddressZero;
+    const initialLoanValue = ethers.constants.Zero;
+    const rate = ethers.constants.One;
+    const duration = ethers.constants.Two;
+    const initialLender = ethers.constants.AddressZero;
+    const loanId = ethers.constants.Zero;
+
+    beforeEach(async () => {
+        [borrower, lender, nonMember, ..._] = await hre.ethers.getSigners();
+        const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");
+
+        loanRequestContract = await LoanRequestFactory.deploy();
+        await loanRequestContract.deployed();
+        await loanRequestContract.createLoanRequest(
+            collateral,
+            initialLoanValue,
+            rate,
+            duration,
+            initialLender
+        );
+    });
+
+
+    it("0-2-00 :: LoanRequest should not allow rate changes if safe is confirmed.", async function () {
+        // Validate lender signoff removal        
+        await loanRequestContract.connect(lender).sign(borrower.address, loanId);
+        let lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
+        let lenderSignStatus = await loanRequestContract.getSignStatus(
+            lenderAddress,
+            borrower.address,
+            loanId
+        );
+        assert.isTrue(lenderSignStatus, "Lender sign status is not true.");
+    });
+});
+
+describe("0-3 :: LoanRequest approved functions", function () {
+    let loanRequestContract;
+    let borrower, lender, nonMember, nft;
+
+    const initialLoanValue = ethers.constants.One;
+    const rate = ethers.constants.One;
+    const duration = ethers.constants.One;
+    const loanId = ethers.constants.Zero;
+
+    beforeEach(async () => {
+        [borrower, lender, nonMember, nft, ..._] = await hre.ethers.getSigners();
+        nft = nft.address;
+        const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");
+
+        loanRequestContract = await LoanRequestFactory.deploy();
+        await loanRequestContract.deployed();
+    });
+
+    it("0-3-00 :: LoanRequest must deploy loan contract when all parameters are set.", async function () {
+        await loanRequestContract.createLoanRequest(
+            nft,
+            initialLoanValue,
+            rate,
+            duration,
+            lender.address
+        );
+        const tx = await loanRequestContract.connect(lender).sign(borrower.address, loanId);
+        const receipt = await tx.wait();
+
+        const topic = loanRequestContract.interface.getEventTopic('DeployedLoanContract');
+        const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+        const deployedEvent = loanRequestContract.interface.parseLog(log);
+        const contractBorrower = deployedEvent.args['_borrower'];
+        const contractLender = deployedEvent.args['_lender'];
+
+        assert.equal(contractBorrower, borrower.address, "Borrower address mismatch.");
+        assert.equal(contractLender, lender.address, "Lender address mismatch.");
+    });
+
+});

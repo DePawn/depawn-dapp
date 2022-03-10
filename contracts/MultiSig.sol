@@ -89,14 +89,11 @@ abstract contract MultiSig {
         safeKey(_safeId)
         onlySigners
         onlyWhenMembersSet
-        returns (bool)
     {
         safe.signStatus[msg.sender] = true;
         __setConfirmedStatus();
 
         emit Signed(msg.sender, safe.confirmed);
-
-        return (safe.confirmed);
     }
 
     function _unsign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
@@ -147,6 +144,8 @@ abstract contract MultiSig {
     {
         require(_arbiter != address(0), "Arbiter cannot be address 0.");
         safe.signers[2] = _arbiter;
+        safe.signStatus[_arbiter] = true;
+        __setConfirmedStatus();
     }
 
     function __setConfirmedStatus() private {
@@ -224,11 +223,6 @@ abstract contract MultiSig {
             "Current signer cannot already be set."
         );
         require(_newSigner != address(0), "New signer cannot be address 0.");
-        _;
-    }
-
-    modifier onlyConfirmed() {
-        require(safe.confirmed == true, "MultiSig not confirmed.");
         _;
     }
 

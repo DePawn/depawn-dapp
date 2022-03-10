@@ -2,29 +2,15 @@
 pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
-// import "./LoanContract.sol";
-import "hardhat/console.sol";
+import "./LoanContract.sol";
 
 contract LoanRequest is MultiSig {
-    enum Status {
-        UNDEFINED,
-        EMPTY,
-        MEMBERS_SET,
-        COMPONENTS_SET,
-        FUNDING_SET,
-        COLLATERAL_SET,
-        ASSETS_SET,
-        COMPLETED,
-        APPROVED
-    }
-
     struct LoanStatus {
         uint256 safeId;
         address collateral;
         uint256 initialLoanValue;
         uint256 rate;
         uint64 duration;
-        Status status;
     }
 
     mapping(address => LoanStatus[]) loanRequests;
@@ -32,10 +18,7 @@ contract LoanRequest is MultiSig {
     event DeployedLoanContract(
         address indexed _contract,
         address indexed _borrower,
-        address indexed _lender,
-        uint256 _required,
-        uint256 _rate,
-        uint64 _duration
+        address indexed _lender
     );
 
     constructor() MultiSig(2) {}
@@ -60,10 +43,35 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
-        __setLoanStatus(_loanId);
 
         // Set lender
         if (_lender != address(0)) _setLender(_safeId, _lender);
+
+        // Borrower signs
+        address(this).delegatecall(
+            abi.encodeWithSignature(
+                "sign(address,uint256)",
+                msg.sender,
+                _loanId
+            )
+        );
+    }
+
+    function isReady(address _borrower, uint256 _loanId)
+        public
+        view
+        returns (bool _isReady)
+    {
+        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        address _lender = _getLender(_safeId);
+
+        _isReady =
+            _getSignStatus(_safeId, _borrower) &&
+            _getSignStatus(_safeId, _lender) &&
+            loanRequests[_borrower][_loanId].collateral != address(0) &&
+            loanRequests[_borrower][_loanId].initialLoanValue != 0 &&
+            loanRequests[_borrower][_loanId].rate != 0 &&
+            loanRequests[_borrower][_loanId].duration != 0;
     }
 
     function getCollateral(address _borrower, uint256 _loanId)
@@ -93,7 +101,7 @@ contract LoanRequest is MultiSig {
     function getDuration(address _borrower, uint256 _loanId)
         external
         view
-        returns (uint64)
+        returns (uint256)
     {
         return loanRequests[_borrower][_loanId].duration;
     }
@@ -127,23 +135,19 @@ contract LoanRequest is MultiSig {
             _unsign(_safeId);
 
             // Borrower signs
-            if (
-                loanRequests[msg.sender][_loanId].rate != 0 &&
-                loanRequests[msg.sender][_loanId].duration != 0
-            ) {
-                (bool success, ) = address(this).delegatecall(
-                    abi.encodeWithSignature(
-                        "sign(address,uint256)",
-                        msg.sender,
-                        _loanId
-                    )
-                );
-                if (!success) {
-                    // Borrower already signed off
-                }
-            }
+            address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    msg.sender,
+                    _loanId
+                )
+            );
 
             loanRequests[msg.sender][_loanId].collateral = _collateral;
+
+            // Conditionally create contract
+            if (isReady(msg.sender, _loanId))
+                __deployLoanContract(msg.sender, _loanId);
         }
     }
 
@@ -161,28 +165,24 @@ contract LoanRequest is MultiSig {
             _unsign(_safeId);
 
             // Borrower signs
-            if (
-                loanRequests[msg.sender][_loanId].rate != 0 &&
-                loanRequests[msg.sender][_loanId].duration != 0
-            ) {
-                (bool success, ) = address(this).delegatecall(
-                    abi.encodeWithSignature(
-                        "sign(address,uint256)",
-                        msg.sender,
-                        _loanId
-                    )
-                );
-                if (!success) {
-                    // Borrower already signed off
-                }
-            }
+            address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    msg.sender,
+                    _loanId
+                )
+            );
 
             loanRequests[msg.sender][_loanId]
                 .initialLoanValue = _initialLoanValue;
+
+            // Conditionally create contract
+            if (isReady(msg.sender, _loanId))
+                __deployLoanContract(msg.sender, _loanId);
         }
     }
 
-    function setRate(uint256 _loanId, uint64 _rate)
+    function setRate(uint256 _loanId, uint256 _rate)
         external
         onlyHasLoan(msg.sender)
         onlyBorrower(_loanId)
@@ -193,23 +193,19 @@ contract LoanRequest is MultiSig {
             _unsign(_safeId);
 
             // Borrower signs
-            if (
-                loanRequests[msg.sender][_loanId].rate != 0 &&
-                loanRequests[msg.sender][_loanId].duration != 0
-            ) {
-                (bool success, ) = address(this).delegatecall(
-                    abi.encodeWithSignature(
-                        "sign(address,uint256)",
-                        msg.sender,
-                        _loanId
-                    )
-                );
-                if (!success) {
-                    // Borrower already signed off
-                }
-            }
+            address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    msg.sender,
+                    _loanId
+                )
+            );
 
             loanRequests[msg.sender][_loanId].rate = _rate;
+
+            // Conditionally create contract
+            if (isReady(msg.sender, _loanId))
+                __deployLoanContract(msg.sender, _loanId);
         }
     }
 
@@ -224,23 +220,20 @@ contract LoanRequest is MultiSig {
             _unsign(_safeId);
 
             // Borrower signs
-            if (
-                loanRequests[msg.sender][_loanId].rate != 0 &&
-                loanRequests[msg.sender][_loanId].duration != 0
-            ) {
-                (bool success, ) = address(this).delegatecall(
-                    abi.encodeWithSignature(
-                        "sign(address,uint256)",
-                        msg.sender,
-                        _loanId
-                    )
-                );
-                if (!success) {
-                    // Borrower already signed off
-                }
-            }
+
+            address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    msg.sender,
+                    _loanId
+                )
+            );
 
             loanRequests[msg.sender][_loanId].duration = _duration;
+
+            // Conditionally create contract
+            if (isReady(msg.sender, _loanId))
+                __deployLoanContract(msg.sender, _loanId);
         }
     }
 
@@ -261,95 +254,23 @@ contract LoanRequest is MultiSig {
         onlyNotConfirmed(msg.sender, _loanId)
     {
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-
-        // Set lender
         _setLender(_safeId, _lender);
 
         // Set loan status
         loanRequests[msg.sender][_loanId].rate = _rate;
-        __setLoanStatus(_loanId);
 
         // Borrower signs
-        if (
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0
-        ) {
-            (bool success, ) = address(this).delegatecall(
-                abi.encodeWithSignature(
-                    "sign(address,uint256)",
-                    msg.sender,
-                    _loanId
-                )
-            );
-            require(success);
-        }
-    }
+        address(this).delegatecall(
+            abi.encodeWithSignature(
+                "sign(address,uint256)",
+                msg.sender,
+                _loanId
+            )
+        );
 
-    function __setLoanStatus(uint256 _loanId) private returns (Status) {
-        // Skip if APPROVED
-        if (loanRequests[msg.sender][_loanId].status == Status.APPROVED) {
-            return loanRequests[msg.sender][_loanId].status;
-        }
-
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        address _lender = _getLender(_safeId);
-
-        // COMPLETED
-        if (
-            loanRequests[msg.sender][_loanId].collateral != address(0) &&
-            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0 &&
-            _lender != address(0)
-        ) {
-            loanRequests[msg.sender][_loanId].status = Status.COMPLETED;
-        }
-        // ASSETS SET
-        else if (
-            loanRequests[msg.sender][_loanId].collateral != address(0) &&
-            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0 &&
-            _lender != address(0)
-        ) {
-            loanRequests[msg.sender][_loanId].status = Status.ASSETS_SET;
-        }
-        // COLLATERAL SET
-        else if (
-            loanRequests[msg.sender][_loanId].collateral != address(0) &&
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0 &&
-            _lender != address(0)
-        ) {
-            loanRequests[msg.sender][_loanId].status = Status.COLLATERAL_SET;
-        }
-        /// FUNDING SET
-        else if (
-            loanRequests[msg.sender][_loanId].initialLoanValue != 0 &&
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0 &&
-            _lender != address(0)
-        ) {
-            loanRequests[msg.sender][_loanId].status = Status.FUNDING_SET;
-        }
-        // COMPONENTS SET
-        else if (
-            loanRequests[msg.sender][_loanId].rate != 0 &&
-            loanRequests[msg.sender][_loanId].duration != 0 &&
-            _lender != address(0)
-        ) {
-            loanRequests[msg.sender][_loanId].status = Status.COMPONENTS_SET;
-        }
-        // MEMBERS_SET
-        else if (_lender != address(0)) {
-            loanRequests[msg.sender][_loanId].status = Status.MEMBERS_SET;
-        }
-        // EMPTY
-        else {
-            loanRequests[msg.sender][_loanId].status = Status.EMPTY;
-        }
-
-        return loanRequests[msg.sender][_loanId].status;
+        // Conditionally create contract
+        if (isReady(msg.sender, _loanId))
+            __deployLoanContract(msg.sender, _loanId);
     }
 
     function removeLender(uint256 _loanId)
@@ -360,19 +281,21 @@ contract LoanRequest is MultiSig {
     {
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
         _removeLender(_safeId);
-        loanRequests[msg.sender][_loanId].status = Status.EMPTY;
     }
 
-    function sign(address _borrower, uint256 _loanId)
-        public
-        onlyNotSigned(_borrower, _loanId)
-    {
+    function sign(address _borrower, uint256 _loanId) public {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        bool _confirmed = _sign(_safeId);
 
-        if (_confirmed && __setLoanStatus(_loanId) == Status.COMPLETED) {
-            loanRequests[_borrower][_loanId].status = Status.APPROVED;
-        }
+        require(
+            _getSignStatus(_safeId, msg.sender) == false,
+            "Only unsigned contracts can be accessed."
+        );
+
+        _sign(_safeId);
+
+        // Conditionally create contract
+        if (isReady(_borrower, _loanId))
+            __deployLoanContract(_borrower, _loanId);
     }
 
     function removeSignature(address _borrower, uint256 _loanId)
@@ -384,20 +307,33 @@ contract LoanRequest is MultiSig {
         _removeSignature(_safeId);
     }
 
+    function __deployLoanContract(address _borrower, uint256 _loanId)
+        private
+        onlyHasLoan(_borrower)
+    {
+        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        require(
+            _getConfirmed(_safeId) == true,
+            "Only confirmed contracts can be accessed."
+        );
+        address _lender = _getLender(_safeId);
+
+        LoanContract loanContract = new LoanContract(
+            [_borrower, _lender],
+            loanRequests[_borrower][_loanId].collateral,
+            loanRequests[_borrower][_loanId].initialLoanValue,
+            loanRequests[_borrower][_loanId].rate,
+            loanRequests[_borrower][_loanId].duration
+        );
+
+        emit DeployedLoanContract(address(loanContract), _borrower, _lender);
+    }
+
     modifier onlyBorrower(uint256 _loanId) {
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
         require(
             msg.sender == safes[_safeId].signers[0],
             "You are not the borrower."
-        );
-        _;
-    }
-
-    modifier onlyLender(address _borrower, uint256 _loanId) {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        require(
-            msg.sender == safes[_safeId].signers[1],
-            "You are not the lender."
         );
         _;
     }
@@ -410,45 +346,11 @@ contract LoanRequest is MultiSig {
         _;
     }
 
-    modifier onlyNotMembersSet(uint256 _loanId) {
-        require(
-            loanRequests[msg.sender][_loanId].status < Status.MEMBERS_SET,
-            "Members have been set."
-        );
-        _;
-    }
-
-    modifier onlyNotSigned(address _borrower, uint256 _loanId) {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        require(
-            _getSignStatus(_safeId, msg.sender) == false,
-            "Only unsigned contracts can be accessed."
-        );
-        _;
-    }
-
     modifier onlyNotConfirmed(address _borrower, uint256 _loanId) {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         require(
             _getConfirmed(_safeId) == false,
             "Only unconfirmed contracts can be accessed."
-        );
-        _;
-    }
-
-    modifier onlyMatchedTerms(
-        address _borrower,
-        uint256 _loanId,
-        uint256 _rate,
-        uint64 _duration
-    ) {
-        require(
-            _rate == loanRequests[_borrower][_loanId].rate,
-            "Rate does not match."
-        );
-        require(
-            _duration == loanRequests[_borrower][_loanId].duration,
-            "Duration does not match."
         );
         _;
     }
