@@ -1,13 +1,13 @@
 require('dotenv').config();
 require("@nomiclabs/hardhat-waffle");
 const Web3Wallet = require('./utils/Web3Wallet');
-const { RPC_PROVIDER, NETWORK, RPC_PORT } = require('./utils/config');
+const { RPC_PROVIDER, NETWORK, CHAINID, RPC_PORT } = require('./utils/config');
 
 // Get private key
 const web3Wallet = new Web3Wallet({
   mnemonic: process.env.MNEMONIC,
   rpcProvider: RPC_PROVIDER,
-  network: NETWORK,
+  network: CHAINID[NETWORK],
   numberOfWallets: 1,
 });
 
@@ -16,9 +16,9 @@ const privateKey = web3Wallet.bip44Wallet[0][0].privateKey;
 module.exports = {
   solidity: "0.8.5",
   paths: {
-    artifacts: './exchange-dapp/artifacts'
+    artifacts: `./exchange-dapp/src/artifacts/${NETWORK}`,
   },
-  defaultNetwork: 'hardhat',
+  defaultNetwork: 'localhost',
   networks: {
     hardhat: {
       forking: {
