@@ -6,3 +6,4 @@ cache
 .cache
 .env
 package-lock.json
+./exchange-dapp/__config.json

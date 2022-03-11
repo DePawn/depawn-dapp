@@ -15,7 +15,7 @@ const { utils, Wallet, ethers:
     }
 } = require('ethers');
 
-const { RPC_PROVIDER, NETWORK, RPC_PORT } = require('./config');
+const { RPC_PROVIDER, NETWORK, CHAINID, RPC_PORT } = require('./config');
 
 /**
  * Object containing Web3Wallet input parameters.
@@ -66,7 +66,7 @@ class Web3Wallet {
         walletParamsObj = {
             mnemonic: process.env.MNEMONIC,
             rpcProvider: RPC_PROVIDER,
-            network: NETWORK,
+            network: CHAINID[NETWORK],
             rpcPort: RPC_PORT.GANACHE,
             balance: '100',
             numberOfWallets: 10
@@ -156,6 +156,7 @@ class Web3Wallet {
 
         switch (this.#network.toUpperCase()) {
             case ('GANACHE'):
+            case ('HARDHAT'):
                 this.#consoleLog('USING GANACHE PROVIDER')
                 const _url = `http://127.0.0.1:${this.#rpcPort}`;
                 this.#provider = new JsonRpcProvider(_url);
