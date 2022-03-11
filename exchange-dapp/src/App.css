@@ -84,8 +84,20 @@ div {
   width: 50px;
 }
 
-.button-connect-wallet {
+.button-connect-wallet,
+.button-connected-account {
+  margin: 20px 50px 0 0;
   width: 120px;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.button-disconnect-wallet {
+  margin: 20px 50px 0 0;
+  width: 120px;
+  right: 0;
+  top: 0;
 }
 
 .button-loan-request-create {

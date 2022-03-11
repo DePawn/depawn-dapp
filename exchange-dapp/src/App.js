@@ -32,6 +32,10 @@ function App() {
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
       console.log('Connected to account: ', accounts[0]);
       setCurrentAccount(accounts[0]);
+
+      ethereum.on('accountsChanged', async (_) => {
+        await checkIfWalletIsConnected();
+      });
     }
     catch (err) {
       console.log(err);
@@ -62,6 +66,7 @@ function App() {
     }
     else {
       console.log('No authorized account found :(');
+      setCurrentAccount(null)
     }
 
     const chainId = await ethereum.request({ method: 'eth_chainId' });
@@ -94,6 +99,10 @@ function App() {
       console.log('borrower: ', _borrower);
       console.log('lender: ', _lender);
     });
+  }
+
+  const getSubAddress = (addrStr) => {
+    return `${addrStr.slice(0, 5)}...${addrStr.slice(-4)}`;
   }
 
   useEffect(() => {
@@ -159,7 +168,10 @@ function App() {
     <div className="App">
       <div>
         <h1>DePawn</h1>
-        <div className="button button-connect-wallet" onClick={connectWallet}>Connect Wallet</div>
+        {currentAccount
+          ? (<div className="button button-connected-account">{getSubAddress(currentAccount)}</div>)
+          : (<div className="button button-connect-wallet" onClick={connectWallet}>Connect Wallet</div>)
+        }
 
         <div className="container">
           <h2>Loan Requests</h2>
