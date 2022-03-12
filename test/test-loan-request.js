@@ -77,10 +77,38 @@ describe("0-0 :: LoanRequest signer functions", function () {
         );
     });
 
-    it("0-0-03 :: LoanRequest should allow borrower to remove lender", async function () {
-        await loanRequestContract.setLender(borrower.address, loanId);
+    it("0-0-03 :: LoanRequest should allow borrower to remove lender if lender has not signed off", async function () {
+        // Remove borrower signature to allow interaction
+        await loanRequestContract.removeSignature(borrower.address, loanId);
 
-        const lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
+        // Sign off lender and ensure lender removal cannot be done.
+        await loanRequestContract.connect(lender).setLender(borrower.address, loanId);
+        let lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
+
+        let lenderSignStatus = await loanRequestContract.getSignStatus(
+            lenderAddress,
+            borrower.address,
+            loanId
+        );
+        assert.isTrue(lenderSignStatus, "Lender sign status should be true.");
+
+        await truffleAssert.reverts(
+            loanRequestContract.setLender(borrower.address, loanId),
+            "Loan cannot be signed off by lender."
+        );
+
+        // Remove lender signature and remove lender.
+        await loanRequestContract.connect(lender).removeSignature(borrower.address, loanId);
+
+        lenderSignStatus = await loanRequestContract.getSignStatus(
+            lenderAddress,
+            borrower.address,
+            loanId
+        );
+        assert.isFalse(lenderSignStatus, "Lender sign status should be false.");
+
+        await loanRequestContract.setLender(borrower.address, loanId);
+        lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
         assert.equal(lenderAddress, ethers.constants.AddressZero, "Lender address should be address 0.");
 
         lenderSignStatus = await loanRequestContract.getSignStatus(
@@ -88,7 +116,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
             borrower.address,
             loanId
         );
-        assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
+        assert.isFalse(lenderSignStatus, "Lender sign status should be false.");
     });
 
     it("0-0-04 :: LoanRequest should remove signer signature at request", async function () {

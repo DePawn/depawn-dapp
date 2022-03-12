@@ -241,12 +241,27 @@ contract LoanRequest is MultiSig {
         );
 
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        address _currentLender = getLender(_borrower, _loanId);
+
+        require(
+            _getSignStatus(_safeId, _currentLender) == false,
+            "Loan cannot be signed off by lender."
+        );
 
         if (msg.sender != safes[_safeId].signers[0]) {
             // If msg.sender != borrower, set msg.sender to lender and
             // sign off lender.
             _setSigner(_safeId, msg.sender, lenderPosition);
-            sign(_borrower, _loanId);
+
+            // Lender signs
+            (bool success, ) = address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "sign(address,uint256)",
+                    _borrower,
+                    _loanId
+                )
+            );
+            require(success, "Borrower loan signoff failed.");
         } else {
             // If msg.sender == borrower, unsign lender and set lender
             // to address(0).
@@ -256,7 +271,6 @@ contract LoanRequest is MultiSig {
     }
 
     function sign(address _borrower, uint256 _loanId) public {
-        console.logAddress(msg.sender);
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
 
         require(
