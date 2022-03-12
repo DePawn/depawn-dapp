@@ -3,11 +3,13 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
         uint256 safeId;
         address collateral;
+        uint256 tokenId;
         uint256 initialLoanValue;
         uint256 rate;
         uint64 duration;
@@ -20,7 +22,12 @@ contract LoanRequest is MultiSig {
 
     event SubmittedLoanRequest(
         address indexed _borrower,
-        uint256 indexed _loanId
+        uint256 indexed _loanId,
+        address collateral,
+        uint256 tokenId,
+        uint256 initialLoanValue,
+        uint256 rate,
+        uint64 duration
     );
 
     event DeployedLoanContract(
@@ -34,6 +41,7 @@ contract LoanRequest is MultiSig {
 
     function createLoanRequest(
         address _collateral,
+        uint256 _tokenId,
         uint256 _initialLoanValue,
         uint256 _rate,
         uint64 _duration,
@@ -54,6 +62,7 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender].push();
         loanRequests[msg.sender][_loanId].safeId = _safeId;
         loanRequests[msg.sender][_loanId].collateral = _collateral;
+        loanRequests[msg.sender][_loanId].tokenId = _tokenId;
         loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
@@ -62,7 +71,7 @@ contract LoanRequest is MultiSig {
         if (_lender != address(0)) {
             _setSigner(_safeId, _lender, lenderPosition);
         } else {
-            emit SubmittedLoanRequest(msg.sender, _loanId);
+            emit SubmittedLoanRequest(msg.sender, _loanId, _collateral, _tokenId, _initialLoanValue, _rate, _duration);
         }
 
         // Borrower signs
@@ -74,6 +83,12 @@ contract LoanRequest is MultiSig {
             )
         );
         require(success, "Borrower loan signoff failed.");
+    }
+
+    function transfer(address receipient, address nft, uint256 id) external {
+
+        IERC721(nft).safeTransferFrom(msg.sender, receipient, id);
+
     }
 
     function isReady(address _borrower, uint256 _loanId)
@@ -119,6 +134,7 @@ contract LoanRequest is MultiSig {
         return _getSignStatus(_safeId, _signer);
     }
 
+    /*
     function setCollateral(uint256 _loanId, address _collateral)
         external
         onlyHasLoan(msg.sender)
@@ -137,7 +153,7 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].collateral = _collateral;
         emit SubmittedLoanRequest(msg.sender, _loanId);
     }
-
+    
     function setInitialLoanValue(uint256 _loanId, uint256 _initialLoanValue)
         external
         onlyHasLoan(msg.sender)
@@ -192,6 +208,7 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].duration = _duration;
         emit SubmittedLoanRequest(msg.sender, _loanId);
     }
+    */
 
     /*
      *  Set the loan Lender.
@@ -212,7 +229,7 @@ contract LoanRequest is MultiSig {
 
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
         _setSigner(_safeId, _lender, lenderPosition);
-        emit SubmittedLoanRequest(msg.sender, _loanId);
+        //emit SubmittedLoanRequest(msg.sender, _loanId);
     }
 
     function sign(address _borrower, uint256 _loanId) public {

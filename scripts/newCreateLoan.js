@@ -21,23 +21,27 @@ async function main() {
 
     const loanRequestContract = await hre.ethers.getContractAt("LoanRequest", "0x5d4dA1C5D567733B7552cC26612d9B3e3A0345FF", borrower);
 
+
+
     //Borrower approves NFT to be transfered to LoanRequest
-    let txn1 = await nftContract.approve(loanRequestContract.address, tokenId);
-    await txn1.wait();
-    console.log("approved NFT");
+    //let txn1 = await nftContract.approve(loanRequestContract.address, tokenId);
+    //await txn1.wait();
+
     let txn2 = await loanRequestContract.createLoanRequest(nftContract.address, tokenId, 100, 5, 6, ethers.constants.AddressZero);
     await txn2.wait();
 
+
+    /*
     let txn3 = await nftContract.ownerOf(tokenId);
     console.log("Owner is now LoanRequest:", txn3);
 
     // Get it back
-    //let txn4 = await loanRequestContract.withdrawNFT(nftContract.address, tokenId);
-    //await txn4.wait();
+    let txn4 = await loanRequestContract.withdrawNFT(nftContract.address, tokenId);
+    await txn4.wait();
 
     let txn5 = await nftContract.ownerOf(tokenId);
     console.log("Owner is again:", txn5);
-
+    */
 
 
 
