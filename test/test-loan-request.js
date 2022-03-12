@@ -63,11 +63,6 @@ describe("0-0 :: LoanRequest signer functions", function () {
     });
 
     it("0-0-02 :: LoanRequest should not allow borrower to add self as lender", async function () {
-        await truffleAssert.reverts(
-            loanRequestContract.setLender(borrower.address, loanId),
-            "Lender cannot be the borrower."
-        );
-
         // Need to create a loan request for lender so we can observe check. 
         await truffleAssert.reverts(
             loanRequestContract.connect(borrower).createLoanRequest(
@@ -82,7 +77,21 @@ describe("0-0 :: LoanRequest signer functions", function () {
         );
     });
 
-    it("0-0-03 :: LoanRequest should remove signer signature at request", async function () {
+    it("0-0-03 :: LoanRequest should allow borrower to remove lender", async function () {
+        await loanRequestContract.setLender(borrower.address, loanId);
+
+        const lenderAddress = await loanRequestContract.getLender(borrower.address, loanId);
+        assert.equal(lenderAddress, ethers.constants.AddressZero, "Lender address should be address 0.");
+
+        lenderSignStatus = await loanRequestContract.getSignStatus(
+            lenderAddress,
+            borrower.address,
+            loanId
+        );
+        assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
+    });
+
+    it("0-0-04 :: LoanRequest should remove signer signature at request", async function () {
         // Validate borrower signoff removal
         await loanRequestContract.setLender(loanId, lender.address);
         let borrowerAddress = borrower.address;
@@ -122,7 +131,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-04 :: LoanRequest should remove lender signature if borrower changes collateral", async function () {
+    it("0-0-05 :: LoanRequest should remove lender signature if borrower changes collateral", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 
@@ -149,7 +158,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-05 :: LoanRequest should remove lender signature if borrower changes initial loan value", async function () {
+    it("0-0-06 :: LoanRequest should remove lender signature if borrower changes initial loan value", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 
@@ -176,7 +185,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-06 :: LoanRequest should remove lender signature if borrower changes rate", async function () {
+    it("0-0-07 :: LoanRequest should remove lender signature if borrower changes rate", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 
@@ -203,7 +212,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-07 :: LoanRequest should remove lender signature if borrower changes duration", async function () {
+    it("0-0-08 :: LoanRequest should remove lender signature if borrower changes duration", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 
@@ -230,7 +239,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-08 :: LoanRequest should remove lender signature if borrower changes lender", async function () {
+    it("0-0-09 :: LoanRequest should remove lender signature if borrower changes lender", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 

@@ -129,8 +129,6 @@ abstract contract MultiSig {
         address _signer,
         uint256 _position
     ) internal safeKey(_safeId) {
-        require(_signer != address(0), "Signer cannot be address 0.");
-
         safe.signers[_position] = _signer;
         safe.signStatus[safe.signers[_position]] = false;
     }

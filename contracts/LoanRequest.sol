@@ -235,19 +235,24 @@ contract LoanRequest is MultiSig {
         onlyHasLoan(_borrower)
         onlyNotConfirmed(_borrower, _loanId)
     {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        require(
-            msg.sender != safes[_safeId].signers[0],
-            "Lender cannot be the borrower."
-        );
         require(
             msg.sender != getLender(_borrower, _loanId),
             "Lender should not be the same as existing."
         );
 
-        _setSigner(_safeId, msg.sender, lenderPosition);
-        sign(_borrower, _loanId);
-        //emit SubmittedLoanRequest(msg.sender, _loanId);
+        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+
+        if (msg.sender != safes[_safeId].signers[0]) {
+            // If msg.sender != borrower, set msg.sender to lender and
+            // sign off lender.
+            _setSigner(_safeId, msg.sender, lenderPosition);
+            sign(_borrower, _loanId);
+        } else {
+            // If msg.sender == borrower, unsign lender and set lender
+            // to address(0).
+            _unsign(_safeId, _getSignStatus(_safeId, msg.sender));
+            _setSigner(_safeId, address(0), lenderPosition);
+        }
     }
 
     function sign(address _borrower, uint256 _loanId) public {
