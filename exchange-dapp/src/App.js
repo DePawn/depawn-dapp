@@ -5,9 +5,6 @@ import getProvider from './utils/getProvider';
 import { networks } from './utils/networks';
 import config from './utils/config';
 
-
-const loanRequestAddress = '';//__config.loanRequestAddress;
-
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
