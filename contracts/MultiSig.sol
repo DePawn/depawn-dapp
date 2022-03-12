@@ -86,15 +86,26 @@ abstract contract MultiSig {
 
     function _sign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
         require(safe.signers[0] != address(0), "Borrower must be set.");
-        require(safe.signers[1] != address(0), "Lender must be set.");
         safe.signStatus[msg.sender] = true;
         emit Signed(msg.sender, safe.confirmed);
     }
 
-    function _unsign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
-        safe.signStatus[safe.signers[0]] = false;
-        safe.signStatus[safe.signers[1]] = false;
-        safe.signStatus[safe.signers[2]] = false;
+    function _unsign(uint256 _safeId, bool _callerSignStatus)
+        internal
+        safeKey(_safeId)
+        onlySigners
+    {
+        safe.signStatus[safe.signers[0]] = safe.signers[0] == msg.sender
+            ? _callerSignStatus
+            : false;
+
+        safe.signStatus[safe.signers[1]] = safe.signers[1] == msg.sender
+            ? _callerSignStatus
+            : false;
+
+        safe.signStatus[safe.signers[2]] = safe.signers[2] == msg.sender
+            ? _callerSignStatus
+            : false;
 
         __setConfirmedStatus();
 
@@ -113,36 +124,16 @@ abstract contract MultiSig {
         emit Unsigned(msg.sender, safe.confirmed);
     }
 
-    function _setLender(uint256 _safeId, address _lender)
-        internal
-        safeKey(_safeId)
-    {
-        require(_lender != address(0), "Lender cannot be address 0.");
-        require(_lender != msg.sender, "Lender cannot be self.");
-        safe.signers[1] = _lender;
-        safe.signStatus[safe.signers[1]] = false;
-    }
+    function _setSigner(
+        uint256 _safeId,
+        address _lender,
+        uint256 _position
+    ) internal safeKey(_safeId) {
+        require(_lender != address(0), "Signer cannot be address 0.");
+        require(_lender != msg.sender, "Signer cannot be self.");
 
-    function _removeLender(uint256 _safeId)
-        internal
-        safeKey(_safeId)
-        onlySigners
-    {
-        safe.signers[1] = address(0);
-        safe.signers[2] = address(0);
-    }
-
-    function _setArbiter(uint256 _safeId, address _arbiter)
-        internal
-        safeKey(_safeId)
-    {
-        require(
-            safe.signers[2] == address(0),
-            "Current signer cannot already be set."
-        );
-        require(_arbiter != address(0), "Arbiter cannot be address 0.");
-        safe.signers[2] = _arbiter;
-        safe.signStatus[_arbiter] = true;
+        safe.signers[_position] = _lender;
+        safe.signStatus[safe.signers[_position]] = false;
     }
 
     function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
