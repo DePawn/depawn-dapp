@@ -5,6 +5,8 @@ import "./MultiSig.sol";
 import "./LoanContract.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
+import "hardhat/console.sol";
+
 contract LoanRequest is MultiSig {
     struct LoanStatus {
         uint256 safeId;
@@ -48,9 +50,11 @@ contract LoanRequest is MultiSig {
         address _lender
     ) public {
         require(_collateral != address(0), "Collateral cannot be address 0.");
+        require(msg.sender != _lender, "Lender cannot be the borrower.");
 
         uint256 _safeId = safes.length;
         uint256 _loanId = loanRequests[msg.sender].length;
+
         _createSafe();
 
         // Append to borrower
@@ -71,7 +75,15 @@ contract LoanRequest is MultiSig {
         if (_lender != address(0)) {
             _setSigner(_safeId, _lender, lenderPosition);
         } else {
-            emit SubmittedLoanRequest(msg.sender, _loanId, _collateral, _tokenId, _initialLoanValue, _rate, _duration);
+            emit SubmittedLoanRequest(
+                msg.sender,
+                _loanId,
+                _collateral,
+                _tokenId,
+                _initialLoanValue,
+                _rate,
+                _duration
+            );
         }
 
         // Borrower signs
@@ -85,10 +97,12 @@ contract LoanRequest is MultiSig {
         require(success, "Borrower loan signoff failed.");
     }
 
-    function transfer(address receipient, address nft, uint256 id) external {
-
+    function transfer(
+        address receipient,
+        address nft,
+        uint256 id
+    ) external {
         IERC721(nft).safeTransferFrom(msg.sender, receipient, id);
-
     }
 
     function isReady(address _borrower, uint256 _loanId)
@@ -216,23 +230,28 @@ contract LoanRequest is MultiSig {
      *   Borrower sets the loan's lender and rates. The borrower will
      *   automatically sign off.
      */
-    function setLender(uint256 _loanId, address _lender)
+    function setLender(address _borrower, uint256 _loanId)
         external
-        onlyHasLoan(msg.sender)
-        onlyBorrower(_loanId)
-        onlyNotConfirmed(msg.sender, _loanId)
+        onlyHasLoan(_borrower)
+        onlyNotConfirmed(_borrower, _loanId)
     {
+        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         require(
-            _lender != getLender(msg.sender, _loanId),
+            msg.sender != safes[_safeId].signers[0],
+            "Lender cannot be the borrower."
+        );
+        require(
+            msg.sender != getLender(_borrower, _loanId),
             "Lender should not be the same as existing."
         );
 
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        _setSigner(_safeId, _lender, lenderPosition);
+        _setSigner(_safeId, msg.sender, lenderPosition);
+        sign(_borrower, _loanId);
         //emit SubmittedLoanRequest(msg.sender, _loanId);
     }
 
     function sign(address _borrower, uint256 _loanId) public {
+        console.logAddress(msg.sender);
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
 
         require(

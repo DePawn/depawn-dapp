@@ -21,6 +21,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         nft2 = nft2.address;
 
         collateral = ethers.constants.AddressZero;
+        tokenId = ethers.constants.Zero;
         initialLoanValue = ethers.constants.Zero;
         rate = ethers.constants.Zero;
         duration = ethers.constants.Zero;
@@ -33,6 +34,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         await loanRequestContract.deployed();
         await loanRequestContract.createLoanRequest(
             nft,
+            tokenId,
             initialLoanValue,
             rate,
             duration,
@@ -40,14 +42,8 @@ describe("0-0 :: LoanRequest signer functions", function () {
         );
     });
 
-    it("0-0-00 :: LoanRequest should allow borrower to add lender and automatically sign for borrower", async function () {
-        await loanRequestContract.setLender(loanId, lender.address);
-
-        const borrowerSignStatus = await loanRequestContract.getSignStatus(
-            borrower.address,
-            borrower.address,
-            loanId
-        );
+    it("0-0-00 :: LoanRequest should only allow lender to add self as lender and signoff self", async function () {
+        await loanRequestContract.connect(lender).setLender(borrower.address, loanId);
 
         const lenderSignStatus = await loanRequestContract.getSignStatus(
             lender.address,
@@ -55,38 +51,34 @@ describe("0-0 :: LoanRequest signer functions", function () {
             loanId
         );
 
-        assert.isTrue(borrowerSignStatus, "Borrower sign status is not true.");
-        assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
+        assert.isTrue(lenderSignStatus, "Lender sign status should be true.");
     });
 
-    it("0-0-01 :: LoanRequest should not allow non-borrower to add lender", async function () {
-        await truffleAssert.reverts(
-            loanRequestContract.connect(lender).setLender(loanId, nonMember.address),
-            "No loans exist for this borrower."
-        );
+    it("0-0-01 :: LoanRequest should not allow lender to add self as lender to non-exisiting contract", async function () {
         // Will assume lender is borrower and fail for new loan request by lender's address.
         await truffleAssert.reverts(
-            loanRequestContract.connect(lender).setLender(loanId, lender.address),
+            loanRequestContract.connect(lender).setLender(lender.address, loanId),
             "No loans exist for this borrower."
         );
     });
 
     it("0-0-02 :: LoanRequest should not allow borrower to add self as lender", async function () {
         await truffleAssert.reverts(
-            loanRequestContract.setLender(loanId, borrower.address),
-            "Signer cannot be self."
+            loanRequestContract.setLender(borrower.address, loanId),
+            "Lender cannot be the borrower."
         );
 
         // Need to create a loan request for lender so we can observe check. 
         await truffleAssert.reverts(
             loanRequestContract.connect(borrower).createLoanRequest(
                 nft,
+                tokenId,
                 initialLoanValue,
                 rate,
                 duration,
                 borrower.address
             ),
-            "Signer cannot be self."
+            "Lender cannot be the borrower."
         );
     });
 

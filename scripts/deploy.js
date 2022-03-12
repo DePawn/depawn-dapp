@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const fs = require('fs');
-const { NETWORK, STATIC } = require('../utils/config');
+const { NETWORK } = require('../utils/config');
 
 const main = async () => {
     const loanRequestFactory = await hre.ethers.getContractFactory("LoanRequest");

@@ -4,6 +4,11 @@ html {
   background: #222;
 }
 
+h1, h2, .label {  
+  font-weight: bold;
+  text-shadow: 1px 1px 3px #000;
+}
+
 div {
   color: whitesmoke;
 }
@@ -14,9 +19,32 @@ div {
   border: none;
 }
 
-.container-loan-request {
+.container-loan-forms {
+  width: 90%;
+  margin: 40px auto 0 auto;
+  display: flex;
+}
+
+.container-loan-request-form-master,
+.container-loan-contracts-master {
+  width: 50%;
+  padding: 0 5%;
+}
+
+.wedge {
+  width: 5px;
+  background: #3f5e7e;
+  border: 3px solid #555;
+  border-radius: 10px;
+  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -webkit-box-shadow: 1px 2px 2px 1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+}
+
+.container-loan-request-form,
+.container-loan-contracts {
   width: 475px;
-  margin: 10px auto 0 auto;
+  margin: 40px auto;
   padding: 24px;
   position: relative;
   border-radius: 12px;
@@ -38,12 +66,8 @@ div {
   padding: 0;
   height: 38px;
   line-height: 44px;
-  text-align: center;
   width: 15%;
   text-align: left;
-  font-weight: bold;
-  text-shadow: 1px 1px 3px #000;
-  /* color: #011110; */
 }
 
 .input {

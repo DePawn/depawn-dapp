@@ -126,13 +126,12 @@ abstract contract MultiSig {
 
     function _setSigner(
         uint256 _safeId,
-        address _lender,
+        address _signer,
         uint256 _position
     ) internal safeKey(_safeId) {
-        require(_lender != address(0), "Signer cannot be address 0.");
-        require(_lender != msg.sender, "Signer cannot be self.");
+        require(_signer != address(0), "Signer cannot be address 0.");
 
-        safe.signers[_position] = _lender;
+        safe.signers[_position] = _signer;
         safe.signStatus[safe.signers[_position]] = false;
     }
 

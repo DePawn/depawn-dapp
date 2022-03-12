@@ -157,6 +157,7 @@ class Web3Wallet {
         switch (this.#network.toUpperCase()) {
             case ('GANACHE'):
             case ('HARDHAT'):
+            case ('MAINNET_FORK'):
                 this.#consoleLog('USING GANACHE PROVIDER')
                 const _url = `http://127.0.0.1:${this.#rpcPort}`;
                 this.#provider = new JsonRpcProvider(_url);

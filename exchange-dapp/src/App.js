@@ -1,4 +1,6 @@
 import './App.css';
+import LoanRequestForm from './components/LoanRequestForm';
+
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
@@ -119,12 +121,11 @@ function App() {
     const initialLoanValue = ethers.BigNumber.from(document.getElementById('input-initial-value').value);
     const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
     const duration = ethers.BigNumber.from(document.getElementById('input-duration').value);
-    const lenderAddress = document.getElementById('input-lender').value;
+    const lenderAddress = ethers.constants.Zero;
 
     // Get contract
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
-    const lender = provider.getSigner(lenderAddress);
     const borrowerAddress = await borrower.getAddress();
 
     const { loanRequestAddress, loanRequestABI } = await config(currentNetwork);
@@ -146,8 +147,6 @@ function App() {
       lenderAddress
     );
 
-    // Signoff and create new contract
-    tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
     let receipt = await tx.wait();
     let events = receipt.events.map(ev => ev.event);
 
@@ -161,6 +160,23 @@ function App() {
     setLoanLender(lenderAddress);
   }
 
+  const sponsorLoan = async () => {
+    const { isDev } = await config(currentNetwork);
+
+    const provider = getProvider();
+    const lender = isDev
+      ? provider.getSigner(process.env.NFT_ACCOUNT_ADDRESS)
+      : provider.getSigner(currentAccount);
+    const lenderAddress = await lender.getAddress();
+    console.log('Lender address: ', lenderAddress);
+
+    // Signoff and create new contract
+    // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
+
+    // const lenderAddress = document.getElementById('input-lender').value;
+
+  }
+
   return (
     <div className="App">
       <div>
@@ -171,38 +187,20 @@ function App() {
         }
 
         <div className="container">
-          <h2>Loan Requests</h2>
-          <div className="container-loan-request">
-
-            <div className="container-loan-request-component">
-              <div className="label label-nft">NFT:</div>
-              <input type="string" id="input-nft" className="input input-loan-request input-nft" placeholder='NFT Address...' defaultValue="0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A"></input>
+          <div className="container-loan-forms">
+            <div className="container-loan-request-form-master">
+              <h2>Loan Requests</h2>
+              <LoanRequestForm submitCallback={submitLoanRequest} />
             </div>
-
-            <div className="container-loan-request-component">
-              <div className="label label-value">Amount:</div>
-              <input type="string" id="input-initial-value" className="input input-loan-request input-initial-value" placeholder='Loan Value (ETH)...' defaultValue="10000"></input>
+            <div className="wedge"></div>
+            <div className="container-loan-contracts-master">
+              <h2>Loan Contracts</h2>
+              <div className="container-loan-contracts">
+                <div className="container-loan-request-create">
+                  <div className="button button-loan-request button-loan-request-create" onClick={sponsorLoan}>Sponsor Loan</div>
+                </div>
+              </div>
             </div>
-
-            <div className="container-loan-request-component">
-              <div className="label label-rate">Rate:</div>
-              <input type="string" id="input-rate" className="input input-loan-request input-rate" placeholder='Rate...' defaultValue="1"></input>
-            </div>
-
-            <div className="container-loan-request-component">
-              <div className="label label-duration">Duration:</div>
-              <input type="string" id="input-duration" className="input input-loan-request input-duration" placeholder='Duration (months)...' defaultValue="36"></input>
-            </div>
-
-            <div className="container-loan-request-component">
-              <div className="label label-lender">Lender:</div>
-              <input type="string" id="input-lender" className="input input-loan-request input-lender" placeholder='Lender...' defaultValue="0x2D35bD9BEC501955e82437c1A96e4bAade2b8eeb"></input>
-            </div>
-
-            <div className="container-loan-request-create">
-              <div className="button button-loan-request button-loan-request-create" onClick={submitLoanRequest}>Create Request</div>
-            </div>
-
           </div>
         </div>
       </div >
