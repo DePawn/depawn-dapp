@@ -70,9 +70,10 @@ function App() {
       setCurrentAccount(null)
     }
 
-    const chainId = await ethereum.request({ method: 'eth_chainId' });
-    console.log('Current chain ID: ', parseInt(chainId, 16));
-    setCurrentNetwork(parseInt(chainId, 16).toString());
+    let chainId = await ethereum.request({ method: 'eth_chainId' });
+    chainId = parseInt(chainId, 16).toString();
+    console.log('Current chain ID: ', chainId);
+    setCurrentNetwork(chainId);
 
     ethereum.on('chainChanged', handleChainChanged);
 
@@ -129,10 +130,13 @@ function App() {
     // Get contract
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
+    console.log('currentAccount: ', currentAccount);
+
+    // console.log('PROVIDER: ', provider);
     const borrowerAddress = await borrower.getAddress();
+    // console.log('borrowerAddress: ', borrowerAddress);
 
     const { loanRequestAddress, loanRequestABI } = await config(currentNetwork);
-    console.log(loanRequestAddress)
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
@@ -141,14 +145,12 @@ function App() {
     );
     await setLoanRequestListeners();
 
-    console.log(alchemy(env.ALCHEMY_MAINNET_URL))
+    // const borrowerLoans = await loanRequestContract.getLoans(borrowerAddress);
+    // console.log('LOANS: ', borrowerLoans);
 
-    const borrowerLoans = await loanRequestContract.getLoans(borrower.getAddress());
-    console.log('LOANS: ', borrowerLoans);
-
-    // Create loan request
-    const loanId = ethers.BigNumber.from(borrowerLoans.length.toString());
-    console.log('LOAN ID: ', loanId);
+    // // Create loan request
+    // const loanId = borrowerLoans;
+    // console.log('LOAN ID: ', loanId.length.toString());
 
     let tx = await loanRequestContract.createLoanRequest(
       nft,
@@ -156,13 +158,14 @@ function App() {
       initialLoanValue,
       rate,
       duration,
-      lenderAddress
+      ethers.constants.AddressZero
     );
 
     let receipt = await tx.wait();
     let events = receipt.events.map(ev => ev.event);
 
     console.log(receipt);
+    console.log(events);
 
     // Set state variables
     setNftAddress(nft);
