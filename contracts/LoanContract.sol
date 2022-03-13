@@ -37,11 +37,17 @@ contract LoanContract {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
-    function lenderTransfer() external payable {
 
-        require(msg.sender == lender, "Only registered lender should deposit to this contract");
-        require(msg.value == initialLoanValue, "Deposit not equal to loan principal requested");
+    function checkMaturity() private view returns(bool) {
+
 
 
     }
+
+    receive() external payable {
+
+
+
+    }
+
 }

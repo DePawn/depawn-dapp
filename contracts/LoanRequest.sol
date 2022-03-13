@@ -294,8 +294,9 @@ contract LoanRequest is MultiSig {
         }
     }
 
-    function sign(address _borrower, uint256 _loanId) public {
+    function sign(address _borrower, uint256 _loanId) public payable {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        uint256 loanValue = loanRequests[_borrower][_loanId].initialLoanValue;
 
         require(
             _getSignStatus(_safeId, msg.sender) == false,
@@ -306,7 +307,10 @@ contract LoanRequest is MultiSig {
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
-            __deployLoanContract(_borrower, _loanId);
+            address loanContractAddress = __deployLoanContract(_borrower, _loanId);
+            require(loanValue == msg.value, "loan value doesn't match amount sent");
+            (bool success, ) = payable(loanContractAddress).call{value: msg.value}("");
+            require(success, "Transfer failed.");
         }
     }
 
@@ -321,7 +325,7 @@ contract LoanRequest is MultiSig {
 
     function __deployLoanContract(address _borrower, uint256 _loanId)
         private
-        onlyHasLoan(_borrower)
+        onlyHasLoan(_borrower) returns(address)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         address _lender = getLender(_borrower, _loanId);
@@ -350,6 +354,8 @@ contract LoanRequest is MultiSig {
             _lender,
             _loanId
         );
+
+        return _loanContractAddress;
     }
 
     modifier onlyBorrower(uint256 _loanId) {
