@@ -67,7 +67,7 @@ class Web3Wallet {
             mnemonic: process.env.MNEMONIC,
             rpcProvider: RPC_PROVIDER,
             network: CHAINID[NETWORK],
-            rpcPort: RPC_PORT.GANACHE,
+            rpcPort: RPC_PORT[CHAINID[NETWORK]],
             balance: '100',
             numberOfWallets: 10
         },
@@ -88,7 +88,7 @@ class Web3Wallet {
         this.#mnemonic = walletParamsObj?.mnemonic ? walletParamsObj.mnemonic : process.env.MNEMONIC;
         this.#rpcProvider = walletParamsObj?.rpcProvider ? walletParamsObj.rpcProvider : RPC_PROVIDER;
         this.#network = walletParamsObj?.network ? walletParamsObj.network : NETWORK;
-        this.#rpcPort = walletParamsObj?.rpcPort ? walletParamsObj.rpcPort : RPC_PORT.GANACHE;
+        this.#rpcPort = walletParamsObj?.rpcPort ? walletParamsObj.rpcPort : RPC_PORT[CHAINID[NETWORK]];
         this.#balance = walletParamsObj?.balance ? walletParamsObj.balance.toString() : '100';
         this.#numberOfWallets = walletParamsObj?.numberOfWallets ? parseInt(walletParamsObj.numberOfWallets) : 10;
         this.#provider;

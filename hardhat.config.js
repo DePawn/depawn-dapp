@@ -13,6 +13,7 @@ const web3Wallet = new Web3Wallet({
 });
 
 const privateKey = web3Wallet.bip44Wallet[0][0].privateKey;
+console.log(`running network ${NETWORK}`);
 
 module.exports = {
   solidity: "0.8.5",

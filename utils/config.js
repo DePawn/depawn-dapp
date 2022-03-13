@@ -1,9 +1,11 @@
 module.exports = {
     RPC_PROVIDER: 'ALCHEMY',
-    NETWORK: '1337',
+    NETWORK: '1447',
     GAS_LIMIT: 100000,
     RPC_PORT: {
-        GANACHE: '8535',
+        GANACHE: '8555',
+        HARDHAT: '8555',
+        MAINNET_FORK: '8535'
     },
     CHAINID: {
         '31337': 'HARDHAT',

@@ -1,15 +1,12 @@
-require('dotenv').config();
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 
-const ALCHEMY_MAINNET_URL = process.env.ALCHEMY_MAINNET_URL;
 
-export const alchemy = () => {
+export const alchemy = (ALCHEMY_MAINNET_URL) => {
+    console.log(ALCHEMY_MAINNET_URL)
     return createAlchemyWeb3(ALCHEMY_MAINNET_URL);
 }
 
 export const config = async (network) => {
-    console.log(`${network}`)
-    // const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestAddress = require(`../static/${network}/LoanRequestAddress.json`);
 
@@ -18,10 +15,12 @@ export const config = async (network) => {
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestAddress.loanRequestAddress,
         RPC_PROVIDER: 'ALCHEMY',
-        NETWORK: '1337',
+        NETWORK: '1447',
         GAS_LIMIT: 100000,
         RPC_PORT: {
-            GANACHE: '8535',
+            GANACHE: '8555',
+            HARDHAT: '8555',
+            MAINNET_FORK: '8535'
         },
         CHAINID: {
             '31337': 'HARDHAT',

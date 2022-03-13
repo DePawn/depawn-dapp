@@ -2,11 +2,12 @@ import './App.css';
 import LoanRequestForm from './components/LoanRequestForm';
 
 import React, { useEffect, useState } from 'react';
-// import env from 'react-dotenv';
+import env from 'react-dotenv';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { networks } from './utils/networks';
 import { alchemy, config } from './utils/config.js';
+
 
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
@@ -140,12 +141,15 @@ function App() {
     );
     await setLoanRequestListeners();
 
-    // Create loan request
-    console.log(borrowerAddress)
-    const borrowerLoans = await loanRequestContract.getLoans(borrowerAddress);
-    console.log(borrowerLoans);
+    console.log(alchemy(env.ALCHEMY_MAINNET_URL))
 
-    const loanId = ethers.constants.Zero; //ethers.BigNumber.from(borrowerLoans.length.toString());
+    const borrowerLoans = await loanRequestContract.getLoans(borrower.getAddress());
+    console.log('LOANS: ', borrowerLoans);
+
+    // Create loan request
+    const loanId = ethers.BigNumber.from(borrowerLoans.length.toString());
+    console.log('LOAN ID: ', loanId);
+
     let tx = await loanRequestContract.createLoanRequest(
       nft,
       ethers.constants.Zero,
