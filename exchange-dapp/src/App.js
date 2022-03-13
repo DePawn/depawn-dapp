@@ -2,10 +2,11 @@ import './App.css';
 import LoanRequestForm from './components/LoanRequestForm';
 
 import React, { useEffect, useState } from 'react';
+// import env from 'react-dotenv';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { networks } from './utils/networks';
-import config from './utils/config';
+import { alchemy, config } from './utils/config.js';
 
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
@@ -69,6 +70,7 @@ function App() {
     }
 
     const chainId = await ethereum.request({ method: 'eth_chainId' });
+    console.log('Current chain ID: ', parseInt(chainId, 16));
     setCurrentNetwork(parseInt(chainId, 16).toString());
 
     ethereum.on('chainChanged', handleChainChanged);
@@ -121,7 +123,7 @@ function App() {
     const initialLoanValue = ethers.BigNumber.from(document.getElementById('input-initial-value').value);
     const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
     const duration = ethers.BigNumber.from(document.getElementById('input-duration').value);
-    const lenderAddress = ethers.constants.Zero;
+    const lenderAddress = ethers.constants.AddressZero;
 
     // Get contract
     const provider = getProvider();
@@ -129,6 +131,8 @@ function App() {
     const borrowerAddress = await borrower.getAddress();
 
     const { loanRequestAddress, loanRequestABI } = await config(currentNetwork);
+    console.log(loanRequestAddress)
+
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
       loanRequestABI,
@@ -137,10 +141,14 @@ function App() {
     await setLoanRequestListeners();
 
     // Create loan request
+    console.log(borrowerAddress)
     const borrowerLoans = await loanRequestContract.getLoans(borrowerAddress);
-    const loanId = ethers.BigNumber.from(borrowerLoans.length.toString());
+    console.log(borrowerLoans);
+
+    const loanId = ethers.constants.Zero; //ethers.BigNumber.from(borrowerLoans.length.toString());
     let tx = await loanRequestContract.createLoanRequest(
       nft,
+      ethers.constants.Zero,
       initialLoanValue,
       rate,
       duration,
@@ -150,7 +158,7 @@ function App() {
     let receipt = await tx.wait();
     let events = receipt.events.map(ev => ev.event);
 
-    console.log(events);
+    console.log(receipt);
 
     // Set state variables
     setNftAddress(nft);

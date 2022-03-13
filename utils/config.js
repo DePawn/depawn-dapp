@@ -3,7 +3,7 @@ module.exports = {
     NETWORK: '1337',
     GAS_LIMIT: 100000,
     RPC_PORT: {
-        GANACHE: '8555',
+        GANACHE: '8535',
     },
     CHAINID: {
         '31337': 'HARDHAT',

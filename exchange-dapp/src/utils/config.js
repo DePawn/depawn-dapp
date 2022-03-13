@@ -1,6 +1,17 @@
-const config = async (network) => {
-    const loanRequestABI = await import(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
-    const loanRequestAddress = await import(`../static/${network}/LoanRequestAddress.json`);
+require('dotenv').config();
+const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
+
+const ALCHEMY_MAINNET_URL = process.env.ALCHEMY_MAINNET_URL;
+
+export const alchemy = () => {
+    return createAlchemyWeb3(ALCHEMY_MAINNET_URL);
+}
+
+export const config = async (network) => {
+    console.log(`${network}`)
+    // const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
+    const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
+    const loanRequestAddress = require(`../static/${network}/LoanRequestAddress.json`);
 
     return {
         isDev: true,
@@ -10,7 +21,7 @@ const config = async (network) => {
         NETWORK: '1337',
         GAS_LIMIT: 100000,
         RPC_PORT: {
-            GANACHE: '8555',
+            GANACHE: '8535',
         },
         CHAINID: {
             '31337': 'HARDHAT',
@@ -22,6 +33,4 @@ const config = async (network) => {
             '80001': 'MUMBAI'
         }
     }
-}
-
-export default config;
+};
