@@ -193,24 +193,16 @@ function App() {
       ethers.constants.AddressZero
     );
 
-    // Set state variables
-    setCurrentNftAddress(nft);
-    setCurrentTokenId(currentTokenId.toNumber());
-    setCurrentLoanValue(ethers.utils.formatEther(initialLoanValue));
-    setCurrentLoanRate(ethers.utils.formatEther(rate));
-    setCurrentLoanDuration(duration);
-    setCurrentLoanLender(lenderAddress);
-
     await getAccountLoanRequests();
   }
 
-  const updateLoan = async () => {
+  const updateLoan = async (loanId) => {
     // Get input values
-    const nft = document.getElementById('input-existing-loan-nft').value;
-    const tokenId = ethers.BigNumber.from(document.getElementById('input-existing-loan-token-id').value);
-    const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-existing-loan-initial-value').value);
-    const rate = ethers.utils.parseUnits(document.getElementById('input-existing-loan-rate').value);
-    const duration = document.getElementById('input-existing-loan-duration').value;
+    const nft = document.getElementById(`input-existing-loan-nft-${loanId}`).value;
+    const tokenId = ethers.BigNumber.from(document.getElementById(`input-existing-loan-token-id-${loanId}`).value);
+    const initialLoanValue = ethers.utils.parseUnits(document.getElementById(`input-existing-loan-initial-value-${loanId}`).value);
+    const rate = ethers.utils.parseUnits(document.getElementById(`input-existing-loan-rate-${loanId}`).value);
+    const duration = document.getElementById(`input-existing-loan-duration-${loanId}`).value;
 
     // Get contract
     const provider = getProvider();
@@ -232,7 +224,12 @@ function App() {
       ethers.constants.AddressZero
     );
 
-    setCurrentTokenId(tokenId);
+    // Set state variables
+    setCurrentNftAddress(nft);
+    setCurrentTokenId(tokenId.toNumber());
+    setCurrentLoanValue(ethers.utils.formatEther(initialLoanValue));
+    setCurrentLoanRate(ethers.utils.formatEther(rate));
+    setCurrentLoanDuration(duration);
   }
 
   const sponsorLoan = async () => {
