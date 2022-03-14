@@ -8,14 +8,38 @@ export default function ExistingLoansForm(props) {
     const [currentEdit, setCurrentEdit] = useState('');
 
     function setEditName(name) {
-        name === currentEdit
-            ? setCurrentEdit('')
-            : setCurrentEdit(name);
+        if (name === currentEdit) {
+            /* If the cancel button ("❌") is hit... */
+            // Restore currentEdit to default
+            setCurrentEdit('');
+
+            // Restore all inputs to defaults
+            restoreVals('');
+        }
+        else {
+            /* If the change button ("✍️") is hit... */
+            // Set currentEdit to the field being editted
+            setCurrentEdit(name);
+        }
+    }
+
+    function restoreVals(exclusion) {
+        const nftElement = document.getElementById("input-existing-loan-nft-" + props.loanNumber);
+        const tokenIdElement = document.getElementById("input-existing-loan-token-id-" + props.loanNumber);
+        const valueElement = document.getElementById("input-existing-loan-value-" + props.loanNumber);
+        const rateElement = document.getElementById("input-existing-loan-rate-" + props.loanNumber);
+        const durationElement = document.getElementById("input-existing-loan-duration-" + props.loanNumber);
+
+        if (exclusion !== "nft") nftElement.value = props.collateral;
+        if (exclusion !== "token-id") tokenIdElement.value = props.tokenId;
+        if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initialLoanValue);
+        if (exclusion !== "rate") rateElement.value = ethers.utils.formatEther(props.rate);
+        if (exclusion !== "duration") durationElement.value = props.duration;
     }
 
     return (
         <div className="container-existing-loan-form">
-            <h3>Loan #{props.loanNumber}</h3>
+            <h3>Loan #{props.loanNumber + 1}</h3>
 
             <div className="container-existing-loan-component">
                 <div className="label label-nft">NFT:</div>
@@ -30,7 +54,10 @@ export default function ExistingLoansForm(props) {
                 <div
                     id={"edit-nft-" + props.loanNumber}
                     className="button button-edit"
-                    onClick={() => { setEditName("nft") }}>
+                    onClick={() => {
+                        setEditName("nft");
+                        restoreVals("nft");
+                    }}>
                     {currentEdit !== "nft" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
@@ -43,13 +70,16 @@ export default function ExistingLoansForm(props) {
                     className="input input-existing-loan-token-id"
                     placeholder='Token ID...'
                     defaultValue={props.tokenId}
-                    readOnly={currentEdit !== "token_id"}>
+                    readOnly={currentEdit !== "token-id"}>
                 </input>
                 <div
                     id={"edit-token-id-" + props.loanNumber}
                     className="button button-edit"
-                    onClick={() => { setEditName("token_id") }}>
-                    {currentEdit !== "token_id" ? edit_emoji : cancel_emoji}
+                    onClick={() => {
+                        setEditName("token-id");
+                        restoreVals("token-id");
+                    }}>
+                    {currentEdit !== "token-id" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -57,8 +87,8 @@ export default function ExistingLoansForm(props) {
                 <div className="label label-value">Amount:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-initial-value-" + props.loanNumber}
-                    className="input input-existing-loan-initial-value"
+                    id={"input-existing-loan-value-" + props.loanNumber}
+                    className="input input-existing-loan-value"
                     placeholder='Loan Value (ETH)...'
                     defaultValue={ethers.utils.formatEther(props.initialLoanValue)}
                     readOnly={currentEdit !== "value"}>
@@ -66,7 +96,10 @@ export default function ExistingLoansForm(props) {
                 <div
                     id={"edit-value-" + props.loanNumber}
                     className="button button-edit"
-                    onClick={() => { setEditName("value") }}>
+                    onClick={() => {
+                        setEditName("value");
+                        restoreVals("value");
+                    }}>
                     {currentEdit !== "value" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
@@ -84,7 +117,10 @@ export default function ExistingLoansForm(props) {
                 <div
                     id={"edit-rate-{props.loanNumber}"}
                     className="button button-edit"
-                    onClick={() => { setEditName("rate") }}>
+                    onClick={() => {
+                        setEditName("rate");
+                        restoreVals("rate");
+                    }}>
                     {currentEdit !== "rate" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
@@ -102,7 +138,10 @@ export default function ExistingLoansForm(props) {
                 <div
                     id={"edit-duration-" + props.loanNumber}
                     className="button button-edit"
-                    onClick={() => { setEditName("duration") }}>
+                    onClick={() => {
+                        setEditName("duration");
+                        restoreVals("duration");
+                    }}>
                     {currentEdit !== "duration" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
@@ -112,7 +151,8 @@ export default function ExistingLoansForm(props) {
                     id={"button-existing-loan-update-" + props.loanNumber}
                     className="button button-existing-loan button-existing-loan-update"
                     onClick={() => {
-                        props.updateFunc(props.loanNumber)
+                        props.updateFunc(props.loanNumber, currentEdit)
+                            .then(() => { setCurrentEdit(''); });
                     }}>
                     Update
                 </div>

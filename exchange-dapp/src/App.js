@@ -7,6 +7,7 @@ import env from 'react-dotenv';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config.js';
+import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
   defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
@@ -121,10 +122,6 @@ function App() {
     });
   }
 
-  const getSubAddress = (addrStr) => {
-    return `${addrStr.slice(0, 5)}...${addrStr.slice(-4)}`;
-  }
-
   /*
    * Get all loan request parameters for each loan submitted by user.
    */
@@ -196,13 +193,9 @@ function App() {
     await getAccountLoanRequests();
   }
 
-  const updateLoan = async (loanId) => {
-    // Get input values
-    const nft = document.getElementById(`input-existing-loan-nft-${loanId}`).value;
-    const tokenId = ethers.BigNumber.from(document.getElementById(`input-existing-loan-token-id-${loanId}`).value);
-    const initialLoanValue = ethers.utils.parseUnits(document.getElementById(`input-existing-loan-initial-value-${loanId}`).value);
-    const rate = ethers.utils.parseUnits(document.getElementById(`input-existing-loan-rate-${loanId}`).value);
-    const duration = document.getElementById(`input-existing-loan-duration-${loanId}`).value;
+  const updateLoan = async (loanId, param) => {
+    // Get parameter to change
+    const paramElement = document.getElementById(`input-existing-loan-${param}-${loanId}`);
 
     // Get contract
     const provider = getProvider();
@@ -217,19 +210,41 @@ function App() {
     );
 
     // Update parameter
-    await loanRequestContract.setLoanParam(
-      ethers.constants.Zero,
-      "token_id",
-      tokenId,
-      ethers.constants.AddressZero
-    );
+    switch (param) {
+      case 'nft':
+        await loanRequestContract.setLoanParam(
+          loanId,
+          param,
+          ethers.constants.Zero,
+          paramElement.value
+        );
+        break;
+      case 'token-id':
+      case 'duration':
+        await loanRequestContract.setLoanParam(
+          loanId,
+          param.replace('-', '_'),
+          ethers.BigNumber.from(paramElement.value),
+          ethers.constants.AddressZero
+        );
+        break;
+      case 'value':
+      case 'rate':
+        await loanRequestContract.setLoanParam(
+          loanId,
+          param,
+          ethers.utils.parseUnits(paramElement.value),
+          ethers.constants.AddressZero
+        );
+        break;
+    }
 
     // Set state variables
-    setCurrentNftAddress(nft);
-    setCurrentTokenId(tokenId.toNumber());
-    setCurrentLoanValue(ethers.utils.formatEther(initialLoanValue));
-    setCurrentLoanRate(ethers.utils.formatEther(rate));
-    setCurrentLoanDuration(duration);
+    if (param === 'nft') setCurrentNftAddress(paramElement.value);
+    if (param === 'token-id') setCurrentTokenId(paramElement.value);
+    if (param === 'value') setCurrentLoanValue(paramElement.value);
+    if (param === 'rate') setCurrentLoanRate(paramElement.value);
+    if (param === 'duration') setCurrentLoanDuration(paramElement.value);
   }
 
   const sponsorLoan = async () => {
@@ -255,7 +270,7 @@ function App() {
       return (
         <ExistingLoansForm
           key={i}
-          loanNumber={i + 1}
+          loanNumber={i}
           updateFunc={updateLoan}
           {...accountLoan}
         />
