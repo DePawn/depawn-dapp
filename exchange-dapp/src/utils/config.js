@@ -5,7 +5,10 @@ export const alchemy = (ALCHEMY_MAINNET_URL) => {
     return createAlchemyWeb3(ALCHEMY_MAINNET_URL);
 }
 
-export const config = async (network) => {
+export const config = (network) => {
+    console.log(`Grabbing artifacts from ../artifacts/${network}`);
+    console.log(`Grabbing contract address from ../static/${network}`);
+
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestAddress = require(`../static/${network}/LoanRequestAddress.json`);
 
@@ -14,7 +17,7 @@ export const config = async (network) => {
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestAddress.loanRequestAddress,
         RPC_PROVIDER: 'ALCHEMY',
-        NETWORK: '31337',
+        NETWORK: network,
         GAS_LIMIT: 100000,
         RPC_PORT: {
             GANACHE: '8555',

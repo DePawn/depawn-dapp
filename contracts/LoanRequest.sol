@@ -122,6 +122,10 @@ contract LoanRequest is MultiSig {
             loanRequests[_borrower][_loanId].duration != 0;
     }
 
+    function getBorrowers() external view returns (address[] memory) {
+        return borrowers;
+    }
+
     function getLoans(address _borrower)
         external
         view
@@ -148,81 +152,47 @@ contract LoanRequest is MultiSig {
         return _getSignStatus(_safeId, _signer);
     }
 
-    /*
-    function setCollateral(uint256 _loanId, address _collateral)
+    function setLoanParam(
+        uint256 _loanId,
+        string memory _param,
+        uint256 _value,
+        address _address
+    )
         external
         onlyHasLoan(msg.sender)
         onlyBorrower(_loanId)
         onlyNotConfirmed(msg.sender, _loanId)
     {
-        require(
-            _collateral != loanRequests[msg.sender][_loanId].collateral,
-            "Collateral should not be the same as existing."
-        );
-        require(_collateral != address(0), "Collateral cannot be address 0.");
-
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
+        LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
+        uint256 _safeId = _loanRequest.safeId;
         _unsign(_safeId, true);
 
-        loanRequests[msg.sender][_loanId].collateral = _collateral;
-        emit SubmittedLoanRequest(msg.sender, _loanId);
-    }
-    
-    function setInitialLoanValue(uint256 _loanId, uint256 _initialLoanValue)
-        external
-        onlyHasLoan(msg.sender)
-        onlyBorrower(_loanId)
-        onlyNotConfirmed(msg.sender, _loanId)
-    {
-        require(
-            _initialLoanValue !=
-                loanRequests[msg.sender][_loanId].initialLoanValue,
-            "Initial loan value should not be the same as existing."
+        if (keccak256(bytes(_param)) == keccak256(bytes("collateral"))) {
+            _loanRequest.collateral = _address;
+        } else if (keccak256(bytes(_param)) == keccak256(bytes("token_id"))) {
+            _loanRequest.tokenId = _value;
+        } else if (keccak256(bytes(_param)) == keccak256(bytes("value"))) {
+            _loanRequest.initialLoanValue = _value;
+        } else if (keccak256(bytes(_param)) == keccak256(bytes("rate"))) {
+            _loanRequest.rate = _value;
+        } else if (keccak256(bytes(_param)) == keccak256(bytes("duration"))) {
+            _loanRequest.duration = uint64(_value);
+        } else {
+            revert(
+                "Param must be one of ['collateral', 'token_id', 'value', 'rate', 'duration']."
+            );
+        }
+
+        emit SubmittedLoanRequest(
+            msg.sender,
+            _loanId,
+            _loanRequest.collateral,
+            _loanRequest.tokenId,
+            _loanRequest.initialLoanValue,
+            _loanRequest.rate,
+            _loanRequest.duration
         );
-
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        _unsign(_safeId, true);
-
-        loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
-        emit SubmittedLoanRequest(msg.sender, _loanId);
     }
-
-    function setRate(uint256 _loanId, uint256 _rate)
-        external
-        onlyHasLoan(msg.sender)
-        onlyBorrower(_loanId)
-        onlyNotConfirmed(msg.sender, _loanId)
-    {
-        require(
-            _rate != loanRequests[msg.sender][_loanId].rate,
-            "Rate should not be the same as existing."
-        );
-
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        _unsign(_safeId, true);
-
-        loanRequests[msg.sender][_loanId].rate = _rate;
-        emit SubmittedLoanRequest(msg.sender, _loanId);
-    }
-
-    function setDuration(uint256 _loanId, uint64 _duration)
-        external
-        onlyHasLoan(msg.sender)
-        onlyBorrower(_loanId)
-        onlyNotConfirmed(msg.sender, _loanId)
-    {
-        require(
-            _duration != loanRequests[msg.sender][_loanId].duration,
-            "Duration should not be the same as existing."
-        );
-
-        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        _unsign(_safeId, true);
-
-        loanRequests[msg.sender][_loanId].duration = _duration;
-        emit SubmittedLoanRequest(msg.sender, _loanId);
-    }
-    */
 
     /*
      *  Set the loan Lender.

@@ -4,9 +4,13 @@ html {
   background: #222;
 }
 
-h1, h2, .label {  
+h1, h2, h3, .label {  
   font-weight: bold;
   text-shadow: 1px 1px 3px #000;
+}
+
+h3 {
+  margin-top: 0;
 }
 
 div {
@@ -26,6 +30,7 @@ div {
 }
 
 .container-loan-request-form-master,
+.container-existing-loan-form-master,
 .container-loan-contracts-master {
   width: 50%;
   padding: 0 5%;
@@ -42,6 +47,7 @@ div {
 }
 
 .container-loan-request-form,
+.container-existing-loan-form,
 .container-loan-contracts {
   width: 475px;
   margin: 40px auto;
@@ -54,7 +60,8 @@ div {
   -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
 }
 
-.container-loan-request-component {
+.container-loan-request-component,
+.container-existing-loan-component {
   margin: 0;
   padding: 0;
   display: flex;
@@ -105,7 +112,7 @@ div {
 }
 
 .button-loan-request {
-  width: 50px;
+    width: 50px;
 }
 
 .button-connect-wallet,
@@ -124,7 +131,32 @@ div {
   top: 0;
 }
 
-.button-loan-request-create {
-  width: 120px;
+.container-existing-loan-buttons {
+  width: 300px;
+  margin: 0 auto;
+  padding: 0;
+  /* background: orange; */
+  display: flex;
+  flex-direction: row;
 }
 
+.button-existing-loan {
+  width: 100px;
+  padding: 6px 0 8px 0;
+}
+
+.button-existing-loan-update {
+  margin-right: 20px;
+}
+
+.button-existing-loan-sign {
+  margin-left: 20px;
+}
+
+.button-loan-request-create {
+    width: 120px;
+}
+
+.button-loan-request-submitted {
+    width: 140px;
+}

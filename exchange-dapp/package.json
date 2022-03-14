@@ -16,6 +16,7 @@
   },
   "scripts": {
     "start": "react-dotenv && react-scripts start",
+    "server": "nodemon server.js",
     "build": "react-dotenv && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

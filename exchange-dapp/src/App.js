@@ -1,22 +1,53 @@
 import './App.css';
 import LoanRequestForm from './components/LoanRequestForm';
+import ExistingLoansForm from './components/ExistingLoansForm';
 
 import React, { useEffect, useState } from 'react';
 import env from 'react-dotenv';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
-import { networks } from './utils/networks';
-import { alchemy, config } from './utils/config.js';
+import { config } from './utils/config.js';
 
+const DEFAULT_LOAN_REQUEST_PARAMETERS = {
+  defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
+  defaultTokenId: '7',
+  defaultInitialLoanValue: '3.2',
+  defaultRate: '0.02',
+  defaultDuration: '24'
+}
 
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
-  const [nftAddress, setNftAddress] = useState('');
-  const [loanValue, setLoanValue] = useState('');
-  const [loanRate, setLoanRate] = useState('');
-  const [loanDuration, setLoanDuration] = useState('');
-  const [loanLender, setLoanLender] = useState('');
+  const [currentNftAddress, setCurrentNftAddress] = useState('');
+  const [currentTokenId, setCurrentTokenId] = useState('');
+  const [currentLoanValue, setCurrentLoanValue] = useState('');
+  const [currentLoanRate, setCurrentLoanRate] = useState('');
+  const [currentLoanDuration, setCurrentLoanDuration] = useState('');
+  const [currentLoanLender, setCurrentLoanLender] = useState('');
+  const [currentAccountLoans, setCurrentAccountLoans] = useState('');
+  const [existingLoanElements, setExistingLoanElements] = useState('');
+
+  useEffect(() => {
+    checkIfWalletIsConnected()
+  }, []);
+
+  useEffect(() => {
+    getAccountLoanRequests();
+  }, [
+    currentAccount,
+    currentNetwork,
+    currentNftAddress,
+    currentTokenId,
+    currentLoanValue,
+    currentLoanRate,
+    currentLoanDuration,
+    currentLoanLender
+  ]);
+
+  useEffect(() => {
+    renderExistingLoanElements();
+  }, [currentAccountLoans]);
 
   /*
    * Connect Wallet Callback
@@ -31,7 +62,7 @@ function App() {
       }
 
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      console.log('Connected to account: ', accounts[0]);
+      // console.log('Connected to account: ', accounts[0]);
       setCurrentAccount(accounts[0]);
 
       ethereum.on('accountsChanged', async (_) => {
@@ -72,9 +103,9 @@ function App() {
 
     let chainId = await ethereum.request({ method: 'eth_chainId' });
     chainId = parseInt(chainId, 16).toString();
-    console.log('Current chain ID: ', chainId);
     setCurrentNetwork(chainId);
 
+    console.log('Current chain ID: ', chainId);
     ethereum.on('chainChanged', handleChainChanged);
 
     function handleChainChanged(_chainId) {
@@ -82,25 +113,11 @@ function App() {
     }
   }
 
-  const setLoanRequestListeners = async (account) => {
-    // Get contract
-    console.log(currentAccount)
-    const provider = getProvider();
-    const borrower = provider.getSigner(account);
-
-    const { loanRequestAddress, loanRequestABI } = await config(currentNetwork);
-    const loanRequestContract = new ethers.Contract(
-      loanRequestAddress,
-      loanRequestABI,
-      borrower
-    );
-
+  const setLoanRequestListeners = async (loanRequestContract) => {
     // Set loan request listener
-    loanRequestContract.on('DeployedLoanContract', async (_contract, _borrower, _lender) => {
-      console.log('CONTRACT DEPLOYED!');
-      console.log('contract: ', _contract);
-      console.log('borrower: ', _borrower);
-      console.log('lender: ', _lender);
+    loanRequestContract.on('SubmittedLoanRequest', async () => {
+      await getAccountLoanRequests();
+      console.log('LISTENER TRIGGERED!')
     });
   }
 
@@ -108,9 +125,34 @@ function App() {
     return `${addrStr.slice(0, 5)}...${addrStr.slice(-4)}`;
   }
 
-  useEffect(() => {
-    checkIfWalletIsConnected();
-  }, []);
+  /*
+   * Get all loan request parameters for each loan submitted by user.
+   */
+  const getAccountLoanRequests = async () => {
+    if (currentAccount === '' || currentNetwork === '') { return; }
+
+    // Get contract
+    const provider = getProvider();
+    const borrower = provider.getSigner(currentAccount);
+    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+
+    const loanRequestContract = new ethers.Contract(
+      loanRequestAddress,
+      loanRequestABI,
+      borrower
+    );
+
+    // Get loan requests
+    const loanRequests = await loanRequestContract.getLoans(currentAccount);
+    const loans = loanRequests.map((loan) => {
+      const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
+      return { collateral, tokenId, initialLoanValue, rate, duration, lender };
+    });
+
+    // Set loan request parameters
+    console.log('ACCOUNT LOANS: ', loans);
+    setCurrentAccountLoans(loans);
+  }
 
   /*
    * Submit Loan Request Callback
@@ -122,74 +164,112 @@ function App() {
   const submitLoanRequest = async () => {
     // Get input values
     const nft = document.getElementById('input-nft').value;
-    const initialLoanValue = ethers.BigNumber.from(document.getElementById('input-initial-value').value);
-    const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
-    const duration = ethers.BigNumber.from(document.getElementById('input-duration').value);
+    const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
+    const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+    const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
+    const duration = document.getElementById('input-duration').value;
     const lenderAddress = ethers.constants.AddressZero;
 
     // Get contract
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
-    console.log('currentAccount: ', currentAccount);
 
-    // console.log('PROVIDER: ', provider);
-    const borrowerAddress = await borrower.getAddress();
-    // console.log('borrowerAddress: ', borrowerAddress);
-
-    const { loanRequestAddress, loanRequestABI } = await config(currentNetwork);
+    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
       loanRequestABI,
       borrower
     );
-    await setLoanRequestListeners();
+    await setLoanRequestListeners(loanRequestContract);
 
-    // const borrowerLoans = await loanRequestContract.getLoans(borrowerAddress);
-    // console.log('LOANS: ', borrowerLoans);
-
-    // // Create loan request
-    // const loanId = borrowerLoans;
-    // console.log('LOAN ID: ', loanId.length.toString());
-
-    let tx = await loanRequestContract.createLoanRequest(
+    // Create new loan request
+    await loanRequestContract.createLoanRequest(
       nft,
-      ethers.constants.Zero,
+      tokenId,
       initialLoanValue,
       rate,
       duration,
       ethers.constants.AddressZero
     );
 
-    let receipt = await tx.wait();
-    let events = receipt.events.map(ev => ev.event);
-
-    console.log(receipt);
-    console.log(events);
-
     // Set state variables
-    setNftAddress(nft);
-    setLoanValue(initialLoanValue.toNumber());
-    setLoanRate(rate.toNumber());
-    setLoanDuration(duration.toNumber());
-    setLoanLender(lenderAddress);
+    setCurrentNftAddress(nft);
+    setCurrentTokenId(currentTokenId.toNumber());
+    setCurrentLoanValue(ethers.utils.formatEther(initialLoanValue));
+    setCurrentLoanRate(ethers.utils.formatEther(rate));
+    setCurrentLoanDuration(duration);
+    setCurrentLoanLender(lenderAddress);
+
+    await getAccountLoanRequests();
+  }
+
+  const updateLoan = async () => {
+    // Get input values
+    const nft = document.getElementById('input-existing-loan-nft').value;
+    const tokenId = ethers.BigNumber.from(document.getElementById('input-existing-loan-token-id').value);
+    const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-existing-loan-initial-value').value);
+    const rate = ethers.utils.parseUnits(document.getElementById('input-existing-loan-rate').value);
+    const duration = document.getElementById('input-existing-loan-duration').value;
+
+    // Get contract
+    const provider = getProvider();
+    const borrower = provider.getSigner(currentAccount);
+
+    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+
+    const loanRequestContract = new ethers.Contract(
+      loanRequestAddress,
+      loanRequestABI,
+      borrower
+    );
+
+    // Update parameter
+    await loanRequestContract.setLoanParam(
+      ethers.constants.Zero,
+      "token_id",
+      tokenId,
+      ethers.constants.AddressZero
+    );
+
+    setCurrentTokenId(tokenId);
   }
 
   const sponsorLoan = async () => {
-    const { isDev } = await config(currentNetwork);
+    const { isDev } = config(currentNetwork);
 
     const provider = getProvider();
     const lender = isDev
-      ? provider.getSigner(process.env.NFT_ACCOUNT_ADDRESS)
+      ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
       : provider.getSigner(currentAccount);
     const lenderAddress = await lender.getAddress();
-    console.log('Lender address: ', lenderAddress);
+    // console.log('Lender address: ', lenderAddress);
 
     // Signoff and create new contract
     // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
 
     // const lenderAddress = document.getElementById('input-lender').value;
+  }
 
+  const renderExistingLoanElements = async () => {
+    if (currentAccountLoans === '') { return; }
+
+    setExistingLoanElements(currentAccountLoans.map((accountLoan, i) => {
+      return (
+        <ExistingLoansForm
+          key={i}
+          loanNumber={i + 1}
+          updateFunc={updateLoan}
+          {...accountLoan}
+        />
+      )
+    }));
+
+    return (
+      <div>
+        {existingLoanElements}
+      </div>
+    )
   }
 
   return (
@@ -205,16 +285,16 @@ function App() {
           <div className="container-loan-forms">
             <div className="container-loan-request-form-master">
               <h2>Loan Requests</h2>
-              <LoanRequestForm submitCallback={submitLoanRequest} />
+              <LoanRequestForm
+                submitCallback={submitLoanRequest}
+                funcCallback={getAccountLoanRequests}
+                {...DEFAULT_LOAN_REQUEST_PARAMETERS}
+              />
             </div>
             <div className="wedge"></div>
             <div className="container-loan-contracts-master">
-              <h2>Loan Contracts</h2>
-              <div className="container-loan-contracts">
-                <div className="container-loan-request-create">
-                  <div className="button button-loan-request button-loan-request-create" onClick={sponsorLoan}>Sponsor Loan</div>
-                </div>
-              </div>
+              <h2>Existing Loans</h2>
+              {!!existingLoanElements && existingLoanElements}
             </div>
           </div>
         </div>
