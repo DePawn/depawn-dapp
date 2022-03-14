@@ -8,7 +8,8 @@ module.exports = {
         MAINNET_FORK: '8545'
     },
     CHAINID: {
-        '1337': 'HARDHAT',
+        // '31337': 'HARDHAT',
+        '31337': 'MAINNET_FORK',
         '1447': 'GANACHE',
         '4': 'RINKEBY',
         '42': 'KOVAN',

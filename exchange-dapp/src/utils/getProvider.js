@@ -14,6 +14,7 @@ export default function getProvider() {
         case '31337':
             // HARDHAT
             provider = new ethers.providers.Web3Provider(ethereum);
+            console.log(provider)
             break;
         case '4':
         case '42':

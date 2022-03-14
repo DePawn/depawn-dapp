@@ -6,8 +6,6 @@ import "./LoanContract.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import "hardhat/console.sol";
-
 contract LoanRequest is MultiSig {
     struct LoanStatus {
         uint256 safeId;
@@ -49,7 +47,7 @@ contract LoanRequest is MultiSig {
         uint256 _rate,
         uint64 _duration,
         address _lender
-    ) public  returns(uint256){
+    ) public returns (uint256) {
         require(_collateral != address(0), "Collateral cannot be address 0.");
         require(msg.sender != _lender, "Lender cannot be the borrower.");
 
@@ -72,7 +70,11 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
 
-        IERC721(_collateral).safeTransferFrom(msg.sender, address(this), _tokenId);
+        IERC721(_collateral).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _tokenId
+        );
 
         // Set lender
         if (_lender != address(0)) {
@@ -101,21 +103,27 @@ contract LoanRequest is MultiSig {
         return _loanId;
     }
 
-    function withdrawNFT(address _borrower, uint256 _loanId) 
-        external 
+    function withdrawNFT(address _borrower, uint256 _loanId)
+        external
         onlyHasLoan(_borrower)
         onlyNotConfirmed(_borrower, _loanId)
         onlyBorrower(_loanId)
     {
         address collateral = loanRequests[_borrower][_loanId].collateral;
         uint256 tokenId = loanRequests[_borrower][_loanId].tokenId;
-        console.log(collateral);
-        console.log(tokenId);
         IERC721(collateral).safeTransferFrom(address(this), _borrower, tokenId);
     }
 
-    function onERC721Received(address , address , uint256 , bytes calldata ) external pure returns(bytes4) {
-        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return
+            bytes4(
+                keccak256("onERC721Received(address,address,uint256,bytes)")
+            );
     }
 
     /*
@@ -135,7 +143,7 @@ contract LoanRequest is MultiSig {
         returns (bool _isReady)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        address _lender = getLender(_borrower, _loanId);
+        address _lender = getSigner(_loanId, lenderPosition);
 
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
@@ -146,26 +154,13 @@ contract LoanRequest is MultiSig {
             loanRequests[_borrower][_loanId].duration != 0;
     }
 
-    function getBorrowers() external view returns (address[] memory) {
-        return borrowers;
-    }
-
-    function getLoans(address _borrower)
-        external
-        view
-        returns (LoanStatus[] memory)
-    {
-        return loanRequests[_borrower];
-    }
-
-    function getLender(address _borrower, uint256 _loanId)
-        public
-        view
-        returns (address)
-    {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        return _getLender(_safeId);
-    }
+    // function getLoans(address _borrower)
+    //     external
+    //     view
+    //     returns (LoanStatus[] memory)
+    // {
+    //     return loanRequests[_borrower];
+    // }
 
     function getSignStatus(
         address _signer,
@@ -191,15 +186,17 @@ contract LoanRequest is MultiSig {
         uint256 _safeId = _loanRequest.safeId;
         _unsign(_safeId, true);
 
-        if (keccak256(bytes(_param)) == keccak256(bytes("collateral"))) {
+        bytes32 _paramHash = keccak256(bytes(_param));
+
+        if (_paramHash == keccak256(bytes("collateral"))) {
             _loanRequest.collateral = _address;
-        } else if (keccak256(bytes(_param)) == keccak256(bytes("token_id"))) {
+        } else if (_paramHash == keccak256(bytes("token_id"))) {
             _loanRequest.tokenId = _value;
-        } else if (keccak256(bytes(_param)) == keccak256(bytes("value"))) {
+        } else if (_paramHash == keccak256(bytes("value"))) {
             _loanRequest.initialLoanValue = _value;
-        } else if (keccak256(bytes(_param)) == keccak256(bytes("rate"))) {
+        } else if (_paramHash == keccak256(bytes("rate"))) {
             _loanRequest.rate = _value;
-        } else if (keccak256(bytes(_param)) == keccak256(bytes("duration"))) {
+        } else if (_paramHash == keccak256(bytes("duration"))) {
             _loanRequest.duration = uint64(_value);
         } else {
             revert(
@@ -230,12 +227,12 @@ contract LoanRequest is MultiSig {
         onlyNotConfirmed(_borrower, _loanId)
     {
         require(
-            msg.sender != getLender(_borrower, _loanId),
+            msg.sender != getSigner(_loanId, lenderPosition),
             "Lender should not be the same as existing."
         );
 
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        address _currentLender = getLender(_borrower, _loanId);
+        address _currentLender = getSigner(_loanId, lenderPosition);
 
         require(
             _getSignStatus(_safeId, _currentLender) == false,
@@ -277,9 +274,17 @@ contract LoanRequest is MultiSig {
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
-            address loanContractAddress = __deployLoanContract(_borrower, _loanId);
-            require(loanValue == msg.value, "loan value doesn't match amount sent");
-            (bool success, ) = payable(loanContractAddress).call{value: msg.value}("");
+            address loanContractAddress = __deployLoanContract(
+                _borrower,
+                _loanId
+            );
+            require(
+                loanValue == msg.value,
+                "loan value doesn't match amount sent"
+            );
+            (bool success, ) = payable(loanContractAddress).call{
+                value: msg.value
+            }("");
             require(success, "Transfer failed.");
         }
     }
@@ -295,10 +300,11 @@ contract LoanRequest is MultiSig {
 
     function __deployLoanContract(address _borrower, uint256 _loanId)
         private
-        onlyHasLoan(_borrower) returns(address)
+        onlyHasLoan(_borrower)
+        returns (address)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        address _lender = getLender(_borrower, _loanId);
+        address _lender = getSigner(_loanId, lenderPosition);
         _setConfirmedStatus(_safeId);
 
         LoanContract _loanContract = new LoanContract(
@@ -311,10 +317,15 @@ contract LoanRequest is MultiSig {
         );
         address _loanContractAddress = address(_loanContract);
 
-
-
-        IERC721(loanRequests[_borrower][_loanId].collateral).approve(_loanContractAddress, loanRequests[_borrower][_loanId].tokenId);
-        IERC721(loanRequests[_borrower][_loanId].collateral).safeTransferFrom(address(this), _loanContractAddress, loanRequests[_borrower][_loanId].tokenId);
+        IERC721(loanRequests[_borrower][_loanId].collateral).approve(
+            _loanContractAddress,
+            loanRequests[_borrower][_loanId].tokenId
+        );
+        IERC721(loanRequests[_borrower][_loanId].collateral).safeTransferFrom(
+            address(this),
+            _loanContractAddress,
+            loanRequests[_borrower][_loanId].tokenId
+        );
 
         loanRequests[_borrower][_loanId].loanContract = _loanContractAddress;
 

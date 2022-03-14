@@ -22,7 +22,6 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "react-hooks/exhaustive-deps": "off",
     "extends": [
       "react-app",
       "react-app/jest"

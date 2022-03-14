@@ -8,6 +8,7 @@ import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config.js';
 import { getSubAddress } from './utils/addressUtils';
+import { assert } from 'chai';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
   defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
@@ -25,7 +26,9 @@ function App() {
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
   const [currentLoanDuration, setCurrentLoanDuration] = useState('');
+  // eslint-disable-next-line
   const [currentLoanLender, setCurrentLoanLender] = useState('');
+  // eslint-disable-next-line
   const [currentAccountLoans, setCurrentAccountLoans] = useState('');
   const [existingLoanElements, setExistingLoanElements] = useState('');
 
@@ -35,6 +38,7 @@ function App() {
 
   useEffect(() => {
     getAccountLoanRequests();
+    // eslint-disable-next-line
   }, [
     currentAccount,
     currentNetwork,
@@ -48,6 +52,7 @@ function App() {
 
   useEffect(() => {
     renderExistingLoanElements();
+    // eslint-disable-next-line
   }, [currentAccountLoans]);
 
   /*
@@ -63,7 +68,7 @@ function App() {
       }
 
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      // console.log('Connected to account: ', accounts[0]);
+      console.log('Connected to account: ', accounts[0]);
       setCurrentAccount(accounts[0]);
 
       ethereum.on('accountsChanged', async (_) => {
@@ -127,6 +132,9 @@ function App() {
    */
   const getAccountLoanRequests = async () => {
     if (currentAccount === '' || currentNetwork === '') { return; }
+    console.log('getAccountLoanRequests -- currentAccount: ', currentAccount);
+    console.log('getAccountLoanRequests -- currentNetwork: ', currentNetwork)
+    console.log(ethers)
 
     // Get contract
     const provider = getProvider();
@@ -140,15 +148,18 @@ function App() {
     );
 
     // Get loan requests
-    const loanRequests = await loanRequestContract.getLoans(currentAccount);
-    const loans = loanRequests.map((loan) => {
-      const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
-      return { collateral, tokenId, initialLoanValue, rate, duration, lender };
-    });
+    const testData = await loanRequestContract.borrowers(ethers.constants.Zero);
+    console.log('BORROWERS: ', testData);
+
+    // const loanRequests = await loanRequestContract.getLoans(currentAccount);
+    // const loans = loanRequests.map((loan) => {
+    //   const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
+    //   return { collateral, tokenId, initialLoanValue, rate, duration, lender };
+    // });
 
     // Set loan request parameters
-    console.log('ACCOUNT LOANS: ', loans);
-    setCurrentAccountLoans(loans);
+    // console.log('ACCOUNT LOANS: ', loans);
+    // setCurrentAccountLoans(loans);
   }
 
   /*
@@ -170,8 +181,10 @@ function App() {
     // Get contract
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
+    console.log('CURRENT ACCOUNT: ', currentAccount)
 
     const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+    console.log(loanRequestAddress)
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
@@ -179,6 +192,7 @@ function App() {
       borrower
     );
     await setLoanRequestListeners(loanRequestContract);
+    console.log('SUBMIT LOAN REQ: ', loanRequestContract)
 
     // Create new loan request
     await loanRequestContract.createLoanRequest(
@@ -187,10 +201,11 @@ function App() {
       initialLoanValue,
       rate,
       duration,
-      ethers.constants.AddressZero
+      lenderAddress
     );
+    console.log("I made it :)")
 
-    await getAccountLoanRequests();
+    // await getAccountLoanRequests();
   }
 
   const updateLoan = async (loanId, param) => {
@@ -237,6 +252,8 @@ function App() {
           ethers.constants.AddressZero
         );
         break;
+      default:
+        assert("Invalid parameter.");
     }
 
     // Set state variables
@@ -247,21 +264,21 @@ function App() {
     if (param === 'duration') setCurrentLoanDuration(paramElement.value);
   }
 
-  const sponsorLoan = async () => {
-    const { isDev } = config(currentNetwork);
+  // const sponsorLoan = async () => {
+  //   const { isDev } = config(currentNetwork);
 
-    const provider = getProvider();
-    const lender = isDev
-      ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
-      : provider.getSigner(currentAccount);
-    const lenderAddress = await lender.getAddress();
-    // console.log('Lender address: ', lenderAddress);
+  //   const provider = getProvider();
+  //   const lender = isDev
+  //     ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
+  //     : provider.getSigner(currentAccount);
+  //   const lenderAddress = await lender.getAddress();
+  //   // console.log('Lender address: ', lenderAddress);
 
-    // Signoff and create new contract
-    // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
+  //   // Signoff and create new contract
+  //   // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
 
-    // const lenderAddress = document.getElementById('input-lender').value;
-  }
+  //   // const lenderAddress = document.getElementById('input-lender').value;
+  // }
 
   const renderExistingLoanElements = async () => {
     if (currentAccountLoans === '') { return; }

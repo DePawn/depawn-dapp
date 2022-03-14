@@ -28,18 +28,18 @@ abstract contract MultiSig {
 
         // Lock out first safe.
         safes.push();
-        safes[0].signers[0] = address(0);
-        safes[0].signers[1] = address(0);
-        safes[0].signers[2] = address(0);
+        for (uint256 i; i < required; i++) {
+            safes[0].signers[i] = address(0);
+        }
     }
 
-    function _getSigners(uint256 _safeId)
-        internal
+    function getSigner(uint256 _safeId, uint256 _position)
+        public
         view
-        returns (address[3] memory)
+        returns (address)
     {
-        address[3] memory _signers = safes[_safeId].signers;
-        return _signers;
+        address _signer = safes[_safeId].signers[_position];
+        return _signer;
     }
 
     function _getConfirmed(uint256 _safeId) internal view returns (bool) {
@@ -56,25 +56,12 @@ abstract contract MultiSig {
         return _status;
     }
 
-    function _getBorrower(uint256 _safeId) internal view returns (address) {
-        address _borrower = safes[_safeId].signers[0];
-        return _borrower;
-    }
-
-    function _getLender(uint256 _safeId) internal view returns (address) {
-        address _lender = safes[_safeId].signers[1];
-        return _lender;
-    }
-
-    function _getArbiter(uint256 _safeId) internal view returns (address) {
-        address _arbiter = safes[_safeId].signers[2];
-        return _arbiter;
-    }
-
     function _isSigner() internal view returns (bool _isSigner_) {
-        _isSigner_ = safe.signers[0] == msg.sender ? true : _isSigner_;
-        _isSigner_ = safe.signers[1] == msg.sender ? true : _isSigner_;
-        _isSigner_ = safe.signers[2] == msg.sender ? true : _isSigner_;
+        uint256 i;
+
+        while (!_isSigner_ || i < required) {
+            _isSigner_ = safe.signers[i] == msg.sender ? true : _isSigner_;
+        }
     }
 
     function _createSafe() internal {
