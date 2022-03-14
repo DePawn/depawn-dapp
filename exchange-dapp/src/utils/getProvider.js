@@ -11,6 +11,10 @@ export default function getProvider() {
             const url = `http://127.0.0.1:8555`;
             provider = new ethers.providers.JsonRpcProvider(url);
             break;
+        case '31337':
+            // HARDHAT
+            provider = new ethers.providers.Web3Provider(ethereum);
+            break;
         case '4':
         case '42':
             // RINKEBY / KOVAN
