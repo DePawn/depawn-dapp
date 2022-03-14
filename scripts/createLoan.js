@@ -35,8 +35,8 @@ async function main() {
     //let txn4 = await loanRequestContract.withdrawNFT(nftContract.address, tokenId);
     //await txn4.wait();
 
-    let txn5 = await nftContract.ownerOf(tokenId);
-    console.log("Owner is again:", txn5);
+    //let txn5 = await nftContract.ownerOf(tokenId);
+    //console.log("Owner is again:", txn5);
 
 
 

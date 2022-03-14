@@ -4,6 +4,7 @@ pragma solidity ^0.8.5;
 import "./MultiSig.sol";
 import "./LoanContract.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "hardhat/console.sol";
 
@@ -48,7 +49,7 @@ contract LoanRequest is MultiSig {
         uint256 _rate,
         uint64 _duration,
         address _lender
-    ) public {
+    ) public  returns(uint256){
         require(_collateral != address(0), "Collateral cannot be address 0.");
         require(msg.sender != _lender, "Lender cannot be the borrower.");
 
@@ -70,6 +71,8 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
+
+        IERC721(_collateral).safeTransferFrom(msg.sender, address(this), _tokenId);
 
         // Set lender
         if (_lender != address(0)) {
@@ -95,8 +98,28 @@ contract LoanRequest is MultiSig {
             )
         );
         require(success, "Borrower loan signoff failed.");
+        return _loanId;
     }
 
+    function withdrawNFT(address _borrower, uint256 _loanId) 
+        external 
+        onlyHasLoan(_borrower)
+        onlyNotConfirmed(_borrower, _loanId)
+        onlyBorrower(_loanId)
+    {
+        address collateral = loanRequests[_borrower][_loanId].collateral;
+        uint256 tokenId = loanRequests[_borrower][_loanId].tokenId;
+        console.log(collateral);
+        console.log(tokenId);
+        IERC721(collateral).safeTransferFrom(address(this), _borrower, tokenId);
+    }
+
+    function onERC721Received(address , address , uint256 , bytes calldata ) external pure returns(bytes4) {
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
+    }
+
+    /*
+    
     function transfer(
         address receipient,
         address nft,
@@ -104,6 +127,7 @@ contract LoanRequest is MultiSig {
     ) external {
         IERC721(nft).safeTransferFrom(msg.sender, receipient, id);
     }
+    */
 
     function isReady(address _borrower, uint256 _loanId)
         public
@@ -240,8 +264,9 @@ contract LoanRequest is MultiSig {
         }
     }
 
-    function sign(address _borrower, uint256 _loanId) public {
+    function sign(address _borrower, uint256 _loanId) public payable {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        uint256 loanValue = loanRequests[_borrower][_loanId].initialLoanValue;
 
         require(
             _getSignStatus(_safeId, msg.sender) == false,
@@ -252,7 +277,10 @@ contract LoanRequest is MultiSig {
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
-            __deployLoanContract(_borrower, _loanId);
+            address loanContractAddress = __deployLoanContract(_borrower, _loanId);
+            require(loanValue == msg.value, "loan value doesn't match amount sent");
+            (bool success, ) = payable(loanContractAddress).call{value: msg.value}("");
+            require(success, "Transfer failed.");
         }
     }
 
@@ -267,7 +295,7 @@ contract LoanRequest is MultiSig {
 
     function __deployLoanContract(address _borrower, uint256 _loanId)
         private
-        onlyHasLoan(_borrower)
+        onlyHasLoan(_borrower) returns(address)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
         address _lender = getLender(_borrower, _loanId);
@@ -276,11 +304,18 @@ contract LoanRequest is MultiSig {
         LoanContract _loanContract = new LoanContract(
             [_borrower, _lender],
             loanRequests[_borrower][_loanId].collateral,
+            loanRequests[_borrower][_loanId].tokenId,
             loanRequests[_borrower][_loanId].initialLoanValue,
             loanRequests[_borrower][_loanId].rate,
             loanRequests[_borrower][_loanId].duration
         );
         address _loanContractAddress = address(_loanContract);
+
+
+
+        IERC721(loanRequests[_borrower][_loanId].collateral).approve(_loanContractAddress, loanRequests[_borrower][_loanId].tokenId);
+        IERC721(loanRequests[_borrower][_loanId].collateral).safeTransferFrom(address(this), _loanContractAddress, loanRequests[_borrower][_loanId].tokenId);
+
         loanRequests[_borrower][_loanId].loanContract = _loanContractAddress;
 
         emit DeployedLoanContract(
@@ -289,6 +324,8 @@ contract LoanRequest is MultiSig {
             _lender,
             _loanId
         );
+
+        return _loanContractAddress;
     }
 
     modifier onlyBorrower(uint256 _loanId) {
