@@ -39,6 +39,12 @@ contract LoanRequest is MultiSig {
         uint256 _value
     );
 
+    event LoanRequestLenderChanged(
+        address indexed _borrower,
+        uint256 indexed _loanId,
+        address _lender
+    );
+
     event DeployedLoanContract(
         address indexed _contract,
         address indexed _borrower,
@@ -214,12 +220,14 @@ contract LoanRequest is MultiSig {
                     _loanId
                 )
             );
+            emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
             // If msg.sender == borrower, unsign lender and set lender
             // to address(0).
             // _unsign(_safeId, _getSignStatus(_safeId, msg.sender));
             _removeSignature(_safeId, safes[_safeId].signers[1]);
             _setSigner(_safeId, address(0), lenderPosition);
+            emit LoanRequestLenderChanged(msg.sender, _loanId, address(0));
         }
     }
 
