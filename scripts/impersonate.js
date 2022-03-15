@@ -3,9 +3,10 @@ const { ethers } = require("hardhat");
 const hre = require("hardhat");
 require("@nomiclabs/hardhat-ethers");
 
-const erc721 = require("../dapp/artifacts/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json").abi;
+const erc721 = require("../exchange-dapp/src/artifacts/31337/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json").abi;
 
 transferibles = [
+
     {
         owner: "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
@@ -31,16 +32,16 @@ transferibles = [
 ]
 
 async function main() {
-
+    /*
     const preTransferFactory = await hre.ethers.getContractFactory("PreTransfer");
     const preTransferContract = await preTransferFactory.deploy();
     await preTransferContract.deployed();
     console.log("PreTransfer deployed to:", preTransferContract.address);
-
+    */
     provider = new ethers.providers.Web3Provider(hre.network.provider);
     let signers = await hre.ethers.getSigners();
 
-    for(let tr of transferibles) {
+    for (let tr of transferibles) {
 
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
@@ -50,16 +51,24 @@ async function main() {
         const signer = provider.getSigner(tr.owner);
 
         let nftContract = new hre.ethers.Contract(tr.nft, tr.abi, signer);
+        console.log("check1");
         let txn0 = await nftContract.ownerOf(tr.tokenId);
         console.log("Owner is", txn0);
+
+        let tx1 = await nftContract["safeTransferFrom(address,address,uint256)"](tr.owner, tr.recipient, tr.tokenId);
+        await tx1.wait();
+
+        /*
         let txn1 = await nftContract.approve(preTransferContract.address, tr.tokenId);
         await txn1.wait();
         console.log("Approve Token Transfer from Contract");
-
+        
         //const PreTransfer = await hre.ethers.getContractAt("PreTransfer", preTransferContract.address, signer);
         //let txn2 = await PreTransfer.transfer(tr.recipient, tr.nft, tr.tokenId);
         let preTransfer = preTransferContract.connect(signer);
         let txn2 = await preTransfer.transfer(tr.recipient, tr.nft, tr.tokenId);
+        */
+
 
         let txn3 = await nftContract.ownerOf(tr.tokenId);
         console.log("Owner is", txn3);
@@ -77,11 +86,11 @@ async function main() {
     await loanRequestContract.deployed();
     console.log("LoanRequest deployed: ", loanRequestContract.address);
 
-    
 
-    
 
-    
+
+
+
     //Owner 0x5f7bd8e190d30b9db5656749c745b8988ab69cd0
     //NFT 0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D
     //Token ID 5465
@@ -89,10 +98,10 @@ async function main() {
 
 
 
-    
-    
-    
-  
+
+
+
+
 
 
 }

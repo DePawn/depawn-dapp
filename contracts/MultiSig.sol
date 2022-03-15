@@ -14,11 +14,7 @@ abstract contract MultiSig {
     Safe private safe;
     bool private safeLock = true;
 
-    event Staffed(
-        address indexed _borrower,
-        address indexed _lender,
-        address indexed _arbiter
-    );
+    event Staffed(address indexed _borrower, uint256 indexed _safeId);
     event Signed(address indexed _signer, bool _confirmedStatus);
     event Unsigned(address indexed _signer, bool _confirmedStatus);
     event Confirmed(address indexed _contract, bool indexed _confirmedStatus);
@@ -28,23 +24,18 @@ abstract contract MultiSig {
 
         // Lock out first safe.
         safes.push();
-        safes[0].signers[0] = address(0);
-        safes[0].signers[1] = address(0);
-        safes[0].signers[2] = address(0);
+        for (uint256 i; i < required; i++) {
+            safes[0].signers[i] = address(0);
+        }
     }
 
-    function _getSigners(uint256 _safeId)
-        internal
+    function getSigner(uint256 _safeId, uint256 _position)
+        public
         view
-        returns (address[3] memory)
+        returns (address)
     {
-        address[3] memory _signers = safes[_safeId].signers;
-        return _signers;
-    }
-
-    function _getConfirmed(uint256 _safeId) internal view returns (bool) {
-        bool _confirmed = safes[_safeId].confirmed;
-        return _confirmed;
+        address _signer = safes[_safeId].signers[_position];
+        return _signer;
     }
 
     function _getSignStatus(uint256 _safeId, address _signer)
@@ -56,25 +47,16 @@ abstract contract MultiSig {
         return _status;
     }
 
-    function _getBorrower(uint256 _safeId) internal view returns (address) {
-        address _borrower = safes[_safeId].signers[0];
-        return _borrower;
-    }
+    function _isSigner(address _signer)
+        internal
+        view
+        returns (bool _isSigner_)
+    {
+        uint256 i;
 
-    function _getLender(uint256 _safeId) internal view returns (address) {
-        address _lender = safes[_safeId].signers[1];
-        return _lender;
-    }
-
-    function _getArbiter(uint256 _safeId) internal view returns (address) {
-        address _arbiter = safes[_safeId].signers[2];
-        return _arbiter;
-    }
-
-    function _isSigner() internal view returns (bool _isSigner_) {
-        _isSigner_ = safe.signers[0] == msg.sender ? true : _isSigner_;
-        _isSigner_ = safe.signers[1] == msg.sender ? true : _isSigner_;
-        _isSigner_ = safe.signers[2] == msg.sender ? true : _isSigner_;
+        while (!_isSigner_ || i < required) {
+            _isSigner_ = safe.signers[i] == _signer ? true : _isSigner_;
+        }
     }
 
     function _createSafe() internal {
@@ -84,40 +66,23 @@ abstract contract MultiSig {
         safes[_safeId].signers[0] = msg.sender;
     }
 
-    function _sign(uint256 _safeId) internal safeKey(_safeId) onlySigners {
+    function _sign(uint256 _safeId)
+        internal
+        safeKey(_safeId)
+        onlySigner(msg.sender)
+    {
         require(safe.signers[0] != address(0), "Borrower must be set.");
         safe.signStatus[msg.sender] = true;
         emit Signed(msg.sender, safe.confirmed);
     }
 
-    function _unsign(uint256 _safeId, bool _callerSignStatus)
+    function _removeSignature(uint256 _safeId, address _signer)
         internal
         safeKey(_safeId)
-        onlySigners
+        onlySigner(msg.sender)
+        onlySigner(_signer)
     {
-        safe.signStatus[safe.signers[0]] = safe.signers[0] == msg.sender
-            ? _callerSignStatus
-            : false;
-
-        safe.signStatus[safe.signers[1]] = safe.signers[1] == msg.sender
-            ? _callerSignStatus
-            : false;
-
-        safe.signStatus[safe.signers[2]] = safe.signers[2] == msg.sender
-            ? _callerSignStatus
-            : false;
-
-        __setConfirmedStatus();
-
-        emit Unsigned(msg.sender, safe.confirmed);
-    }
-
-    function _removeSignature(uint256 _safeId)
-        internal
-        safeKey(_safeId)
-        onlySigners
-    {
-        safe.signStatus[msg.sender] = false;
+        safe.signStatus[_signer] = false;
 
         __setConfirmedStatus();
 
@@ -129,8 +94,22 @@ abstract contract MultiSig {
         address _signer,
         uint256 _position
     ) internal safeKey(_safeId) {
+        // Either _position is safe creator,
+        // or creator is not equal to _signer
+        require(
+            _position == 0 || safe.signers[0] != _signer,
+            "Signer 0 must be unique."
+        );
+
         safe.signers[_position] = _signer;
         safe.signStatus[safe.signers[_position]] = false;
+
+        uint256 _counter;
+        for (uint256 i; i < required; i++) {
+            _counter = safe.signers[i] != address(0) ? _counter + 1 : _counter;
+        }
+
+        if (_counter >= required) emit Staffed(safe.signers[0], _safeId);
     }
 
     function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
@@ -194,9 +173,9 @@ abstract contract MultiSig {
         safeLock = true;
     }
 
-    modifier onlySigners() {
-        require(msg.sender != address(0), "Address 0 is invalid.");
-        require(_isSigner() == true, "You are not a valid signer.");
+    modifier onlySigner(address _signer) {
+        require(_signer != address(0), "Address 0 is invalid.");
+        require(_isSigner(_signer) == true, "You are not a valid signer.");
         _;
     }
 }

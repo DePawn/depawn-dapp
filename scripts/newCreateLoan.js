@@ -41,8 +41,6 @@ async function main() {
 
     let txn5 = await nftContract.ownerOf(tokenId);
     console.log("Owner is again:", txn5);
-    
-
 
 
 }

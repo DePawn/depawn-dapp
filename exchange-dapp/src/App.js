@@ -10,8 +10,8 @@ import { config } from './utils/config.js';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
-  defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
-  defaultTokenId: '7',
+  defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+  defaultTokenId: '5465',
   defaultInitialLoanValue: '3.2',
   defaultRate: '0.02',
   defaultDuration: '24'
@@ -20,7 +20,9 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
+  // eslint-disable-next-line
   const [currentNftAddress, setCurrentNftAddress] = useState('');
+  // eslint-disable-next-line
   const [currentTokenId, setCurrentTokenId] = useState('');
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
@@ -35,6 +37,7 @@ function App() {
 
   useEffect(() => {
     getAccountLoanRequests();
+    // eslint-disable-next-line
   }, [
     currentAccount,
     currentNetwork,
@@ -48,6 +51,7 @@ function App() {
 
   useEffect(() => {
     renderExistingLoanElements();
+    // eslint-disable-next-line
   }, [currentAccountLoans]);
 
   /*
@@ -114,11 +118,27 @@ function App() {
     }
   }
 
-  const setLoanRequestListeners = async (loanRequestContract) => {
+  const setSubmittedLoanRequestListener = async (loanRequestContract) => {
     // Set loan request listener
     loanRequestContract.on('SubmittedLoanRequest', async () => {
       await getAccountLoanRequests();
-      console.log('LISTENER TRIGGERED!')
+      console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!')
+    });
+  }
+
+  const setLoanRequestChangedListeners = async (loanRequestContract) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestChanged', async () => {
+      await getAccountLoanRequests();
+      console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!')
+    });
+  }
+
+  const setLoanRequestLenderChangedListeners = async (loanRequestContract) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestLenderChanged', async () => {
+      await getAccountLoanRequests();
+      console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!')
     });
   }
 
@@ -142,7 +162,7 @@ function App() {
     // Get loan requests
     const loanRequests = await loanRequestContract.getLoans(currentAccount);
     const loans = loanRequests.map((loan) => {
-      const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
+      let { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
       return { collateral, tokenId, initialLoanValue, rate, duration, lender };
     });
 
@@ -171,14 +191,27 @@ function App() {
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
 
-    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+    const { loanRequestAddress, loanRequestABI, erc721 } = config(currentNetwork);
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
       loanRequestABI,
       borrower
     );
-    await setLoanRequestListeners(loanRequestContract);
+
+    // Set contract event listeners
+    await setSubmittedLoanRequestListener(loanRequestContract);
+    await setLoanRequestChangedListeners(loanRequestContract);
+    await setLoanRequestLenderChangedListeners(loanRequestContract);
+    
+    let nftContract = new ethers.Contract(nft, erc721, borrower);
+    let txn1 = await nftContract.approve(loanRequestAddress, tokenId);
+    await txn1.wait();
+    console.log(currentAccount, loanRequestAddress, tokenId);
+
+    let tx1 = await nftContract["safeTransferFrom(address,address,uint256)"](currentAccount, loanRequestAddress, tokenId);
+    await tx1.wait();
+    console.log("check");
 
     // Create new loan request
     await loanRequestContract.createLoanRequest(
@@ -187,7 +220,6 @@ function App() {
       initialLoanValue,
       rate,
       duration,
-      ethers.constants.AddressZero
     );
 
     await getAccountLoanRequests();
@@ -211,21 +243,11 @@ function App() {
 
     // Update parameter
     switch (param) {
-      case 'nft':
-        await loanRequestContract.setLoanParam(
-          loanId,
-          param,
-          ethers.constants.Zero,
-          paramElement.value
-        );
-        break;
-      case 'token-id':
       case 'duration':
         await loanRequestContract.setLoanParam(
           loanId,
           param.replace('-', '_'),
           ethers.BigNumber.from(paramElement.value),
-          ethers.constants.AddressZero
         );
         break;
       case 'value':
@@ -234,17 +256,20 @@ function App() {
           loanId,
           param,
           ethers.utils.parseUnits(paramElement.value),
-          ethers.constants.AddressZero
         );
         break;
+      case 'lender':
+        await loanRequestContract.setLender(currentAccount, loanId);
+        break;
+      default:
+        console.log("Incorrect params string for updateLoan().");
     }
 
     // Set state variables
-    if (param === 'nft') setCurrentNftAddress(paramElement.value);
-    if (param === 'token-id') setCurrentTokenId(paramElement.value);
     if (param === 'value') setCurrentLoanValue(paramElement.value);
     if (param === 'rate') setCurrentLoanRate(paramElement.value);
     if (param === 'duration') setCurrentLoanDuration(paramElement.value);
+    if (param === 'lender') setCurrentLoanLender(paramElement.value);
   }
 
   const sponsorLoan = async () => {

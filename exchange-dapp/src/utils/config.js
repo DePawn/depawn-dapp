@@ -11,11 +11,13 @@ export const config = (network) => {
 
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestAddress = require(`../static/${network}/LoanRequestAddress.json`);
+    const erc721 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json`);
 
     return {
         isDev: true,
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestAddress.loanRequestAddress,
+        erc721: erc721.abi,
         RPC_PROVIDER: 'ALCHEMY',
         NETWORK: network,
         GAS_LIMIT: 100000,
