@@ -27,7 +27,6 @@ function App() {
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
   const [currentLoanDuration, setCurrentLoanDuration] = useState('');
-  // eslint-disable-next-line
   const [currentLoanLender, setCurrentLoanLender] = useState('');
   const [currentAccountLoans, setCurrentAccountLoans] = useState('');
   const [existingLoanElements, setExistingLoanElements] = useState('');
@@ -135,6 +134,14 @@ function App() {
     });
   }
 
+  const setLoanRequestLenderChangedListeners = async (loanRequestContract) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestLenderChanged', async () => {
+      await getAccountLoanRequests();
+      console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!')
+    });
+  }
+
   /*
    * Get all loan request parameters for each loan submitted by user.
    */
@@ -155,7 +162,7 @@ function App() {
     // Get loan requests
     const loanRequests = await loanRequestContract.getLoans(currentAccount);
     const loans = loanRequests.map((loan) => {
-      const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
+      let { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
       return { collateral, tokenId, initialLoanValue, rate, duration, lender };
     });
 
@@ -191,8 +198,11 @@ function App() {
       loanRequestABI,
       borrower
     );
+
+    // Set contract event listeners
     await setSubmittedLoanRequestListener(loanRequestContract);
     await setLoanRequestChangedListeners(loanRequestContract);
+    await setLoanRequestLenderChangedListeners(loanRequestContract);
 
 
     // Create new loan request
@@ -240,6 +250,9 @@ function App() {
           ethers.utils.parseUnits(paramElement.value),
         );
         break;
+      case 'lender':
+        await loanRequestContract.setLender(currentAccount, loanId);
+        break;
       default:
         console.log("Incorrect params string for updateLoan().");
     }
@@ -248,6 +261,7 @@ function App() {
     if (param === 'value') setCurrentLoanValue(paramElement.value);
     if (param === 'rate') setCurrentLoanRate(paramElement.value);
     if (param === 'duration') setCurrentLoanDuration(paramElement.value);
+    if (param === 'lender') setCurrentLoanLender(paramElement.value);
   }
 
   const sponsorLoan = async () => {

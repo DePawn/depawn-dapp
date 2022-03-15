@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 
-const edit_emoji = "\u{270d}";
+const dark_edit_emoji = "✍🏿";
+const medium_dark_edit_emoji = "✍🏾";
+const medium_edit_emoji = "✍🏽";
+const light_edit_emoji = "✍🏻";
+const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
 export default function ExistingLoansForm(props) {
@@ -20,6 +24,9 @@ export default function ExistingLoansForm(props) {
             /* If the change button ("✍️") is hit... */
             // Set currentEdit to the field being editted
             setCurrentEdit(name);
+
+            // If lender, set to address 0
+            if (name === 'lender') removeLender();
         }
     }
 
@@ -29,12 +36,19 @@ export default function ExistingLoansForm(props) {
         const valueElement = document.getElementById("input-existing-loan-value-" + props.loanNumber);
         const rateElement = document.getElementById("input-existing-loan-rate-" + props.loanNumber);
         const durationElement = document.getElementById("input-existing-loan-duration-" + props.loanNumber);
+        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loanNumber);
 
         if (exclusion !== "nft") nftElement.value = props.collateral;
         if (exclusion !== "token-id") tokenIdElement.value = props.tokenId;
         if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initialLoanValue);
         if (exclusion !== "rate") rateElement.value = ethers.utils.formatEther(props.rate);
         if (exclusion !== "duration") durationElement.value = props.duration;
+        if (exclusion !== "lender") lenderElement.value = props.lender;
+    }
+
+    function removeLender() {
+        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loanNumber);
+        lenderElement.value = ethers.constants.AddressZero;
     }
 
     return (
@@ -90,7 +104,7 @@ export default function ExistingLoansForm(props) {
                         setEditName("value");
                         restoreVals("value");
                     }}>
-                    {currentEdit !== "value" ? edit_emoji : cancel_emoji}
+                    {currentEdit !== "value" ? dark_edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -111,7 +125,7 @@ export default function ExistingLoansForm(props) {
                         setEditName("rate");
                         restoreVals("rate");
                     }}>
-                    {currentEdit !== "rate" ? edit_emoji : cancel_emoji}
+                    {currentEdit !== "rate" ? medium_dark_edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -132,7 +146,28 @@ export default function ExistingLoansForm(props) {
                         setEditName("duration");
                         restoreVals("duration");
                     }}>
-                    {currentEdit !== "duration" ? edit_emoji : cancel_emoji}
+                    {currentEdit !== "duration" ? medium_edit_emoji : cancel_emoji}
+                </div>
+            </div>
+
+            <div className="container-existing-loan-component">
+                <div className="label label-lender">Lender:</div>
+                <input
+                    type="string"
+                    id={"input-existing-loan-lender-" + props.loanNumber}
+                    className="input input-existing-loan-lender"
+                    placeholder='Address...'
+                    defaultValue={props.lender}
+                    readOnly>
+                </input>
+                <div
+                    id={"edit-lender-" + props.loanNumber}
+                    className="button button-edit button-edit-lender"
+                    onClick={() => {
+                        setEditName("lender");
+                        restoreVals("lender");
+                    }}>
+                    {currentEdit !== "lender" ? delete_emoji : cancel_emoji}
                 </div>
             </div>
 

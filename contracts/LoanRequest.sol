@@ -15,6 +15,7 @@ contract LoanRequest is MultiSig {
         uint256 initialLoanValue;
         uint256 rate;
         uint64 duration;
+        address lender;
         address loanContract;
     }
 
@@ -224,11 +225,19 @@ contract LoanRequest is MultiSig {
         } else {
             // If msg.sender == borrower, unsign lender and set lender
             // to address(0).
-            // _unsign(_safeId, _getSignStatus(_safeId, msg.sender));
-            _removeSignature(_safeId, safes[_safeId].signers[1]);
+            (bool success, ) = address(this).delegatecall(
+                abi.encodeWithSignature(
+                    "_removeSignature(uint256,address)",
+                    _safeId,
+                    safes[_safeId].signers[1]
+                )
+            );
+            
             _setSigner(_safeId, address(0), lenderPosition);
             emit LoanRequestLenderChanged(msg.sender, _loanId, address(0));
         }
+
+        loanRequests[_borrower][_loanId].lender = safes[_safeId].signers[1];
     }
 
     function sign(address _borrower, uint256 _loanId) public payable {
