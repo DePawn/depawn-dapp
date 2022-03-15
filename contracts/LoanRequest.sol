@@ -68,12 +68,13 @@ contract LoanRequest is MultiSig {
         loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
         loanRequests[msg.sender][_loanId].rate = _rate;
         loanRequests[msg.sender][_loanId].duration = _duration;
-
+        /*
         IERC721(_collateral).safeTransferFrom(
             msg.sender,
             address(this),
             _tokenId
         );
+        */
 
         // Set lender
         if (_lender != address(0)) {

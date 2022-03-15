@@ -12,7 +12,7 @@ module.exports = {
   },
   defaultNetwork: 'localhost',
   networks: {
-    localhost: {
+    hardhat: {
       forking: {
         chainId: 31337,
         url: process.env.ALCHEMY_MAINNET_URL,

@@ -10,8 +10,8 @@ import { config } from './utils/config.js';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
-  defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
-  defaultTokenId: '7',
+  defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+  defaultTokenId: '5465',
   defaultInitialLoanValue: '3.2',
   defaultRate: '0.02',
   defaultDuration: '24'
@@ -171,7 +171,7 @@ function App() {
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
 
-    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+    const { loanRequestAddress, loanRequestABI, erc721 } = config(currentNetwork);
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
@@ -179,6 +179,15 @@ function App() {
       borrower
     );
     await setLoanRequestListeners(loanRequestContract);
+    
+    let nftContract = new ethers.Contract(nft, erc721, borrower);
+    let txn1 = await nftContract.approve(loanRequestAddress, tokenId);
+    await txn1.wait();
+    console.log(currentAccount, loanRequestAddress, tokenId);
+
+    let tx1 = await nftContract["safeTransferFrom(address,address,uint256)"](currentAccount, loanRequestAddress, tokenId);
+    await tx1.wait();
+    console.log("check");
 
     // Create new loan request
     await loanRequestContract.createLoanRequest(
