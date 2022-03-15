@@ -14,7 +14,6 @@ transferibles = [
         recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
         abi: erc721
     },
-
     {
         owner: "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
         nft: "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
