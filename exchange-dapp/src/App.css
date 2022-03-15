@@ -164,3 +164,21 @@ div {
 .button-loan-request-submitted {
     width: 140px;
 }
+
+.button-edit-nft,
+.button-edit-token-id {
+  width: 23px;
+  background: none;
+  border-color: none;
+  border: none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  cursor: default;
+}
+
+.button-edit-nft:active, 
+.button-edit-token-id:active {  
+  transform: none;
+  box-shadow: none;
+}

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npx hardhat test --network localhost",
     "test-hardhat": "npx hardhat test --network hardhat",
-    "test-hardhat-loanRequest": "npx hardhat test --network hardhat test/test-loan-request.js",
+    "impersonate": "npx hardhat run --network localhost scripts/impersonate.js",
     "deploy": "npx hardhat run --network localhost scripts/deploy.js",
     "deploy-hardhat": "npx hardhat run --network hardhat scripts/deploy.js"
   },

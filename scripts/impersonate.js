@@ -6,7 +6,7 @@ require("@nomiclabs/hardhat-ethers");
 const erc721 = require("../exchange-dapp/src/artifacts/31337/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json").abi;
 
 transferibles = [
-    
+
     {
         owner: "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
@@ -14,7 +14,6 @@ transferibles = [
         recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
         abi: erc721
     },
-    
     {
         owner: "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
         nft: "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
@@ -42,7 +41,7 @@ async function main() {
     provider = new ethers.providers.Web3Provider(hre.network.provider);
     let signers = await hre.ethers.getSigners();
 
-    for(let tr of transferibles) {
+    for (let tr of transferibles) {
 
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
@@ -87,11 +86,11 @@ async function main() {
     await loanRequestContract.deployed();
     console.log("LoanRequest deployed: ", loanRequestContract.address);
 
-    
 
-    
 
-    
+
+
+
     //Owner 0x5f7bd8e190d30b9db5656749c745b8988ab69cd0
     //NFT 0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D
     //Token ID 5465
@@ -99,10 +98,10 @@ async function main() {
 
 
 
-    
-    
-    
-  
+
+
+
+
 
 
 }
