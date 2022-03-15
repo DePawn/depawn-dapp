@@ -42,11 +42,6 @@ abstract contract MultiSig {
         return _signer;
     }
 
-    function _getConfirmed(uint256 _safeId) internal view returns (bool) {
-        bool _confirmed = safes[_safeId].confirmed;
-        return _confirmed;
-    }
-
     function _getSignStatus(uint256 _safeId, address _signer)
         internal
         view
@@ -116,6 +111,10 @@ abstract contract MultiSig {
         address _signer,
         uint256 _position
     ) internal safeKey(_safeId) {
+        if (_position != 0) {
+            require(safe.signers[0] != _signer, "Signer 0 must be unique.");
+        }
+
         safe.signers[_position] = _signer;
         safe.signStatus[safe.signers[_position]] = false;
     }

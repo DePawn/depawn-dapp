@@ -12,7 +12,6 @@ module.exports = {
   },
   defaultNetwork: 'localhost',
   networks: {
-    hardhat: {},
     localhost: {
       forking: {
         chainId: 31337,
