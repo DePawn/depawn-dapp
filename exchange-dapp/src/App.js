@@ -10,8 +10,8 @@ import { config } from './utils/config.js';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
-  defaultNft: '0xB3010C222301a6F5479CAd8fAdD4D5C163FA7d8A',
-  defaultTokenId: '7',
+  defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+  defaultTokenId: '5465',
   defaultInitialLoanValue: '3.2',
   defaultRate: '0.02',
   defaultDuration: '24'
@@ -20,11 +20,14 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
+  // eslint-disable-next-line
   const [currentNftAddress, setCurrentNftAddress] = useState('');
+  // eslint-disable-next-line
   const [currentTokenId, setCurrentTokenId] = useState('');
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
   const [currentLoanDuration, setCurrentLoanDuration] = useState('');
+  // eslint-disable-next-line
   const [currentLoanLender, setCurrentLoanLender] = useState('');
   const [currentAccountLoans, setCurrentAccountLoans] = useState('');
   const [existingLoanElements, setExistingLoanElements] = useState('');
@@ -35,6 +38,7 @@ function App() {
 
   useEffect(() => {
     getAccountLoanRequests();
+    // eslint-disable-next-line
   }, [
     currentAccount,
     currentNetwork,
@@ -48,6 +52,7 @@ function App() {
 
   useEffect(() => {
     renderExistingLoanElements();
+    // eslint-disable-next-line
   }, [currentAccountLoans]);
 
   /*
@@ -114,11 +119,19 @@ function App() {
     }
   }
 
-  const setLoanRequestListeners = async (loanRequestContract) => {
+  const setSubmittedLoanRequestListener = async (loanRequestContract) => {
     // Set loan request listener
     loanRequestContract.on('SubmittedLoanRequest', async () => {
       await getAccountLoanRequests();
-      console.log('LISTENER TRIGGERED!')
+      console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!')
+    });
+  }
+
+  const setLoanRequestChangedListeners = async (loanRequestContract) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestChanged', async () => {
+      await getAccountLoanRequests();
+      console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!')
     });
   }
 
@@ -178,7 +191,9 @@ function App() {
       loanRequestABI,
       borrower
     );
-    await setLoanRequestListeners(loanRequestContract);
+    await setSubmittedLoanRequestListener(loanRequestContract);
+    await setLoanRequestChangedListeners(loanRequestContract);
+
 
     // Create new loan request
     await loanRequestContract.createLoanRequest(
@@ -187,7 +202,6 @@ function App() {
       initialLoanValue,
       rate,
       duration,
-      ethers.constants.AddressZero
     );
 
     await getAccountLoanRequests();
@@ -211,21 +225,11 @@ function App() {
 
     // Update parameter
     switch (param) {
-      case 'nft':
-        await loanRequestContract.setLoanParam(
-          loanId,
-          param,
-          ethers.constants.Zero,
-          paramElement.value
-        );
-        break;
-      case 'token-id':
       case 'duration':
         await loanRequestContract.setLoanParam(
           loanId,
           param.replace('-', '_'),
           ethers.BigNumber.from(paramElement.value),
-          ethers.constants.AddressZero
         );
         break;
       case 'value':
@@ -234,14 +238,13 @@ function App() {
           loanId,
           param,
           ethers.utils.parseUnits(paramElement.value),
-          ethers.constants.AddressZero
         );
         break;
+      default:
+        console.log("Incorrect params string for updateLoan().");
     }
 
     // Set state variables
-    if (param === 'nft') setCurrentNftAddress(paramElement.value);
-    if (param === 'token-id') setCurrentTokenId(paramElement.value);
     if (param === 'value') setCurrentLoanValue(paramElement.value);
     if (param === 'rate') setCurrentLoanRate(paramElement.value);
     if (param === 'duration') setCurrentLoanDuration(paramElement.value);

@@ -3,8 +3,9 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
+// import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+// import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
@@ -31,6 +32,13 @@ contract LoanRequest is MultiSig {
         uint64 duration
     );
 
+    event LoanRequestChanged(
+        address indexed _borrower,
+        uint256 indexed _loanId,
+        string _param,
+        uint256 _value
+    );
+
     event DeployedLoanContract(
         address indexed _contract,
         address indexed _borrower,
@@ -45,8 +53,7 @@ contract LoanRequest is MultiSig {
         uint256 _tokenId,
         uint256 _initialLoanValue,
         uint256 _rate,
-        uint64 _duration,
-        address _lender
+        uint64 _duration
     ) public {
         require(_collateral != address(0), "Collateral cannot be address 0.");
 
@@ -56,39 +63,27 @@ contract LoanRequest is MultiSig {
         _createSafe();
 
         // Append to borrower
-        if (_loanId == 0) {
-            borrowers.push(msg.sender);
-        }
+        if (_loanId == 0) borrowers.push(msg.sender);
 
         // Set loan request parameters
         loanRequests[msg.sender].push();
-        loanRequests[msg.sender][_loanId].safeId = _safeId;
-        loanRequests[msg.sender][_loanId].collateral = _collateral;
-        loanRequests[msg.sender][_loanId].tokenId = _tokenId;
-        loanRequests[msg.sender][_loanId].initialLoanValue = _initialLoanValue;
-        loanRequests[msg.sender][_loanId].rate = _rate;
-        loanRequests[msg.sender][_loanId].duration = _duration;
+        LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
+        _loanRequest.safeId = _safeId;
+        _loanRequest.collateral = _collateral;
+        _loanRequest.tokenId = _tokenId;
+        _loanRequest.initialLoanValue = _initialLoanValue;
+        _loanRequest.rate = _rate;
+        _loanRequest.duration = _duration;
 
-        IERC721(_collateral).safeTransferFrom(
+        emit SubmittedLoanRequest(
             msg.sender,
-            address(this),
-            _tokenId
+            _loanId,
+            _collateral,
+            _tokenId,
+            _initialLoanValue,
+            _rate,
+            _duration
         );
-
-        // Set lender
-        if (_lender != address(0)) {
-            _setSigner(_safeId, _lender, lenderPosition);
-        } else {
-            emit SubmittedLoanRequest(
-                msg.sender,
-                _loanId,
-                _collateral,
-                _tokenId,
-                _initialLoanValue,
-                _rate,
-                _duration
-            );
-        }
     }
 
     function withdrawNFT(address _borrower, uint256 _loanId)
@@ -129,16 +124,16 @@ contract LoanRequest is MultiSig {
         view
         returns (bool _isReady)
     {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
+        uint256 _safeId = _loanRequest.safeId;
         address _lender = getSigner(_loanId, lenderPosition);
 
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&
-            loanRequests[_borrower][_loanId].collateral != address(0) &&
-            loanRequests[_borrower][_loanId].initialLoanValue != 0 &&
-            loanRequests[_borrower][_loanId].rate != 0 &&
-            loanRequests[_borrower][_loanId].duration != 0;
+            _loanRequest.collateral != address(0) &&
+            _loanRequest.initialLoanValue != 0 &&
+            _loanRequest.duration != 0;
     }
 
     function getLoans(address _borrower)
@@ -161,8 +156,7 @@ contract LoanRequest is MultiSig {
     function setLoanParam(
         uint256 _loanId,
         string memory _param,
-        uint256 _value,
-        address _address
+        uint256 _value
     )
         external
         onlyHasLoan(msg.sender)
@@ -171,35 +165,27 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        _unsign(_safeId, true);
+
+        (bool success, ) = address(this).delegatecall(
+            abi.encodeWithSignature(
+                "_removeSignature(uint256,address)",
+                _safeId,
+                safes[_safeId].signers[1]
+            )
+        );
 
         bytes32 _paramHash = keccak256(bytes(_param));
-
-        if (_paramHash == keccak256(bytes("collateral"))) {
-            _loanRequest.collateral = _address;
-        } else if (_paramHash == keccak256(bytes("token_id"))) {
-            _loanRequest.tokenId = _value;
-        } else if (_paramHash == keccak256(bytes("value"))) {
+        if (_paramHash == keccak256(bytes("value"))) {
             _loanRequest.initialLoanValue = _value;
         } else if (_paramHash == keccak256(bytes("rate"))) {
             _loanRequest.rate = _value;
         } else if (_paramHash == keccak256(bytes("duration"))) {
             _loanRequest.duration = uint64(_value);
         } else {
-            revert(
-                "Param must be one of ['collateral', 'token_id', 'value', 'rate', 'duration']."
-            );
+            revert("Param must be one of ['value', 'rate', 'duration'].");
         }
 
-        emit SubmittedLoanRequest(
-            msg.sender,
-            _loanId,
-            _loanRequest.collateral,
-            _loanRequest.tokenId,
-            _loanRequest.initialLoanValue,
-            _loanRequest.rate,
-            _loanRequest.duration
-        );
+        emit LoanRequestChanged(msg.sender, _loanId, _param, _value);
     }
 
     /*
@@ -231,14 +217,16 @@ contract LoanRequest is MultiSig {
         } else {
             // If msg.sender == borrower, unsign lender and set lender
             // to address(0).
-            _unsign(_safeId, _getSignStatus(_safeId, msg.sender));
+            // _unsign(_safeId, _getSignStatus(_safeId, msg.sender));
+            _removeSignature(_safeId, safes[_safeId].signers[1]);
             _setSigner(_safeId, address(0), lenderPosition);
         }
     }
 
     function sign(address _borrower, uint256 _loanId) public payable {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        uint256 loanValue = loanRequests[_borrower][_loanId].initialLoanValue;
+        LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
+        uint256 _safeId = _loanRequest.safeId;
+        uint256 loanValue = _loanRequest.initialLoanValue;
 
         require(
             _getSignStatus(_safeId, msg.sender) == false,
@@ -254,9 +242,9 @@ contract LoanRequest is MultiSig {
                 loanValue == msg.value,
                 "loan value doesn't match amount sent"
             );
-            (bool success, ) = payable(
-                loanRequests[_borrower][_loanId].loanContract
-            ).call{value: msg.value}("");
+            (bool success, ) = payable(_loanRequest.loanContract).call{
+                value: msg.value
+            }("");
             require(success, "Transfer failed.");
         }
     }
@@ -267,38 +255,39 @@ contract LoanRequest is MultiSig {
         onlyNotConfirmed(_borrower, _loanId)
     {
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        _removeSignature(_safeId);
+        _removeSignature(_safeId, msg.sender);
     }
 
     function __deployLoanContract(address _borrower, uint256 _loanId)
         private
         onlyHasLoan(_borrower)
     {
-        uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
+        LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
+        uint256 _safeId = _loanRequest.safeId;
         address _lender = getSigner(_loanId, lenderPosition);
         _setConfirmedStatus(_safeId);
 
         LoanContract _loanContract = new LoanContract(
             [_borrower, _lender],
-            loanRequests[_borrower][_loanId].collateral,
-            loanRequests[_borrower][_loanId].tokenId,
-            loanRequests[_borrower][_loanId].initialLoanValue,
-            loanRequests[_borrower][_loanId].rate,
-            loanRequests[_borrower][_loanId].duration
+            _loanRequest.collateral,
+            _loanRequest.tokenId,
+            _loanRequest.initialLoanValue,
+            _loanRequest.rate,
+            _loanRequest.duration
         );
         address _loanContractAddress = address(_loanContract);
 
-        IERC721(loanRequests[_borrower][_loanId].collateral).approve(
+        IERC721(_loanRequest.collateral).approve(
             _loanContractAddress,
-            loanRequests[_borrower][_loanId].tokenId
+            _loanRequest.tokenId
         );
-        IERC721(loanRequests[_borrower][_loanId].collateral).safeTransferFrom(
+        IERC721(_loanRequest.collateral).safeTransferFrom(
             address(this),
             _loanContractAddress,
-            loanRequests[_borrower][_loanId].tokenId
+            _loanRequest.tokenId
         );
 
-        loanRequests[_borrower][_loanId].loanContract = _loanContractAddress;
+        _loanRequest.loanContract = _loanContractAddress;
 
         emit DeployedLoanContract(
             _loanContractAddress,

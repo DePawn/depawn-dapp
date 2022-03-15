@@ -53,12 +53,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-nft-" + props.loanNumber}
-                    className="button button-edit"
-                    onClick={() => {
-                        setEditName("nft");
-                        restoreVals("nft");
-                    }}>
-                    {currentEdit !== "nft" ? edit_emoji : cancel_emoji}
+                    className="button button-edit button-edit-nft">
                 </div>
             </div>
 
@@ -74,12 +69,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-token-id-" + props.loanNumber}
-                    className="button button-edit"
-                    onClick={() => {
-                        setEditName("token-id");
-                        restoreVals("token-id");
-                    }}>
-                    {currentEdit !== "token-id" ? edit_emoji : cancel_emoji}
+                    className="button button-edit button-edit-token-id">
                 </div>
             </div>
 
@@ -95,7 +85,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-value-" + props.loanNumber}
-                    className="button button-edit"
+                    className="button button-edit button-edit-value"
                     onClick={() => {
                         setEditName("value");
                         restoreVals("value");
@@ -116,7 +106,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-rate-{props.loanNumber}"}
-                    className="button button-edit"
+                    className="button button-edit button-edit-rate"
                     onClick={() => {
                         setEditName("rate");
                         restoreVals("rate");
@@ -137,7 +127,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-duration-" + props.loanNumber}
-                    className="button button-edit"
+                    className="button button-edit button-edit-duration"
                     onClick={() => {
                         setEditName("duration");
                         restoreVals("duration");
