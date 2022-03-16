@@ -16,7 +16,8 @@ export const config = (network) => {
     return {
         isDev: true,
         loanRequestABI: loanRequestABI.abi,
-        loanRequestConfig: loanRequestConfig.loanRequestConfig,
+        loanRequestAddress: loanRequestConfig.loanRequestAddress,
+        transferibles: loanRequestConfig.transferibles,
         erc721: erc721.abi,
         RPC_PROVIDER: 'ALCHEMY',
         NETWORK: network,

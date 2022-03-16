@@ -20,10 +20,6 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 function App() {
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
-  // eslint-disable-next-line
-  const [currentNftAddress, setCurrentNftAddress] = useState('');
-  // eslint-disable-next-line
-  const [currentTokenId, setCurrentTokenId] = useState('');
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
   const [currentLoanDuration, setCurrentLoanDuration] = useState('');
@@ -41,8 +37,6 @@ function App() {
   }, [
     currentAccount,
     currentNetwork,
-    currentNftAddress,
-    currentTokenId,
     currentLoanValue,
     currentLoanRate,
     currentLoanDuration,
@@ -142,6 +136,12 @@ function App() {
     });
   }
 
+  const setNftTransferListener = async (nftContract) => {
+    nftContract.on('Transfer', async (ev) => {
+      console.log('NFT Transfered!', ev)
+    })
+  }
+
   /*
    * Get all loan request parameters for each loan submitted by user.
    */
@@ -185,7 +185,6 @@ function App() {
     const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
     const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
     const duration = document.getElementById('input-duration').value;
-    const lenderAddress = ethers.constants.AddressZero;
 
     // Get contract
     const provider = getProvider();
@@ -204,15 +203,6 @@ function App() {
     await setLoanRequestChangedListeners(loanRequestContract);
     await setLoanRequestLenderChangedListeners(loanRequestContract);
 
-    // let nftContract = new ethers.Contract(nft, erc721, borrower);
-    // let txn1 = await nftContract.approve(loanRequestAddress, tokenId);
-    // await txn1.wait();
-    // console.log(currentAccount, loanRequestAddress, tokenId);
-
-    // let tx1 = await nftContract["safeTransferFrom(address,address,uint256)"](currentAccount, loanRequestAddress, tokenId);
-    // await tx1.wait();
-    // console.log("check");
-
     // Create new loan request
     await loanRequestContract.createLoanRequest(
       nft,
@@ -222,6 +212,11 @@ function App() {
       duration,
     );
 
+    // Transfer NFT to LoanRequest contract
+    const nftContract = new ethers.Contract(nft, erc721, borrower);
+    await setNftTransferListener(nftContract);
+
+    // Update Existing Loans frontend
     await getAccountLoanRequests();
   }
 
@@ -272,21 +267,21 @@ function App() {
     if (param === 'lender') setCurrentLoanLender(paramElement.value);
   }
 
-  const sponsorLoan = async () => {
-    const { isDev } = config(currentNetwork);
+  // const sponsorLoan = async () => {
+  //   const { isDev } = config(currentNetwork);
 
-    const provider = getProvider();
-    const lender = isDev
-      ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
-      : provider.getSigner(currentAccount);
-    const lenderAddress = await lender.getAddress();
-    // console.log('Lender address: ', lenderAddress);
+  //   const provider = getProvider();
+  //   const lender = isDev
+  //     ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
+  //     : provider.getSigner(currentAccount);
+  //   const lenderAddress = await lender.getAddress();
+  //   // console.log('Lender address: ', lenderAddress);
 
-    // Signoff and create new contract
-    // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
+  //   // Signoff and create new contract
+  //   // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
 
-    // const lenderAddress = document.getElementById('input-lender').value;
-  }
+  //   // const lenderAddress = document.getElementById('input-lender').value;
+  // }
 
   const renderExistingLoanElements = async () => {
     if (currentAccountLoans === '') { return; }
@@ -296,6 +291,8 @@ function App() {
         <ExistingLoansForm
           key={i}
           loanNumber={i}
+          currentAccount={currentAccount}
+          currentNetwork={currentNetwork}
           updateFunc={updateLoan}
           {...accountLoan}
         />

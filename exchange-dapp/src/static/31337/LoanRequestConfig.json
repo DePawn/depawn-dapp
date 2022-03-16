@@ -1,20 +1,23 @@
 {
-  "loanRequestAddress": "0x3904b8f5b0F49cD206b7d5AABeE5D1F37eE15D8d",
+  "loanRequestAddress": "0x5d4dA1C5D567733B7552cC26612d9B3e3A0345FF",
   "transferibles": [
     {
-      "owner": "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
+      "ownerAddress": "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
       "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-      "tokenId": 5465
+      "tokenId": 5465,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     },
     {
-      "owner": "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
+      "ownerAddress": "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
       "nft": "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
-      "tokenId": 22
+      "tokenId": 22,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     },
     {
-      "owner": "0x8cb377959625e693986c6adef82fff01d4d91af8",
+      "ownerAddress": "0x8cb377959625e693986c6adef82fff01d4d91af8",
       "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-      "tokenId": 6482
+      "tokenId": 6482,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     }
   ]
 }

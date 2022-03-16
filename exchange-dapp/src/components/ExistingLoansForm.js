@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
+import getProvider from '../utils/getProvider';
+import { config } from '../utils/config.js';
 
-const dark_edit_emoji = "✍🏿";
-const medium_dark_edit_emoji = "✍🏾";
-const medium_edit_emoji = "✍🏽";
-const light_edit_emoji = "✍🏻";
+const edit_emoji = "✍🏽";
 const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
 export default function ExistingLoansForm(props) {
+    const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
 
     function setEditName(name) {
@@ -30,6 +30,25 @@ export default function ExistingLoansForm(props) {
         }
     }
 
+    async function currentNftCommitStatusSetter() {
+        // Get contract LoanRequest contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
+
+        // Get ERC721 contract
+        const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
+        const nftOwner = await nftContract.ownerOf(props.tokenId);
+
+        // Identify if LoanRequest contract currently owns ERC721
+        setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
+    }
+
+    useEffect(() => {
+        currentNftCommitStatusSetter();
+        // eslint-disable-next-line
+    }, []);
+
     function restoreVals(exclusion) {
         const nftElement = document.getElementById("input-existing-loan-nft-" + props.loanNumber);
         const tokenIdElement = document.getElementById("input-existing-loan-token-id-" + props.loanNumber);
@@ -44,6 +63,49 @@ export default function ExistingLoansForm(props) {
         if (exclusion !== "rate") rateElement.value = ethers.utils.formatEther(props.rate);
         if (exclusion !== "duration") durationElement.value = props.duration;
         if (exclusion !== "lender") lenderElement.value = props.lender;
+    }
+
+    async function commitNft() {
+        // Get contract LoanRequest contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
+
+        // Get ERC721 contract
+        const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
+
+        // Transfer ERC721 to LoanRequest contract
+        try {
+            await nftContract["safeTransferFrom(address,address,uint256)"](
+                props.currentAccount, loanRequestAddress, props.tokenId
+            );
+            return true;
+        }
+        catch (err) {
+            return false;
+        }
+    }
+
+    async function withdrawNft() {
+        // Get contract LoanRequest contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+        const { loanRequestAddress, loanRequestABI } = config(props.currentNetwork);
+
+        const loanRequestContract = new ethers.Contract(
+            loanRequestAddress,
+            loanRequestABI,
+            borrower
+        );
+
+        // Withdraw ERC721 from LoanRequest contract
+        try {
+            await loanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+            return true;
+        }
+        catch (err) {
+            return false;
+        }
     }
 
     function removeLender() {
@@ -104,7 +166,7 @@ export default function ExistingLoansForm(props) {
                         setEditName("value");
                         restoreVals("value");
                     }}>
-                    {currentEdit !== "value" ? dark_edit_emoji : cancel_emoji}
+                    {currentEdit !== "value" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -125,7 +187,7 @@ export default function ExistingLoansForm(props) {
                         setEditName("rate");
                         restoreVals("rate");
                     }}>
-                    {currentEdit !== "rate" ? medium_dark_edit_emoji : cancel_emoji}
+                    {currentEdit !== "rate" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -146,7 +208,7 @@ export default function ExistingLoansForm(props) {
                         setEditName("duration");
                         restoreVals("duration");
                     }}>
-                    {currentEdit !== "duration" ? medium_edit_emoji : cancel_emoji}
+                    {currentEdit !== "duration" ? edit_emoji : cancel_emoji}
                 </div>
             </div>
 
@@ -174,6 +236,19 @@ export default function ExistingLoansForm(props) {
             <div className="container-existing-loan-buttons">
                 <div
                     id={"button-existing-loan-update-" + props.loanNumber}
+                    className="button button-existing-loan button-existing-loan-commit"
+                    onClick={() => {
+                        if (!currentNftCommitStatus) {
+                            commitNft().then((res) => { setCurrentNftCommitStatus(res); });
+                        }
+                        else {
+                            withdrawNft().then((res) => { setCurrentNftCommitStatus(!res) })
+                        }
+                    }}>
+                    {currentNftCommitStatus ? "Withdraw NFT" : "Commit NFT"}
+                </div>
+                <div
+                    id={"button-existing-loan-update-" + props.loanNumber}
                     className="button button-existing-loan button-existing-loan-update"
                     onClick={() => {
                         props.updateFunc(props.loanNumber, currentEdit)
@@ -184,7 +259,7 @@ export default function ExistingLoansForm(props) {
 
                 <div
                     id={"button-existing-loan-sign-" + props.loanNumber}
-                    className="button button-existing-loan button-existing-loan-sign">
+                    className={`button button-existing-loan button-existing-loan-sign ${currentNftCommitStatus ? " button-enabled" : " button-disabled"}`}>
                     Sign
                 </div>
             </div>
