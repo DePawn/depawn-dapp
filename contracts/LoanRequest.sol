@@ -4,8 +4,6 @@ pragma solidity ^0.8.5;
 import "./MultiSig.sol";
 import "./LoanContract.sol";
 
-import "hardhat/console.sol";
-
 // import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 // import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 // import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -253,13 +251,9 @@ contract LoanRequest is MultiSig {
         );
 
         bool success = _sign(_safeId);
-        // console.logBool(success);
-
-        bool _isReady = isReady(_borrower, _loanId);
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
-            console.logBool(_isReady);
             __deployLoanContract(_borrower, _loanId);
             require(
                 loanValue == msg.value,
