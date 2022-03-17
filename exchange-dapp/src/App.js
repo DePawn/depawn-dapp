@@ -8,7 +8,6 @@ import { ethers } from 'ethers';
 import axios from 'axios';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config';
-// import { loadNftCookies, saveNftCookies } from './utils/cookieUtils';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -20,7 +19,6 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 }
 
 function App() {
-  // const [nftCookieData, setNftCookieData] = useState('');
   const [currentAccount, setCurrentAccount] = useState('');
   const [currentNetwork, setCurrentNetwork] = useState('');
   const [currentLoanValue, setCurrentLoanValue] = useState('');
@@ -35,9 +33,6 @@ function App() {
   const [existingLoanElements, setExistingLoanElements] = useState('');
 
   useEffect(() => {
-    // const cookies = loadNftCookies();
-    // setAccountNfts(cookies);
-
     checkIfWalletIsConnected()
     // eslint-disable-next-line
   }, []);
@@ -56,9 +51,6 @@ function App() {
 
   useEffect(() => {
     renderLoanRequestElements();
-
-    // const cookies = saveNftCookies(currentAccountNfts)
-    // setNftCookieData(cookies);
     renderExistingLoanElements();
 
     // eslint-disable-next-line
@@ -66,7 +58,6 @@ function App() {
 
   useEffect(() => {
     renderExistingLoanElements();
-
     // eslint-disable-next-line
   }, [currentAccountLoans]);
 
@@ -125,7 +116,7 @@ function App() {
     chainId = parseInt(chainId, 16).toString();
     setCurrentNetwork(chainId);
 
-    if (!!account) await setAccountNfts(account, chainId);
+    if (!!account) await fetchAccountsNft(account, chainId);
 
     console.log('Current chain ID: ', chainId);
     ethereum.on('chainChanged', handleChainChanged);
@@ -135,10 +126,17 @@ function App() {
     }
   }
 
-  const setAccountNfts = async (account, network) => {
+  const fetchAccountsNft = async (account, network) => {
     if (!account || !network) return {};
 
-    const { protocol } = config(network);
+    const { dev, protocol } = config(network);
+
+    /* DEV ONLY */
+    if (dev) {
+      console.log('running dev')
+      await fetchNftData(network);
+      return;
+    }
 
     // Get NFT metadata
     const metaOptions = {
@@ -155,20 +153,6 @@ function App() {
       }
     };
     const nftMetaResponse = await axios.request(metaOptions);
-    console.log(nftMetaResponse)
-
-    // // Compare cookies with meta to see if we need to pull contract info
-    // let isSame = nftCookieData.length === nftMetaResponse.data.nfts.length;
-
-    // if (isSame) {
-    //   nftMetaResponse.data.nfts.forEach((nft, i) => {
-    //     isSame = nft.contract_address === nftCookieData[i].contract_address &&
-    //       nft.token_id === nftCookieData[i].token_id &&
-    //       isSame
-    //   });
-    // }
-
-    // if (isSame) return;
 
     // Get NFT Contract information
     const contractOptions = {
@@ -189,9 +173,38 @@ function App() {
     nftMetaResponse.data.nfts.forEach((nft, i) => {
       nft.contract = nftContractResponse.data.nfts[i].contract;
     });
-    console.log(nftContractResponse)
 
     setCurrentAccountNfts(nftMetaResponse.data.nfts);
+  }
+
+  const fetchNftData = async (network) => {
+    const { dev, protocol, transferibles } = config(network);
+
+    // Get NFT metadata
+    const nftMetaResponse = {
+      data: []
+    };
+
+    for (let tr of transferibles) {
+      let metaOptions = {
+        method: 'GET',
+        url: `https://api.nftport.xyz/v0/nfts/${tr.nft}/${tr.tokenId}`,
+        params: { chain: protocol },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: env.NFT_PORT_KEY
+        }
+      };
+
+      let metaResponse = await axios.request(metaOptions);
+      nftMetaResponse.data.push(metaResponse.nft);
+    }
+
+    console.log(' ------- metaResponses: ', metaResponses);
+
+    // metaResponses.data.nfts.forEach((nft, i) => {
+    //   nft.contract = contractResponses.data.nfts[i].contract;
+    // });
   }
 
   const setSubmittedLoanRequestListener = async (loanRequestContract) => {
@@ -381,6 +394,7 @@ function App() {
 
   const renderExistingLoanElements = async () => {
     if (currentAccountLoans === '') { return; }
+    if (currentAccountNfts === '') { return; }
 
     setExistingLoanElements(currentAccountLoans.map((accountLoan, i) => {
       console.log(currentAccountNfts[i])
