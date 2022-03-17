@@ -255,14 +255,14 @@ contract LoanRequest is MultiSig {
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
-            require(
-                loanValue == msg.value,
-                "loan value doesn't match amount sent"
-            );
-            (bool success, ) = payable(_loanRequest.loanContract).call{
-                value: msg.value
-            }("");
-            require(success, "Transfer failed.");
+            // require(
+            //     loanValue == msg.value,
+            //     "loan value doesn't match amount sent"
+            // );
+            // (bool success, ) = payable(_loanRequest.loanContract).call{
+            //     value: msg.value
+            // }("");
+            // require(success, "Transfer failed.");
         }
     }
 
@@ -281,7 +281,7 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        address _lender = getSigner(_loanId, lenderPosition);
+        address _lender = getSigner(_safeId, lenderPosition);
         _setConfirmedStatus(_safeId);
 
         LoanContract _loanContract = new LoanContract(

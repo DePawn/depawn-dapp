@@ -8,6 +8,7 @@ import { ethers } from 'ethers';
 import axios from 'axios';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config';
+// import { loadNftCookies, saveNftCookies } from './utils/cookieUtils';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -50,6 +51,7 @@ function App() {
   ]);
 
   useEffect(() => {
+    console.log("i'm doin it")
     renderLoanRequestElements();
     renderExistingLoanElements();
 
@@ -135,50 +137,50 @@ function App() {
     if (dev) {
       console.log('running dev')
       await fetchNftData(network);
-      return;
     }
+    else {
+      // Get NFT metadata
+      const metaOptions = {
+        method: 'GET',
+        url: `https://api.nftport.xyz/v0/accounts/${account}`,
+        params: {
+          chain: protocol,
+          include: 'metadata',
+          page_size: '25'
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: env.NFT_PORT_KEY
+        }
+      };
+      const nftMetaResponse = await axios.request(metaOptions);
 
-    // Get NFT metadata
-    const metaOptions = {
-      method: 'GET',
-      url: `https://api.nftport.xyz/v0/accounts/${account}`,
-      params: {
-        chain: protocol,
-        include: 'metadata',
-        page_size: '25'
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: env.NFT_PORT_KEY
-      }
-    };
-    const nftMetaResponse = await axios.request(metaOptions);
+      // Get NFT Contract information
+      const contractOptions = {
+        method: 'GET',
+        url: `https://api.nftport.xyz/v0/accounts/${account}`,
+        params: {
+          chain: protocol,
+          // exclude: 'erc1155',
+          include: 'contract_information',
+          page_size: '25'
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: env.NFT_PORT_KEY
+        }
+      };
+      const nftContractResponse = await axios.request(contractOptions);
+      nftMetaResponse.data.nfts.forEach((nft, i) => {
+        nft.contract = nftContractResponse.data.nfts[i].contract;
+      });
 
-    // Get NFT Contract information
-    const contractOptions = {
-      method: 'GET',
-      url: `https://api.nftport.xyz/v0/accounts/${account}`,
-      params: {
-        chain: protocol,
-        // exclude: 'erc1155',
-        include: 'contract_information',
-        page_size: '25'
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: env.NFT_PORT_KEY
-      }
-    };
-    const nftContractResponse = await axios.request(contractOptions);
-    nftMetaResponse.data.nfts.forEach((nft, i) => {
-      nft.contract = nftContractResponse.data.nfts[i].contract;
-    });
-
-    setCurrentAccountNfts(nftMetaResponse.data.nfts);
+      setCurrentAccountNfts(nftMetaResponse.data.nfts);
+    }
   }
 
   const fetchNftData = async (network) => {
-    const { dev, protocol, transferibles } = config(network);
+    const { protocol, transferibles } = config(network);
 
     // Get NFT metadata
     const nftMetaResponse = {
@@ -197,14 +199,11 @@ function App() {
       };
 
       let metaResponse = await axios.request(metaOptions);
-      nftMetaResponse.data.push(metaResponse.nft);
+      nftMetaResponse.data.push({ ...metaResponse.data.nft, ...metaResponse.data.contract });
     }
 
-    console.log(' ------- metaResponses: ', metaResponses);
-
-    // metaResponses.data.nfts.forEach((nft, i) => {
-    //   nft.contract = contractResponses.data.nfts[i].contract;
-    // });
+    console.log(nftMetaResponse.data)
+    setCurrentAccountNfts(nftMetaResponse.data);
   }
 
   const setSubmittedLoanRequestListener = async (loanRequestContract) => {
@@ -286,7 +285,7 @@ function App() {
     const provider = getProvider();
     const borrower = provider.getSigner(currentAccount);
 
-    const { loanRequestAddress, loanRequestABI, erc721, erc1155 } = config(currentNetwork);
+    const { loanRequestAddress, loanRequestABI, erc721, erc1155, network } = config(currentNetwork);
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
@@ -313,7 +312,7 @@ function App() {
     await setNftTransferListener(nftContract, ercType);
 
     // // Update Existing Loans frontend
-    // await getAccountLoanRequests();
+    await fetchNftData(network)
   }
 
   const updateLoan = async (loanId, param) => {
@@ -363,22 +362,6 @@ function App() {
     if (param === 'lender') setCurrentLoanLender(paramElement.value);
   }
 
-  // const sponsorLoan = async () => {
-  //   const { isDev } = config(currentNetwork);
-
-  //   const provider = getProvider();
-  //   const lender = isDev
-  //     ? provider.getSigner(env.NFT_ACCOUNT_ADDRESS)
-  //     : provider.getSigner(currentAccount);
-  //   const lenderAddress = await lender.getAddress();
-  //   // console.log('Lender address: ', lenderAddress);
-
-  //   // Signoff and create new contract
-  //   // tx = await loanRequestContract.connect(lender).sign(borrowerAddress, loanId);
-
-  //   // const lenderAddress = document.getElementById('input-lender').value;
-  // }
-
   const renderLoanRequestElements = async () => {
     setLoanRequestElement(
       <div className="container-loan-request-form-master">
@@ -404,7 +387,7 @@ function App() {
           loanNumber={i}
           currentAccount={currentAccount}
           currentNetwork={currentNetwork}
-          currentType={currentAccountNfts[i].contract.type.toLowerCase()}
+          currentType={currentAccountNfts[i].type.toLowerCase()}
           updateFunc={updateLoan}
           {...accountLoan}
         />

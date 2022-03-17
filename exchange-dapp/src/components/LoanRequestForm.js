@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 export default function LoanRequestForm(props) {
+    console.log('LoanRequestForm: ', props)
     const [currentNft, setCurrentNft] = useState(0);
 
     function renderNftDropdown() {
@@ -57,12 +58,18 @@ export default function LoanRequestForm(props) {
     }
 
     function renderNftImage() {
+        if (!props.currentAccountNfts) return;
+
+        const imgUrl = !!props.currentAccountNfts[currentNft].cached_file_url
+            ? props.currentAccountNfts[currentNft].cached_file_url
+            : props.currentAccountNfts[currentNft].file_url;
+
         return (
-            !!props.currentAccountNfts && props.currentAccountNfts[currentNft].file_url
+            !!props.currentAccountNfts && imgUrl
                 ?
                 <img
-                    src={props.currentAccountNfts[currentNft].file_url.replace('ipfs://', 'https://ipfs.io/')}
-                    alt={props.currentAccountNfts[currentNft].file_url}
+                    src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                    alt={imgUrl}
                     className="image image-loan-request image-loan-request-nft"
                 />
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
@@ -120,7 +127,7 @@ export default function LoanRequestForm(props) {
                 <div
                     className="button button-loan-request button-loan-request-create"
                     onClick={() => {
-                        props.submitCallback(props.currentAccountNfts[currentNft].contract.type);
+                        props.submitCallback(props.currentAccountNfts[currentNft].type);
                     }}>
                     Submit Request
                 </div>
