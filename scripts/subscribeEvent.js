@@ -15,6 +15,7 @@ async function main() {
 
     const loanRequestContract = await hre.ethers.getContractAt("LoanRequest", "0x5d4dA1C5D567733B7552cC26612d9B3e3A0345FF", borrower);
 
+    /*
     loanRequestContract.on("SubmittedLoanRequest", async (borrower, loanId, collateral, tokenId, loanValue, rate, duration) => {
         console.log(borrower);
         console.log(loanId.toNumber());
@@ -27,6 +28,21 @@ async function main() {
         let sql = `replace into loans values('${loanId.toNumber()}', '${borrower}', '${collateral}', '${tokenId.toNumber()}', '${loanValue.toNumber()}', '${rate.toNumber()}', '${duration.toNumber()}', null)`
 
         await db.run(sql);
+
+
+
+    });
+    */
+
+    loanRequestContract.on("DeployedLoanContract", async (_loanContractAddress,
+        _borrower,
+        _lender,
+        _loanId) => {
+        console.log(_loanContractAddress,
+            _borrower,
+            _lender,
+            _loanId);
+
 
 
 

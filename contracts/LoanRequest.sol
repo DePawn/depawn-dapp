@@ -3,6 +3,7 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
+import "hardhat/console.sol";
 
 // import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 // import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -139,7 +140,7 @@ contract LoanRequest is MultiSig {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
         address _lender = getSigner(_loanId, lenderPosition);
-
+        console.log(_lender);
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&
@@ -226,6 +227,7 @@ contract LoanRequest is MultiSig {
                     _loanId
                 )
             );
+            console.log("lender", success);
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
             // If msg.sender == borrower, unsign lender and set lender
@@ -254,9 +256,9 @@ contract LoanRequest is MultiSig {
             _getSignStatus(_safeId, msg.sender) == false,
             "Only unsigned contracts can be accessed."
         );
-
+        console.log(msg.sender);
         _sign(_safeId);
-
+        console.log(isReady(_borrower, _loanId));
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
