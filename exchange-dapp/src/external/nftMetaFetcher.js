@@ -59,7 +59,7 @@ export const fetchAccountNfts = async (account, network) => {
 export const fetchNftData = async (nfts, network) => {
     let { dev, protocol, transferibles } = config(network);
 
-    // If nfts is passed as empty and in dev, swap to dev nfts
+    // If nfts is passed as empty and in dev mode, swap to dev nfts
     if (!!nfts && dev) [nfts, transferibles] = [transferibles, nfts];
 
     // Get NFT metadata

@@ -37,7 +37,7 @@ export default function ExistingLoansForm(props) {
         const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
 
         // Get ERC721 contract
-        const nftContract = new ethers.Contract(props.collateral, props.currentType === 'erc115' ? erc1155 : erc721, borrower);
+        const nftContract = new ethers.Contract(props.collateral, props.ercType === 'erc115' ? erc1155 : erc721, borrower);
         let nftOwner = await nftContract.ownerOf(props.tokenId);
 
         nftContract.on('Transfer', async (ev) => { })
@@ -74,7 +74,7 @@ export default function ExistingLoansForm(props) {
         const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
 
         try {
-            if (props.currentType === 'erc1155') {
+            if (props.ercType === 'erc1155') {
                 // Get ERC1155 contract
                 const nftContract = new ethers.Contract(props.collateral, erc1155, borrower);
 
@@ -84,7 +84,7 @@ export default function ExistingLoansForm(props) {
                 );
                 return true;
             }
-            else if (props.currentType === 'erc721') {
+            else if (props.ercType === 'erc721') {
                 // Get ERC721 contract
                 const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
 
@@ -282,7 +282,7 @@ export default function ExistingLoansForm(props) {
                     id={"button-existing-loan-update-" + props.loanNumber}
                     className="button button-existing-loan button-existing-loan-update"
                     onClick={() => {
-                        props.updateFunc(props.loanNumber, currentEdit)
+                        props.updateLoanFunc(props.loanNumber, currentEdit)
                             .then(() => { setCurrentEdit(''); });
                     }}>
                     Update

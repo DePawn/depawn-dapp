@@ -28,6 +28,7 @@ export const config = (network) => {
         MAINNET_FORK: '8545',
         MAINNET: '8545',
         MUMBAI: '8545',
+        DEV: '',
     };
 
     const chainId = {
@@ -36,7 +37,8 @@ export const config = (network) => {
         '4': 'RINKEBY',
         '42': 'KOVAN',
         '1': 'MAINNET',
-        '80001': 'MUMBAI'
+        '80001': 'MUMBAI',
+        '': 'DEV',
     };
 
     const protocol = {
@@ -45,7 +47,8 @@ export const config = (network) => {
         '4': 'rinkeby',
         '42': 'ethereum',
         '1': 'ethereum',
-        '80001': 'polygon'
+        '80001': 'polygon',
+        '': 'ethereum',
     };
 
     return {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function LoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
+    console.log(props)
 
     function renderNftDropdown() {
         return (
@@ -9,6 +10,7 @@ export default function LoanRequestForm(props) {
                 <div className="label label-nft">NFT:</div>
                 <div className="input input-container">
                     {!!props.currentAccountNfts ? (
+                        // Account has NFTs
                         <select
                             id="datalist-nft"
                             className="datalist datalist-loan-request datalist-nft"
@@ -28,13 +30,30 @@ export default function LoanRequestForm(props) {
                             })}
                         </select>
                     ) : (
-                        <select
-                            id="datalist-nft"
-                            className="datalist datalist-loan-request datalist-nft"
-                        >""</select>
+                        !!props._dev ? (
+                            // Dev ONLY
+                            <select
+                                id="datalist-nft"
+                                className="datalist datalist-loan-request datalist-nft">
+                                <option
+                                    value={props.defaultNft}
+                                    key={0}
+                                >
+                                    {props.defaultNft}
+                                </option>
+                            </select>
+                        ) : (
+                            // No NFTs for account
+                            <select
+                                id="datalist-nft"
+                                className="datalist datalist-loan-request datalist-nft"
+                            >
+                                ""
+                            </select>
+                        )
                     )}
                 </div>
-            </div>
+            </div >
         )
     }
 
@@ -49,7 +68,10 @@ export default function LoanRequestForm(props) {
                     placeholder='Token ID...'
                     value={!!props.currentAccountNfts
                         ? props.currentAccountNfts[currentNft].token_id
-                        : ""}
+                        : !!props._dev
+                            ? props.defaultTokenId
+                            : ""
+                    }
                     readOnly={true}>
                 </input>
             </div>
@@ -57,12 +79,14 @@ export default function LoanRequestForm(props) {
     }
 
     function renderNftImage() {
-        if (!props.currentAccountNfts) return;
-
-        const imgUrl = parseNftImageFromCurrentAccounts(currentNft);
+        const imgUrl = props.currentAccountNfts
+            ? parseNftImageFromCurrentAccounts(currentNft)
+            : props._dev
+                ? props.defaultImageUrl
+                : undefined;
 
         return (
-            !!props.currentAccountNfts && imgUrl
+            !!props.currentAccountNfts || (imgUrl && props._dev)
                 ?
                 <img
                     src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
@@ -88,57 +112,75 @@ export default function LoanRequestForm(props) {
     }, [currentNft])
 
     return (
-        <div className="container-loan-request-form">
 
-            {renderNftDropdown()}
-            {renderTokenIdDropdown()}
+        <div className="container-loan-request-form-master">
 
-            <div className="container-loan-request-component">
-                <div className="label label-value">Amount:</div>
-                <input
-                    type="string"
-                    id="input-initial-value"
-                    className="input input-loan-request input-initial-value"
-                    placeholder='Loan Value (ETH)...'
-                    defaultValue={props.defaultInitialLoanValue}>
-                </input>
-            </div>
+            <h2>
+                Loan Requests {props._dev && !props.currentAccountNfts ? "(dev)" : ""}
+            </h2>
 
-            <div className="container-loan-request-component">
-                <div className="label label-rate">Rate:</div>
-                <input
-                    type="string"
-                    id="input-rate"
-                    className="input input-loan-request input-rate"
-                    placeholder='Rate...'
-                    defaultValue={props.defaultRate}>
-                </input>
-            </div>
+            <div className="container-loan-request-form">
 
-            <div className="container-loan-request-component">
-                <div className="label label-duration">Duration:</div>
-                <input
-                    type="string"
-                    id="input-duration"
-                    className="input input-loan-request input-duration"
-                    placeholder='Duration (months)...'
-                    defaultValue={props.defaultDuration}>
-                </input>
-            </div>
+                {renderNftDropdown()}
+                {renderTokenIdDropdown()}
 
-            {renderNftImage()}
+                <div className="container-loan-request-component">
+                    <div className="label label-value">Amount:</div>
+                    <input
+                        type="string"
+                        id="input-initial-value"
+                        className="input input-loan-request input-initial-value"
+                        placeholder='Loan Value (ETH)...'
+                        defaultValue={props.defaultInitialLoanValue}>
+                    </input>
+                </div>
 
-            <div className="container-loan-request-create">
-                <div
-                    className="button button-loan-request button-loan-request-create"
-                    onClick={() => {
-                        const type = props.currentAccountNfts[currentNft].type;
-                        const imgUrl = parseNftImageFromCurrentAccounts(currentNft);
-                        props.submitCallback({ type, imgUrl });
-                    }}>
-                    Submit Request
+                <div className="container-loan-request-component">
+                    <div className="label label-rate">Rate:</div>
+                    <input
+                        type="string"
+                        id="input-rate"
+                        className="input input-loan-request input-rate"
+                        placeholder='Rate...'
+                        defaultValue={props.defaultRate}>
+                    </input>
+                </div>
+
+                <div className="container-loan-request-component">
+                    <div className="label label-duration">Duration:</div>
+                    <input
+                        type="string"
+                        id="input-duration"
+                        className="input input-loan-request input-duration"
+                        placeholder='Duration (months)...'
+                        defaultValue={props.defaultDuration}>
+                    </input>
+                </div>
+
+                {renderNftImage()}
+
+                <div className="container-loan-request-create">
+                    <div
+                        className="button button-loan-request button-loan-request-create"
+                        onClick={() => {
+                            const ercType = props.currentAccountNfts
+                                ? props.currentAccountNfts[currentNft].type
+                                : props._dev
+                                    ? 'erc721'
+                                    : null;
+
+                            const imgUrl = props.currentAccountNfts
+                                ? parseNftImageFromCurrentAccounts(currentNft)
+                                : props._dev
+                                    ? props.defaultImageUrl
+                                    : undefined;
+
+                            props.submitCallback({ ercType, imgUrl });
+                        }}>
+                        Submit Request
+                    </div>
                 </div>
             </div>
-        </div >
+        </div>
     )
 }
