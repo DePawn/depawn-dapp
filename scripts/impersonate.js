@@ -82,11 +82,39 @@ async function main() {
 
     const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest", signers[19]);
 
-    loanRequestContract = await LoanRequestFactory.deploy();
+    let loanRequestContract = await LoanRequestFactory.deploy();
     await loanRequestContract.deployed();
     console.log("LoanRequest deployed: ", loanRequestContract.address);
 
 
+    // Borrower with NFT"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    let borrowerAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+    let borrowerNFT = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+    let borrowerTokenId = 5465;
+    
+    let borrower = provider.getSigner(borrowerAddress);
+
+    let loanId = await loanRequestContract.connect(borrower).createLoanRequest(
+        borrowerNFT,
+        borrowerTokenId,
+        1,
+        10,
+        2
+    );
+    await loanId.wait();
+
+    console.log("loanId", loanId.value.toNumber());
+    loanId = loanId.value.toNumber();
+
+    let tx = await loanRequestContract.connect(borrower).sign(borrowerAddress, loanId);
+    let receipt = await tx.wait();
+    console.log("ok");
+
+    let lenderAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    let lender = provider.getSigner(lenderAddress);
+    // Signoff and create new contract
+    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId);
+    receipt = await tx.wait();
 
 
 

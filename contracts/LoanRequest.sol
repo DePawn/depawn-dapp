@@ -3,6 +3,7 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
+import "hardhat/console.sol";
 
 // import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 // import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -139,7 +140,7 @@ contract LoanRequest is MultiSig {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
         address _lender = getSigner(_safeId, lenderPosition);
-
+        
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&

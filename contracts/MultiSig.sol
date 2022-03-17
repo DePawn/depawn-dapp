@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.5;
+import "hardhat/console.sol";
 
 abstract contract MultiSig {
     uint256 public required;
@@ -71,6 +72,7 @@ abstract contract MultiSig {
         onlySigner(msg.sender)
         returns (bool _isSigned)
     {
+        console.log(msg.sender);
         require(safe.signers[0] != address(0), "Borrower must be set.");
         safe.signStatus[msg.sender] = true;
         emit Signed(msg.sender, safe.confirmed);
