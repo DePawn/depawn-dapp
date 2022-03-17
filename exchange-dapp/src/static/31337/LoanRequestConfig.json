@@ -1,0 +1,29 @@
+{
+  "loanRequestAddress": "0xEDBA386C67364084c5eCbb4C50422eEDCfB19374",
+  "transferibles": [
+    {
+      "ownerAddress": "0x06a51fa36188839ec6373944918d980812ea44b2",
+      "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "tokenId": 3320,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    },
+    {
+      "ownerAddress": "0x6317b49061120855e0bc34709ed75dbeb30336ef",
+      "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "tokenId": 6019,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    },
+    {
+      "ownerAddress": "0x8ba7ac4ff3619e0a002a7077357047b9dd8cdf84",
+      "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "tokenId": 5195,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    },
+    {
+      "ownerAddress": "0xf158275fa2a711ada7bcbd66359ecfaf0ac56734",
+      "nft": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "tokenId": 6491,
+      "recipient": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    }
+  ]
+}

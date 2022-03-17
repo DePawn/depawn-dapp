@@ -77,15 +77,44 @@ div {
   text-align: left;
 }
 
-.input {
+.input,
+.datalist {
   width: 70%;
   margin: 4px 4px 4px 4%;
   padding: 10px;
   border: 1px solid #2e4d6d;
+  font-size: 13px;
   box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
   -webkit-box-shadow: 0 1px 1px 2px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
   -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
   border-radius: 5px;
+}
+
+.input-container {
+  width: 74.2%;
+  margin: 4px 0 4px 4%;
+  padding: 0;
+  border: none;
+}
+
+.datalist-nft {
+  width: 100%;
+  margin: 0;
+  border: node;
+}
+
+.image-loan-request-nft {
+  width: 450px;
+  margin: 25px 0 17px 0;
+  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -webkit-box-shadow: 0 1px 1px 2px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  border-radius: 15px;
+}
+
+.container-no-image {
+  width: 100%;
+  margin: 20px 0;
 }
 
 .button {
@@ -106,12 +135,17 @@ div {
   text-shadow: 1px 1px 2px rgba(1, 1, 1, 0.4);
 }
 
+.button-disabled {
+  cursor: not-allowed;
+  background: darkgray;
+}
+
 .button-edit {
   margin: 4px 4% 4px 0;
   padding: 4px 8px;
 }
 
-.button:active {  
+.button-enabled:active {  
   transform: scale(0.98);
   box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
 }
@@ -137,7 +171,7 @@ div {
 }
 
 .container-existing-loan-buttons {
-  width: 300px;
+  width: 400px;
   margin: 0 auto;
   padding: 0;
   display: flex;
@@ -149,12 +183,20 @@ div {
   padding: 6px 0 8px 0;
 }
 
+.button-existing-loan-commit {
+  width: 120px;
+  margin-left: 31px;
+  margin-right: 10px;
+}
+
 .button-existing-loan-update {
-  margin-right: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 .button-existing-loan-sign {
-  margin-left: 20px;
+  margin-left: 10px;
+  margin-right: 0;
 }
 
 .button-loan-request-create {
