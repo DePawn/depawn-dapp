@@ -44,7 +44,7 @@ export const config = (network) => {
     console.log('CONFIG: ', protocol[network])
 
     return {
-        isDev: true,
+        dev: true,
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,

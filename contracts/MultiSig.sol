@@ -70,12 +70,14 @@ abstract contract MultiSig {
         internal
         safeKey(_safeId)
         onlySigner(msg.sender)
+        returns (bool _isSigned)
     {
         console.log(msg.sender);
         require(safe.signers[0] != address(0), "Borrower must be set.");
         safe.signStatus[msg.sender] = true;
         emit Signed(msg.sender, safe.confirmed);
-        console.log("signed");
+
+        _isSigned = safe.signStatus[msg.sender];
     }
 
     function _removeSignature(uint256 _safeId, address _signer)
@@ -104,7 +106,7 @@ abstract contract MultiSig {
         );
 
         safe.signers[_position] = _signer;
-        safe.signStatus[safe.signers[_position]] = false;
+        safe.signStatus[_signer] = false;
 
         uint256 _counter;
         for (uint256 i; i < required; i++) {

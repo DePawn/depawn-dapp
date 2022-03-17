@@ -477,6 +477,7 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember, nft;
 
+    let tokenId;
     let initialLoanValue;
     let rate;
     let duration;
@@ -493,27 +494,32 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
 
     afterEach(async () => {
         // Zero out parameters
+        tokenId = ethers.constants.Zero;
         initialLoanValue = ethers.constants.Zero;
         rate = ethers.constants.Zero;
         duration = ethers.constants.Zero;
     })
 
     it("0-3-00 :: LoanRequest should deploy loan contract when all parameters are finalized via createLoanRequest()", async function () {
+        tokenId = ethers.constants.One;
         initialLoanValue = ethers.constants.One;
         rate = ethers.constants.One;
         duration = ethers.constants.One;
 
         await loanRequestContract.createLoanRequest(
             nft,
+            tokenId,
             initialLoanValue,
             rate,
             duration,
-            lender.address
         );
 
+        let tx = await loanRequestContract.sign(borrower.address, loanId);
+        let receipt = await tx.wait();
+
         // Signoff and create new contract
-        const tx = await loanRequestContract.connect(lender).sign(borrower.address, loanId);
-        const receipt = await tx.wait();
+        tx = await loanRequestContract.connect(lender).setLender(borrower.address, loanId);
+        receipt = await tx.wait();
         const events = receipt.events.map(ev => ev.event);
 
         expect(events).to.include('DeployedLoanContract');

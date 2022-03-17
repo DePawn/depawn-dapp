@@ -139,8 +139,8 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        address _lender = getSigner(_loanId, lenderPosition);
-        console.log(_lender);
+        address _lender = getSigner(_safeId, lenderPosition);
+        
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&
@@ -220,14 +220,8 @@ contract LoanRequest is MultiSig {
             _setSigner(_safeId, msg.sender, lenderPosition);
 
             // Lender signs
-            (bool success, ) = address(this).delegatecall(
-                abi.encodeWithSignature(
-                    "sign(address,uint256)",
-                    _borrower,
-                    _loanId
-                )
-            );
-            console.log("lender", success);
+            sign(_borrower, _loanId);
+
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
             // If msg.sender == borrower, unsign lender and set lender
@@ -256,9 +250,9 @@ contract LoanRequest is MultiSig {
             _getSignStatus(_safeId, msg.sender) == false,
             "Only unsigned contracts can be accessed."
         );
-        console.log(msg.sender);
-        _sign(_safeId);
-        console.log(isReady(_borrower, _loanId));
+
+        bool success = _sign(_safeId);
+
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
