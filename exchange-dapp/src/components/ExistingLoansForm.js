@@ -10,6 +10,7 @@ const cancel_emoji = "\u{274c}";
 export default function ExistingLoansForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
+    console.log(props.currentType)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -34,14 +35,17 @@ export default function ExistingLoansForm(props) {
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
+        const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
 
         // Get ERC721 contract
-        const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
-        const nftOwner = await nftContract.ownerOf(props.tokenId);
+        const nftContract = new ethers.Contract(props.collateral, props.currentType === 'erc115' ? erc1155 : erc721, borrower);
+
+        nftContract.on('Transfer', async (ev) => {
+            console.log(`NFT (${props.currentType.toUpperCase()}) Transfered!`, ev)
+        })
 
         // Identify if LoanRequest contract currently owns ERC721
-        setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
+        // setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
     }
 
     useEffect(() => {
@@ -66,20 +70,38 @@ export default function ExistingLoansForm(props) {
     }
 
     async function commitNft() {
+        console.log('PROPS::: ', props)
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
-
-        // Get ERC721 contract
-        const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
-
-        // Transfer ERC721 to LoanRequest contract
+        const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
+        console.log(props)
         try {
-            await nftContract["safeTransferFrom(address,address,uint256)"](
-                props.currentAccount, loanRequestAddress, props.tokenId
-            );
-            return true;
+            if (props.currentType === 'erc1155') {
+                console.log('trying the erc1155');
+                // Get ERC1155 contract
+                const nftContract = new ethers.Contract(props.collateral, erc1155, borrower);
+
+                // Transfer ERC1155 to LoanRequest contract
+                await nftContract["safeTransferFrom(address,address,uint256,uint256)"](
+                    props.currentAccount, loanRequestAddress, props.tokenId, ethers.constants.One
+                );
+                return true;
+            }
+            else if (props.currentType === 'erc721') {
+                console.log('trying the erc721');
+                // Get ERC721 contract
+                const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
+
+                // Transfer ERC721 to LoanRequest contract
+                await nftContract["safeTransferFrom(address,address,uint256)"](
+                    props.currentAccount, loanRequestAddress, props.tokenId
+                );
+                return true;
+            }
+            else {
+                console.log('Unsupported Token type.');
+            }
         }
         catch (err) {
             return false;
@@ -218,8 +240,8 @@ export default function ExistingLoansForm(props) {
                     type="string"
                     id={"input-existing-loan-lender-" + props.loanNumber}
                     className="input input-existing-loan-lender"
-                    placeholder='Address...'
-                    defaultValue={props.lender}
+                    placeholder='Not set...'
+                    defaultValue={!!parseInt(props.lender, 16) ? props.lender : "Unassigned 😞"}
                     readOnly>
                 </input>
                 <div
@@ -259,7 +281,7 @@ export default function ExistingLoansForm(props) {
 
                 <div
                     id={"button-existing-loan-sign-" + props.loanNumber}
-                    className={`button button-existing-loan button-existing-loan-sign ${currentNftCommitStatus ? " button-enabled" : " button-disabled"}`}>
+                    className={`button button - existing - loan button - existing - loan - sign ${currentNftCommitStatus ? " button-enabled" : " button-disabled"}`}>
                     Sign
                 </div>
             </div>

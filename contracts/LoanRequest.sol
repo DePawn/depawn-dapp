@@ -6,6 +6,7 @@ import "./LoanContract.sol";
 
 // import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 // import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+// import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {

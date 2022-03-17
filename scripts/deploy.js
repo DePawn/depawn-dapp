@@ -7,21 +7,27 @@ const erc721 = require(`../exchange-dapp/src/artifacts/${NETWORK}/@openzeppelin/
 
 const transferibles = [
     {
-        ownerAddress: "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
+        ownerAddress: "0x06a51fa36188839ec6373944918d980812ea44b2",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-        tokenId: 5465,
+        tokenId: 3320,
         recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     },
     {
-        ownerAddress: "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
-        nft: "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
-        tokenId: 22,
+        ownerAddress: "0x6317b49061120855e0bc34709ed75dbeb30336ef",
+        nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+        tokenId: 6019,
         recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     },
     {
-        ownerAddress: "0x8cb377959625e693986c6adef82fff01d4d91af8",
+        ownerAddress: "0x8ba7ac4ff3619e0a002a7077357047b9dd8cdf84",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-        tokenId: 6482,
+        tokenId: 5195,
+        recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+    },
+    {
+        ownerAddress: "0xf158275fa2a711ada7bcbd66359ecfaf0ac56734",
+        nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+        tokenId: 6491,
         recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     }
 ];
@@ -40,8 +46,6 @@ const main = async () => {
         const signer = provider.getSigner(tr.ownerAddress);
 
         let nftContract = new hre.ethers.Contract(tr.nft, erc721, signer);
-        console.log("check1");
-
         let tx = await nftContract.ownerOf(tr.tokenId);
         console.log("Owner is", tx);
 
