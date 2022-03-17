@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 export default function LoanRequestForm(props) {
-    console.log('LoanRequestForm: ', props)
     const [currentNft, setCurrentNft] = useState(0);
 
     function renderNftDropdown() {

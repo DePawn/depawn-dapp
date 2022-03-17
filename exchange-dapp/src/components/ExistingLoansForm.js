@@ -10,7 +10,6 @@ const cancel_emoji = "\u{274c}";
 export default function ExistingLoansForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
-    console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -32,7 +31,6 @@ export default function ExistingLoansForm(props) {
     }
 
     async function currentNftCommitStatusSetter() {
-        console.log(props)
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
@@ -77,7 +75,6 @@ export default function ExistingLoansForm(props) {
 
         try {
             if (props.currentType === 'erc1155') {
-                console.log('trying the erc1155');
                 // Get ERC1155 contract
                 const nftContract = new ethers.Contract(props.collateral, erc1155, borrower);
 
@@ -88,7 +85,6 @@ export default function ExistingLoansForm(props) {
                 return true;
             }
             else if (props.currentType === 'erc721') {
-                console.log('trying the erc721');
                 // Get ERC721 contract
                 const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
 

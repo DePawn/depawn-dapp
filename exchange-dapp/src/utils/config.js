@@ -1,13 +1,19 @@
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 
 export const alchemy = (ALCHEMY_MAINNET_URL) => {
-    console.log(ALCHEMY_MAINNET_URL)
+    // console.log(ALCHEMY_MAINNET_URL)
     return createAlchemyWeb3(ALCHEMY_MAINNET_URL);
 }
 
 export const config = (network) => {
-    console.log(`Grabbing artifacts from ../artifacts/${network}`);
-    console.log(`Grabbing contract address from ../static/${network}`);
+    /* DEV ONLY */
+    const DEV = true;
+    /* ******** */
+
+    network = DEV ? '31337' : network;
+
+    // console.log(`Grabbing artifacts from ../artifacts/${network}`);
+    // console.log(`Grabbing contract address from ../static/${network}`);
 
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestConfig = require(`../static/${network}/LoanRequestConfig.json`);
@@ -41,10 +47,9 @@ export const config = (network) => {
         '1': 'ethereum',
         '80001': 'polygon'
     };
-    console.log('CONFIG: ', protocol[network])
 
     return {
-        dev: true,
+        dev: DEV,
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,

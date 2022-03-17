@@ -3,12 +3,10 @@ import LoanRequestForm from './components/LoanRequestForm';
 import ExistingLoansForm from './components/ExistingLoansForm';
 
 import React, { useEffect, useState } from 'react';
-import env from 'react-dotenv';
 import { ethers } from 'ethers';
-import axios from 'axios';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config';
-// import { loadNftCookies, saveNftCookies } from './utils/cookieUtils';
+import { fetchAccountNfts, fetchNftData } from './external/metaNft';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -20,8 +18,8 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 }
 
 function App() {
-  const [currentAccount, setCurrentAccount] = useState('');
-  const [currentNetwork, setCurrentNetwork] = useState('');
+  const [currentAccount, setCurrentAccount] = useState(null);
+  const [currentNetwork, setCurrentNetwork] = useState(null);
   const [currentLoanValue, setCurrentLoanValue] = useState('');
   const [currentLoanRate, setCurrentLoanRate] = useState('');
   const [currentLoanDuration, setCurrentLoanDuration] = useState('');
@@ -34,39 +32,50 @@ function App() {
   const [existingLoanElements, setExistingLoanElements] = useState('');
 
   useEffect(() => {
-    checkIfWalletIsConnected()
-      .then(() => fetchAccountsNft());
+    checkIfWalletIsConnected();
+    // .then(() => fetchAccountNfts());
     // eslint-disable-next-line
   }, []);
 
-  useEffect(() => {
-    getAccountLoanRequests();
-    // eslint-disable-next-line
-  }, [
-    currentAccount,
-    currentNetwork,
-    currentLoanValue,
-    currentLoanRate,
-    currentLoanDuration,
-    currentLoanLender
-  ]);
+  // useEffect(() => {
+  //   const fetchNftData = async () => {
+  //     const nftData = await fetchNftData(currentAccount, currentNetwork);
+  //     setCurrentAccountNfts(nftData);
+  //   };
 
-  useEffect(() => {
-    renderLoanRequestElements()
-    renderExistingLoanElements();
+  //   fetchNftData().catch(console.error);
 
-    // eslint-disable-next-line
-  }, [currentAccountNfts]);
+  //   // eslint-disable-next-line
+  // }, [currentAccount])
 
-  useEffect(() => {
-    renderExistingLoanElements();
-    // eslint-disable-next-line
-  }, [currentAccountLoans]);
+  // useEffect(() => {
+  //   getAccountLoanRequests();
+  //   // eslint-disable-next-line
+  // }, [
+  //   currentAccount,
+  //   currentNetwork,
+  //   currentLoanValue,
+  //   currentLoanRate,
+  //   currentLoanDuration,
+  //   currentLoanLender
+  // ]);
 
-  /*
-   * Connect Wallet Callback
-   */
+  // useEffect(() => {
+  //   renderLoanRequestElements()
+  //   renderExistingLoanElements();
+
+  //   // eslint-disable-next-line
+  // }, [currentAccountNfts]);
+
+  // useEffect(() => {
+  //   renderExistingLoanElements();
+  //   // eslint-disable-next-line
+  // }, [currentAccountLoans]);
+
   const connectWallet = async () => {
+    /*
+     * Connect Wallet Callback
+     */
     try {
       const { ethereum } = window;
 
@@ -87,10 +96,12 @@ function App() {
     }
   }
 
-  /*
-   * Connect Wallet State Change Function
-   */
   const checkIfWalletIsConnected = async () => {
+    /*
+     * Connect Wallet State Change Function
+     */
+
+    // Get wallet's ethereum object
     const { ethereum } = window;
 
     if (!ethereum) {
@@ -98,117 +109,52 @@ function App() {
       return;
     }
     else {
-      console.log('We have the ethereum object: ', ethereum);
+      console.log('Wallet connected.');
     }
 
-    // Check for an authorized account
+    // Get network
+    let chainId = await ethereum.request({ method: 'eth_chainId' });
+    chainId = parseInt(chainId, 16).toString();
+
+    // Get account, if one is authorized
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     const account = accounts.length !== 0 ? accounts[0] : null;
 
-    if (!!account) {
-      console.log('Found an authorized account: ', account);
-      setCurrentAccount(account);
-    }
-    else {
-      console.log('No authorized account found :(');
-      setCurrentAccount(null)
+    // If account or network are changed, set account loan and nft data
+    if (account !== currentAccount || chainId !== currentNetwork) {
+      await setAccountData(account, chainId);
     }
 
-    let chainId = await ethereum.request({ method: 'eth_chainId' });
-    chainId = parseInt(chainId, 16).toString();
-    setCurrentNetwork(chainId);
+    // Update state variables
+    !!chainId ? setCurrentNetwork(chainId) : setCurrentNetwork(null);
+    !!account ? setCurrentAccount(account) : setCurrentAccount(null);
 
-    if (!!account) await fetchAccountsNft(account, chainId);
-
-    console.log('Current chain ID: ', chainId);
-    ethereum.on('chainChanged', handleChainChanged);
-
-    function handleChainChanged(_chainId) {
-      window.location.reload();
-    }
+    // Set wallet event listeners
+    ethereum.on('accountsChanged', () => window.location.reload());
+    ethereum.on('chainChanged', () => window.location.reload());
   }
 
-  const fetchAccountsNft = async (account, network) => {
-    if (!account || !network) return {};
+  const setAccountData = async (account, network) => {
+    console.log('Account: ', account);
+    console.log('Network: ', network);
+    if (!!account && !!network) {
+      // Fetch and store the current NFT data
+      console.log('Setting account NFT data...');
+      const nfts = await fetchNftData(account, network);
+      setCurrentAccountNfts(nfts);
+      console.log('--setAccountData--: ', nfts);
 
-    const { dev, protocol } = config(network);
-
-    /* DEV ONLY */
-    if (dev) {
-      console.log('running dev')
-      await fetchNftData([], network);
+      // Get account loan data
+      console.log('Getting account loan data...');
+      const loans = await getAccountLoanRequests(account, network, nfts);
+      setCurrentAccountLoans(loans);
+      console.log('--getAccountLoanRequests--: ', loans);
     }
     else {
-      // Get NFT metadata
-      const metaOptions = {
-        method: 'GET',
-        url: `https://api.nftport.xyz/v0/accounts/${account}`,
-        params: {
-          chain: protocol,
-          include: 'metadata',
-          page_size: '25'
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: env.NFT_PORT_KEY
-        }
-      };
-      const nftMetaResponse = await axios.request(metaOptions);
-
-      // Get NFT Contract information
-      const contractOptions = {
-        method: 'GET',
-        url: `https://api.nftport.xyz/v0/accounts/${account}`,
-        params: {
-          chain: protocol,
-          // exclude: 'erc1155',
-          include: 'contract_information',
-          page_size: '25'
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: env.NFT_PORT_KEY
-        }
-      };
-      const nftContractResponse = await axios.request(contractOptions);
-      nftMetaResponse.data.nfts.forEach((nft, i) => {
-        nft.contract = nftContractResponse.data.nfts[i].contract;
-      });
-
-      setCurrentAccountNfts(nftMetaResponse.data.nfts);
+      setCurrentAccountNfts('');
+      setCurrentAccountLoans('');
+      console.log('disconnected');
     }
-  }
-
-  const fetchNftData = async (nfts, network) => {
-    let { dev, protocol, transferibles } = config(network);
-
-    // If nfts is passed as empty and in dev, swap to dev nfts
-    if (!!nfts && dev) [nfts, transferibles] = [transferibles, nfts];
-
-    // Get NFT metadata
-    const nftMetaResponse = {
-      data: []
-    };
-
-    for (let tr of nfts) {
-      let metaOptions = {
-        method: 'GET',
-        url: `https://api.nftport.xyz/v0/nfts/${tr.nft}/${tr.tokenId}`,
-        params: { chain: protocol },
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: env.NFT_PORT_KEY
-        }
-      };
-
-      let metaResponse = await axios.request(metaOptions);
-      nftMetaResponse.data.push({ ...metaResponse.data.nft, ...metaResponse.data.contract });
-    }
-
-    // Set state variable only when nfts is passed as []
-    [nfts, transferibles] = [transferibles, nfts];
-
-    setCurrentAccountNfts(nftMetaResponse.data);
   }
 
   const setSubmittedLoanRequestListener = async (loanRequestContract) => {
@@ -241,17 +187,16 @@ function App() {
     })
   }
 
-  /*
-   * Get all loan request parameters for each loan submitted by user.
-   */
-  const getAccountLoanRequests = async () => {
-    if (currentAccount === '' || currentNetwork === '') { return; }
-    if (!currentAccountNfts) { await fetchAccountsNft(); }
+  const getAccountLoanRequests = async (account, network, nfts) => {
+    /*
+     * Get all loan request parameters for each loan submitted by user.
+     */
+    if (account === '' || network === '') { return; }
 
     // Get contract
     const provider = getProvider();
-    const borrower = provider.getSigner(currentAccount);
-    const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+    const borrower = provider.getSigner(account);
+    const { loanRequestAddress, loanRequestABI } = config(network);
 
     const loanRequestContract = new ethers.Contract(
       loanRequestAddress,
@@ -259,33 +204,34 @@ function App() {
       borrower
     );
 
-    // Get loan requests
-    const loanRequests = await loanRequestContract.getLoans(currentAccount);
+    /* Get loan requests and nft image url */
+    const loanRequests = await loanRequestContract.getLoans(account);
     const loans = loanRequests.map((loan) => {
+      // Loan request data
       const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
 
-      console.log(currentAccountNfts)
-      const nftData = [...currentAccountNfts].find(nft =>
+      // Nft image url
+      const nftData = [...nfts].find(nft =>
         parseInt(collateral, 16) === parseInt(nft.contract_address, 16) &&
         tokenId.eq(ethers.BigNumber.from(nft.token_id))
       )
-      console.log(nftData)
       const imgUrl = !!nftData.cached_file_url ? nftData.cached_file_url : nftData.file_url;
 
+      // Return loan request and nft image url
       return { collateral, tokenId, initialLoanValue, rate, duration, lender, imgUrl };
     });
 
-    setCurrentAccountLoans(loans);
+    return loans;
   }
 
-  /*
-   * Submit Loan Request Callback
-   * 
-   * If all loan components are set and borrower and lender have signed off,
-   * this loan request will generate a loan contract.
-   * 
-   */
   const submitLoanRequest = async (ercType) => {
+    /*
+     * Submit Loan Request Callback
+     * 
+     * If all loan components are set and borrower and lender have signed off,
+     * this loan request will generate a loan contract.
+     * 
+     */
     ercType = ercType.toLowerCase();
 
     // Get input values
@@ -430,7 +376,7 @@ function App() {
             <div className="wedge"></div>
             <div className="container-loan-contracts-master">
               <h2>Existing Loans</h2>
-              {!!existingLoanElements && existingLoanElements}
+              {/* {!!existingLoanElements && existingLoanElements} */}
             </div>
           </div>
         </div>
