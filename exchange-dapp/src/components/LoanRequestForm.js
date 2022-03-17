@@ -60,9 +60,7 @@ export default function LoanRequestForm(props) {
     function renderNftImage() {
         if (!props.currentAccountNfts) return;
 
-        const imgUrl = !!props.currentAccountNfts[currentNft].cached_file_url
-            ? props.currentAccountNfts[currentNft].cached_file_url
-            : props.currentAccountNfts[currentNft].file_url;
+        const imgUrl = parseNftImageFromCurrentAccounts(currentNft);
 
         return (
             !!props.currentAccountNfts && imgUrl
@@ -74,6 +72,14 @@ export default function LoanRequestForm(props) {
                 />
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function parseNftImageFromCurrentAccounts(idx) {
+        const imgUrl = !!props.currentAccountNfts[idx].cached_file_url
+            ? props.currentAccountNfts[idx].cached_file_url
+            : props.currentAccountNfts[idx].file_url;
+
+        return imgUrl;
     }
 
     useEffect(() => {
@@ -127,7 +133,9 @@ export default function LoanRequestForm(props) {
                 <div
                     className="button button-loan-request button-loan-request-create"
                     onClick={() => {
-                        props.submitCallback(props.currentAccountNfts[currentNft].type);
+                        const type = props.currentAccountNfts[currentNft].type;
+                        const imgUrl = parseNftImageFromCurrentAccounts(currentNft);
+                        props.submitCallback({ type, imgUrl });
                     }}>
                     Submit Request
                 </div>

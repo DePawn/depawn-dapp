@@ -10,7 +10,7 @@ const cancel_emoji = "\u{274c}";
 export default function ExistingLoansForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
-    console.log(props.currentType)
+    console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -32,6 +32,7 @@ export default function ExistingLoansForm(props) {
     }
 
     async function currentNftCommitStatusSetter() {
+        console.log(props)
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
@@ -39,13 +40,12 @@ export default function ExistingLoansForm(props) {
 
         // Get ERC721 contract
         const nftContract = new ethers.Contract(props.collateral, props.currentType === 'erc115' ? erc1155 : erc721, borrower);
+        let nftOwner = await nftContract.ownerOf(props.tokenId);
 
-        nftContract.on('Transfer', async (ev) => {
-            console.log(`NFT (${props.currentType.toUpperCase()}) Transfered!`, ev)
-        })
+        nftContract.on('Transfer', async (ev) => { })
 
         // Identify if LoanRequest contract currently owns ERC721
-        // setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
+        setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
     }
 
     useEffect(() => {
@@ -70,12 +70,11 @@ export default function ExistingLoansForm(props) {
     }
 
     async function commitNft() {
-        console.log('PROPS::: ', props)
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
         const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
-        console.log(props)
+
         try {
             if (props.currentType === 'erc1155') {
                 console.log('trying the erc1155');
@@ -133,6 +132,20 @@ export default function ExistingLoansForm(props) {
     function removeLender() {
         const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loanNumber);
         lenderElement.value = ethers.constants.AddressZero;
+    }
+
+    function renderNftImage() {
+        return (
+            !!props.imgUrl
+                ?
+                <img
+                    src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                    alt={props.imgUrl}
+                    key={props.loanNumber}
+                    className={`image image-existing-loan-nft image-existing-loan-nft-${props.loanNumber}`}
+                />
+                : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
+        )
     }
 
     return (
@@ -285,6 +298,10 @@ export default function ExistingLoansForm(props) {
                     Sign
                 </div>
             </div>
+
+            {/* <div className="container-existing-loan-img"> */}
+            {renderNftImage()}
+            {/* </div> */}
         </div >
     )
 }

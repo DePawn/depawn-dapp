@@ -103,7 +103,8 @@ div {
   border: node;
 }
 
-.image-loan-request-nft {
+.image-loan-request-nft,
+.image-existing-loan-nft {
   width: 450px;
   margin: 25px 0 17px 0;
   box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
@@ -185,7 +186,7 @@ div {
 
 .button-existing-loan-commit {
   width: 120px;
-  margin-left: 31px;
+  margin-left: 44px;
   margin-right: 10px;
 }
 
