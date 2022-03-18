@@ -161,22 +161,8 @@ export default function LoanRequestForm(props) {
 
                 <div className="container-loan-request-create">
                     <div
-                        className="button button-loan-request button-loan-request-create"
-                        onClick={() => {
-                            // const ercType = props.currentAccountNfts
-                            //     ? props.currentAccountNfts[currentNft].type
-                            //     : props._dev
-                            //         ? 'erc721'
-                            //         : null;
-
-                            // const imgUrl = props.currentAccountNfts
-                            //     ? parseNftImageFromCurrentAccounts(currentNft)
-                            //     : props._dev
-                            //         ? props.defaultImageUrl
-                            //         : undefined;
-
-                            props.submitCallback();
-                        }}>
+                        className="button button-loan-request button-loan-request-create  button-enabled"
+                        onClick={() => props.submitCallback()}>
                         Submit Request
                     </div>
                 </div>

@@ -118,16 +118,13 @@ function App() {
     let chainId = await ethereum.request({ method: 'eth_chainId' });
     chainId = parseInt(chainId, 16).toString();
 
-    // Get config values with network
-    const { devBack, transferibles } = config(chainId);
-
     // Get account, if one is authorized
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     let account = accounts.length !== 0 ? accounts[0] : null;
 
     // Update state variables
-    chainId = !!chainId ? chainId : !devBack ? null : '31337';
-    account = !!account ? account : !devBack ? null : transferibles[0].recipient
+    chainId = !!chainId ? chainId : null;
+    account = !!account ? account : null;
     setCurrentNetwork(chainId);
     setCurrentAccount(account);
 
@@ -149,6 +146,9 @@ function App() {
     let nfts = null;
     let loans = [];
 
+    const { devFront, transferibles } = config(network);
+    if (devFront) account = transferibles[0].recipient;
+
     if (!!account && !!network) {
       // Fetch and store the current NFT data
       console.log('Setting account NFT data...');
@@ -163,6 +163,16 @@ function App() {
     else {
       console.log('disconnected');
     }
+
+    // Remove NFTs of existing loan requests
+    nfts = [...nfts].filter((nft) =>
+      !loans.find((loan) =>
+        parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
+        loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
+      )
+    )
+
+    console.log(nfts)
 
     setCurrentAccountNfts(nfts);
     setCurrentAccountLoans(loans);
@@ -349,8 +359,6 @@ function App() {
   }
 
   const renderExistingLoanElements = async (account, network, loans) => {
-    const { devFront } = config(network);
-
     const getExistingLoanElements = async () => {
       const existingLoanElements = loans.map((loan, i) => {
         return (
@@ -362,7 +370,6 @@ function App() {
             updateLoanFunc={callback__UpdateLoan}
             fetchNftFunc={fetchNftData}
             {...loan}
-            _dev={devFront}
           />
         )
       });

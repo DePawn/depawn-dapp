@@ -64,39 +64,24 @@ export default function ExistingLoansForm(props) {
         if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initialLoanValue);
         if (exclusion !== "rate") rateElement.value = ethers.utils.formatEther(props.rate);
         if (exclusion !== "duration") durationElement.value = props.duration;
-        if (exclusion !== "lender") lenderElement.value = props.lender;
+        if (exclusion !== "lender") lenderElement.value = !!parseInt(props.lender, 16) ? props.lender : "Unassigned 😞";
     }
 
     async function commitNft() {
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, erc721, erc1155 } = config(props.currentNetwork);
+        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
 
         try {
-            if (props.ercType === 'erc1155') {
-                // Get ERC1155 contract
-                const nftContract = new ethers.Contract(props.collateral, erc1155, borrower);
+            // Get ERC721 contract
+            const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
 
-                // Transfer ERC1155 to LoanRequest contract
-                await nftContract["safeTransferFrom(address,address,uint256,uint256)"](
-                    props.currentAccount, loanRequestAddress, props.tokenId, ethers.constants.One
-                );
-                return true;
-            }
-            else if (props.ercType === 'erc721') {
-                // Get ERC721 contract
-                const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
-
-                // Transfer ERC721 to LoanRequest contract
-                await nftContract["safeTransferFrom(address,address,uint256)"](
-                    props.currentAccount, loanRequestAddress, props.tokenId
-                );
-                return true;
-            }
-            else {
-                console.log('Unsupported Token type.');
-            }
+            // Transfer ERC721 to LoanRequest contract
+            await nftContract["safeTransferFrom(address,address,uint256)"](
+                props.currentAccount, loanRequestAddress, props.tokenId
+            );
+            return true;
         }
         catch (err) {
             return false;
@@ -160,7 +145,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-nft-" + props.loanNumber}
-                    className="button button-edit button-edit-nft">
+                    className="button button-edit button-edit-nft button-enabled">
                 </div>
             </div>
 
@@ -176,7 +161,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-token-id-" + props.loanNumber}
-                    className="button button-edit button-edit-token-id">
+                    className="button button-edit button-edit-token-id button-enabled">
                 </div>
             </div>
 
@@ -192,7 +177,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-value-" + props.loanNumber}
-                    className="button button-edit button-edit-value"
+                    className="button button-edit button-edit-value button-enabled"
                     onClick={() => {
                         setEditName("value");
                         restoreVals("value");
@@ -213,7 +198,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-rate-{props.loanNumber}"}
-                    className="button button-edit button-edit-rate"
+                    className="button button-edit button-edit-rate button-enabled"
                     onClick={() => {
                         setEditName("rate");
                         restoreVals("rate");
@@ -234,7 +219,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-duration-" + props.loanNumber}
-                    className="button button-edit button-edit-duration"
+                    className="button button-edit button-edit-duration button-enabled"
                     onClick={() => {
                         setEditName("duration");
                         restoreVals("duration");
@@ -255,7 +240,7 @@ export default function ExistingLoansForm(props) {
                 </input>
                 <div
                     id={"edit-lender-" + props.loanNumber}
-                    className="button button-edit button-edit-lender"
+                    className="button button-edit button-edit-lender button-enabled"
                     onClick={() => {
                         setEditName("lender");
                         restoreVals("lender");
@@ -267,7 +252,7 @@ export default function ExistingLoansForm(props) {
             <div className="container-existing-loan-buttons">
                 <div
                     id={"button-existing-loan-update-" + props.loanNumber}
-                    className="button button-existing-loan button-existing-loan-commit"
+                    className="button button-existing-loan button-existing-loan-commit button-enabled"
                     onClick={() => {
                         if (!currentNftCommitStatus) {
                             commitNft().then((res) => { setCurrentNftCommitStatus(res); });
@@ -280,7 +265,7 @@ export default function ExistingLoansForm(props) {
                 </div>
                 <div
                     id={"button-existing-loan-update-" + props.loanNumber}
-                    className="button button-existing-loan button-existing-loan-update"
+                    className="button button-existing-loan button-existing-loan-update button-enabled"
                     onClick={() => {
                         props.updateLoanFunc(props.loanNumber, currentEdit)
                             .then(() => { setCurrentEdit(''); });
