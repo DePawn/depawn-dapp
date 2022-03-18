@@ -7,8 +7,6 @@ import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config';
 import { fetchNftData } from './external/nftMetaFetcher';
-import { setAllLoanRequestListeners } from './external/loanRequestListeners';
-import { setAllErc721Listeners } from './external/erc721Listeners';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -30,20 +28,31 @@ function App() {
   const [currentAccountLoans, setCurrentAccountLoans] = useState('');
   const [loanRequestElement, setLoanRequestElement] = useState('');
   const [existingLoanElements, setExistingLoanElements] = useState('');
+  const [isNewLoanRequest, setIsNewLoanRequest] = useState(false);
 
   useEffect(() => {
+    console.log('Page loading...');
     pageLoadSequence();
     // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
-    console.log(`currentSubmitRequestStatus: ${currentSubmitRequestStatus}`);
     if (currentSubmitRequestStatus) submitLoanRequestSequence();
     // eslint-disable-next-line
   }, [currentSubmitRequestStatus]);
 
+  useEffect(() => {
+    if (isNewLoanRequest) {
+      console.log('New request is loading...')
+      createdLoanRequestSequence();
+    }
+
+    setIsNewLoanRequest(false);
+    // eslint-disable-next-line
+  }, [isNewLoanRequest])
+
   /* ---------------------------------------  *
-   *        PAGE MODIFIED FUNCTIONS           *
+   *       EVENT SEQUENCE FUNCTIONS           *
    * ---------------------------------------  */
   const pageLoadSequence = async () => {
     // Set account and network info
@@ -65,31 +74,30 @@ function App() {
   }
 
   const submitLoanRequestSequence = async () => {
-    // Set account and network info
-    console.log('--pageLoadSequence-- Account: ', currentAccount);
-    console.log('--pageLoadSequence-- Network: ', currentNetwork);
-
-    // Set account loan and nft data
-    const { nfts, loans } = await setAccountData(currentAccount, currentNetwork);
-    console.log('--pageLoadSequence-- NFTs: ', nfts);
-    console.log('--pageLoadSequence-- Loans: ', loans);
-
-    /* Likely will need to re-render this as we will not allow duplicate loans for 
-       a single NFT owned by currentAccount.
-       Maybe use 'nfts' with a removeNft function...?
-       
-    // Render loan request elements for borrower
-    await renderLoanRequestElements(nfts, currentNetwork);
-    */
-
-    // Render existing loan elements for borrower
-    const _existingLoanElements = await renderExistingLoanElements(currentAccount, currentNetwork, loans);
-    setExistingLoanElements(_existingLoanElements);
+    // Submit loan request
+    await submitLoanRequest();
 
     // Reset currentSubmitRequestStatus
     setCurrentSubmitRequestStatus(false);
   }
 
+  const createdLoanRequestSequence = async () => {
+    // Set account loan and nft data
+    const { nfts, loans } = await setAccountData(currentAccount, currentNetwork);
+    console.log('--pageLoadSequence-- NFTs: ', nfts);
+    console.log('--pageLoadSequence-- Loans: ', loans);
+
+    // Render loan request elements for borrower
+    await renderLoanRequestElements(nfts, currentNetwork);
+
+    // Render existing loan elements for borrower
+    const _existingLoanElements = await renderExistingLoanElements(currentAccount, currentNetwork, loans);
+    setExistingLoanElements(_existingLoanElements);
+  }
+
+  /* ---------------------------------------  *
+   *        PAGE MODIFIED FUNCTIONS           *
+   * ---------------------------------------  */
   const checkIfWalletIsConnected = async () => {
     /*
      * Connect Wallet State Change Function
@@ -97,9 +105,6 @@ function App() {
 
     // Get wallet's ethereum object
     const { ethereum } = window;
-    const { dev, transferibles } = config('');
-
-    console.log(transferibles[0].recipient)
 
     if (!ethereum) {
       console.log('Make sure you have MetaMask!');
@@ -113,13 +118,16 @@ function App() {
     let chainId = await ethereum.request({ method: 'eth_chainId' });
     chainId = parseInt(chainId, 16).toString();
 
+    // Get config values with network
+    const { devBack, transferibles } = config(chainId);
+
     // Get account, if one is authorized
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     let account = accounts.length !== 0 ? accounts[0] : null;
 
     // Update state variables
-    chainId = !!chainId ? chainId : !dev ? null : '31337';
-    account = !!account ? account : !dev ? null : transferibles[0].recipient
+    chainId = !!chainId ? chainId : !devBack ? null : '31337';
+    account = !!account ? account : !devBack ? null : transferibles[0].recipient
     setCurrentNetwork(chainId);
     setCurrentAccount(account);
 
@@ -155,6 +163,9 @@ function App() {
     else {
       console.log('disconnected');
     }
+
+    setCurrentAccountNfts(nfts);
+    setCurrentAccountLoans(loans);
 
     return { nfts, loans };
   }
@@ -196,6 +207,55 @@ function App() {
     return loans;
   }
 
+  const submitLoanRequest = async () => {
+    /*
+     * If all loan components are set and borrower and lender have signed off,
+     * this loan request will generate a loan contract.
+     */
+
+    // Get input values
+    const nft = document.getElementById('datalist-nft').value;
+    const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
+    const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+    const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
+    const duration = document.getElementById('input-duration').value;
+
+    // Get contract
+    const {
+      loanRequestAddress,
+      loanRequestABI,
+      devFront,
+      transferibles
+    } = config(currentNetwork);
+
+    const provider = getProvider();
+    const borrower = provider.getSigner(
+      !devFront ? currentAccount : transferibles[0].recipient
+    );
+
+    const loanRequestContract = new ethers.Contract(
+      loanRequestAddress,
+      loanRequestABI,
+      borrower
+    );
+
+    // Set contract event listeners
+    await setSubmittedLoanRequestListener(loanRequestContract);
+    await setLoanRequestChangedListeners(loanRequestContract);
+    await setLoanRequestLenderChangedListeners(loanRequestContract);
+
+    // Create new loan request
+    await loanRequestContract.createLoanRequest(
+      nft,
+      tokenId,
+      initialLoanValue,
+      rate,
+      duration,
+    );
+
+    console.log('here')
+  }
+
   /* ---------------------------------------  *
    *           FRONTEND CALLBACKS             *
    * ---------------------------------------  */
@@ -223,55 +283,10 @@ function App() {
     }
   }
 
-  const callback__SubmitLoanRequest = async ({ ercType, imgUrl }) => {
+  const callback__SubmitLoanRequest = async () => {
     /*
-     * Submit Loan Request Callback
-     * 
-     * If all loan components are set and borrower and lender have signed off,
-     * this loan request will generate a loan contract.
-     * 
+     * Submit Loan Request Button Callback
      */
-    ercType = ercType.toLowerCase();
-
-    // Get input values
-    const nft = document.getElementById('datalist-nft').value;
-    const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
-    const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
-    const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
-    const duration = document.getElementById('input-duration').value;
-
-    // Get contract
-    const provider = getProvider();
-    const borrower = provider.getSigner(currentAccount);
-
-    // const { loanRequestAddress, loanRequestABI, erc721 } = config(currentNetwork);
-
-    // const loanRequestContract = new ethers.Contract(
-    //   loanRequestAddress,
-    //   loanRequestABI,
-    //   borrower
-    // );
-
-    // // Set contract event listeners
-    // await setAllLoanRequestListeners(loanRequestContract, { getAccountLoanRequests });
-
-    // // Create new loan request
-    // await loanRequestContract.createLoanRequest(
-    //   nft,
-    //   tokenId,
-    //   initialLoanValue,
-    //   rate,
-    //   duration,
-    // );
-
-    // // Transfer NFT to LoanRequest contract
-    // if (ercType === 'erc721') {
-    //   const nftContract = new ethers.Contract(nft, erc721, borrower);
-    //   await setAllErc721Listeners(nftContract);
-    // }
-    // else {
-    //   console.log(`Cannot set listeners for NFT type ${ercType}.`);
-    // }
 
     setCurrentSubmitRequestStatus(true);
   }
@@ -321,20 +336,20 @@ function App() {
    *           FRONTEND RENDERING             *
    * ---------------------------------------  */
   const renderLoanRequestElements = async (nfts, network) => {
-    const { dev } = config(network);
+    const { devFront } = config(network);
 
     setLoanRequestElement(
       <LoanRequestForm
         currentAccountNfts={nfts}
         submitCallback={callback__SubmitLoanRequest}
         {...DEFAULT_LOAN_REQUEST_PARAMETERS}
-        _dev={dev}
+        _dev={devFront}
       />
     )
   }
 
   const renderExistingLoanElements = async (account, network, loans) => {
-    const { dev } = config(network);
+    const { devFront } = config(network);
 
     const getExistingLoanElements = async () => {
       const existingLoanElements = loans.map((loan, i) => {
@@ -347,7 +362,7 @@ function App() {
             updateLoanFunc={callback__UpdateLoan}
             fetchNftFunc={fetchNftData}
             {...loan}
-            _dev={dev}
+            _dev={devFront}
           />
         )
       });
@@ -360,6 +375,33 @@ function App() {
         ? (<div>{await getExistingLoanElements()}</div>)
         : (<div><div className="container-existing-loan-form">☹️💀 No loans atm 💀☹️</div></div>)
     )
+  }
+
+  /* ---------------------------------------  *
+   *            EVENT LISTENERS               *
+   * ---------------------------------------  */
+  const setSubmittedLoanRequestListener = async (loanRequestContract) => {
+    // Set loan request listener
+    loanRequestContract.on('SubmittedLoanRequest', async () => {
+      setIsNewLoanRequest(true)
+      console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!')
+    });
+  }
+
+  const setLoanRequestChangedListeners = async (loanRequestContract, funcs) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestChanged', async () => {
+      setIsNewLoanRequest(true)
+      console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!')
+    });
+  }
+
+  const setLoanRequestLenderChangedListeners = async (loanRequestContract, funcs) => {
+    // Set loan request listener
+    loanRequestContract.on('LoanRequestLenderChanged', async () => {
+      setIsNewLoanRequest(true)
+      console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!')
+    });
   }
 
   return (

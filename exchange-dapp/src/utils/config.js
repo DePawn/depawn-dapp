@@ -1,16 +1,16 @@
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 
 export const alchemy = (ALCHEMY_MAINNET_URL) => {
-    // console.log(ALCHEMY_MAINNET_URL)
     return createAlchemyWeb3(ALCHEMY_MAINNET_URL);
 }
 
 export const config = (network) => {
     /* DEV ONLY */
-    const DEV = true;
+    const DEV_FRONT = false;
+    const DEV_BACK = true;
     /* ******** */
 
-    network = DEV ? '31337' : network;
+    network = DEV_FRONT || DEV_BACK ? '31337' : network;
 
     // console.log(`Grabbing artifacts from ../artifacts/${network}`);
     // console.log(`Grabbing contract address from ../static/${network}`);
@@ -52,7 +52,9 @@ export const config = (network) => {
     };
 
     return {
-        dev: DEV,
+        devFront: DEV_FRONT,
+        devBack: DEV_BACK,
+        devBoth: DEV_FRONT && DEV_BACK,
         loanRequestABI: loanRequestABI.abi,
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,

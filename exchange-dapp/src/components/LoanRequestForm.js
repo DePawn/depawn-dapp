@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function LoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
-    console.log(props)
+    // console.log(props)
 
     function renderNftDropdown() {
         return (
@@ -163,19 +163,19 @@ export default function LoanRequestForm(props) {
                     <div
                         className="button button-loan-request button-loan-request-create"
                         onClick={() => {
-                            const ercType = props.currentAccountNfts
-                                ? props.currentAccountNfts[currentNft].type
-                                : props._dev
-                                    ? 'erc721'
-                                    : null;
+                            // const ercType = props.currentAccountNfts
+                            //     ? props.currentAccountNfts[currentNft].type
+                            //     : props._dev
+                            //         ? 'erc721'
+                            //         : null;
 
-                            const imgUrl = props.currentAccountNfts
-                                ? parseNftImageFromCurrentAccounts(currentNft)
-                                : props._dev
-                                    ? props.defaultImageUrl
-                                    : undefined;
+                            // const imgUrl = props.currentAccountNfts
+                            //     ? parseNftImageFromCurrentAccounts(currentNft)
+                            //     : props._dev
+                            //         ? props.defaultImageUrl
+                            //         : undefined;
 
-                            props.submitCallback({ ercType, imgUrl });
+                            props.submitCallback();
                         }}>
                         Submit Request
                     </div>
