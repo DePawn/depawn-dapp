@@ -5,8 +5,8 @@ import "./MultiSig.sol";
 import "./LoanContract.sol";
 import "hardhat/console.sol";
 
-// import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-// import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 // import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract LoanRequest is MultiSig {
@@ -83,6 +83,12 @@ contract LoanRequest is MultiSig {
         _loanRequest.initialLoanValue = _initialLoanValue;
         _loanRequest.rate = _rate;
         _loanRequest.duration = _duration;
+
+        IERC721(_collateral).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _tokenId
+        );
 
         emit SubmittedLoanRequest(
             msg.sender,
@@ -208,7 +214,7 @@ contract LoanRequest is MultiSig {
      *   automatically sign off.
      */
     function setLender(address _borrower, uint256 _loanId)
-        external
+        external payable
         onlyHasLoan(_borrower)
         onlyNotConfirmed(_borrower, _loanId)
     {
@@ -221,6 +227,7 @@ contract LoanRequest is MultiSig {
 
             // Lender signs
             sign(_borrower, _loanId);
+            
 
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
@@ -264,6 +271,7 @@ contract LoanRequest is MultiSig {
                 value: msg.value
             }("");
             require(success, "Transfer failed.");
+            console.log("done");
         }
     }
 
@@ -282,7 +290,7 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        address _lender = getSigner(_loanId, lenderPosition);
+        address _lender = getSigner(_safeId, lenderPosition);
         _setConfirmedStatus(_safeId);
 
         LoanContract _loanContract = new LoanContract(
@@ -294,6 +302,7 @@ contract LoanRequest is MultiSig {
             _loanRequest.duration
         );
         address _loanContractAddress = address(_loanContract);
+        console.log(_loanContractAddress);
 
         IERC721(_loanRequest.collateral).approve(
             _loanContractAddress,
