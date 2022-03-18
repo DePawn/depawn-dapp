@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.5;
+import "hardhat/console.sol";
 
 abstract contract MultiSig {
     uint256 public required;
@@ -14,7 +15,11 @@ abstract contract MultiSig {
     Safe private safe;
     bool private safeLock = true;
 
-    event Staffed(address indexed _borrower, uint256 indexed _safeId);
+    event Staffed(
+        address indexed _borrower,
+        address _lender,
+        uint256 indexed _safeId
+    );
     event Signed(address indexed _signer, bool _confirmedStatus);
     event Unsigned(address indexed _signer, bool _confirmedStatus);
     event Confirmed(address indexed _contract, bool indexed _confirmedStatus);
@@ -47,16 +52,11 @@ abstract contract MultiSig {
         return _status;
     }
 
-    function _isSigner(address _signer)
-        internal
-        view
-        returns (bool _isSigner_)
-    {
-        uint256 i;
-
-        while (!_isSigner_ || i < required) {
-            _isSigner_ = safe.signers[i] == _signer ? true : _isSigner_;
-        }
+    function _isSigner() internal view returns (bool _isSigner_) {
+        _isSigner_ = true;
+        _isSigner_ = safe.signers[0] == msg.sender ? true : _isSigner_;
+        _isSigner_ = safe.signers[1] == msg.sender ? true : _isSigner_;
+        _isSigner_ = safe.signers[2] == msg.sender ? true : _isSigner_;
     }
 
     function _createSafe() internal {
@@ -70,10 +70,14 @@ abstract contract MultiSig {
         internal
         safeKey(_safeId)
         onlySigner(msg.sender)
+        returns (bool _isSigned)
     {
+        console.log(msg.sender);
         require(safe.signers[0] != address(0), "Borrower must be set.");
         safe.signStatus[msg.sender] = true;
         emit Signed(msg.sender, safe.confirmed);
+
+        _isSigned = safe.signStatus[msg.sender];
     }
 
     function _removeSignature(uint256 _safeId, address _signer)
@@ -102,14 +106,15 @@ abstract contract MultiSig {
         );
 
         safe.signers[_position] = _signer;
-        safe.signStatus[safe.signers[_position]] = false;
+        safe.signStatus[_signer] = false;
 
         uint256 _counter;
         for (uint256 i; i < required; i++) {
             _counter = safe.signers[i] != address(0) ? _counter + 1 : _counter;
         }
 
-        if (_counter >= required) emit Staffed(safe.signers[0], _safeId);
+        if (_counter >= required)
+            emit Staffed(safe.signers[0], safe.signers[1], _safeId);
     }
 
     function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
@@ -175,7 +180,7 @@ abstract contract MultiSig {
 
     modifier onlySigner(address _signer) {
         require(_signer != address(0), "Address 0 is invalid.");
-        require(_isSigner(_signer) == true, "You are not a valid signer.");
+        require(_isSigner() == true, "You are not a valid signer.");
         _;
     }
 }

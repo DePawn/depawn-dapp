@@ -3,9 +3,11 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
+import "hardhat/console.sol";
 
 // import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 // import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+// import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
@@ -61,7 +63,7 @@ contract LoanRequest is MultiSig {
         uint256 _initialLoanValue,
         uint256 _rate,
         uint64 _duration
-    ) public {
+    ) public returns (uint256 _loanId) {
         require(_collateral != address(0), "Collateral cannot be address 0.");
 
         uint256 _safeId = safes.length;
@@ -93,15 +95,19 @@ contract LoanRequest is MultiSig {
         );
     }
 
-    function withdrawNFT(address _borrower, uint256 _loanId)
+    function withdrawNFT(uint256 _loanId)
         external
-        onlyHasLoan(_borrower)
-        onlyNotConfirmed(_borrower, _loanId)
+        onlyHasLoan(msg.sender)
+        onlyNotConfirmed(msg.sender, _loanId)
         onlyBorrower(_loanId)
     {
-        address collateral = loanRequests[_borrower][_loanId].collateral;
-        uint256 tokenId = loanRequests[_borrower][_loanId].tokenId;
-        IERC721(collateral).safeTransferFrom(address(this), _borrower, tokenId);
+        address collateral = loanRequests[msg.sender][_loanId].collateral;
+        uint256 tokenId = loanRequests[msg.sender][_loanId].tokenId;
+        IERC721(collateral).safeTransferFrom(
+            address(this),
+            msg.sender,
+            tokenId
+        );
     }
 
     function onERC721Received(
@@ -133,8 +139,8 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        address _lender = getSigner(_loanId, lenderPosition);
-
+        address _lender = getSigner(_safeId, lenderPosition);
+        
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&
@@ -214,13 +220,8 @@ contract LoanRequest is MultiSig {
             _setSigner(_safeId, msg.sender, lenderPosition);
 
             // Lender signs
-            (bool success, ) = address(this).delegatecall(
-                abi.encodeWithSignature(
-                    "sign(address,uint256)",
-                    _borrower,
-                    _loanId
-                )
-            );
+            sign(_borrower, _loanId);
+
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
             // If msg.sender == borrower, unsign lender and set lender
@@ -232,7 +233,7 @@ contract LoanRequest is MultiSig {
                     safes[_safeId].signers[1]
                 )
             );
-            
+
             _setSigner(_safeId, address(0), lenderPosition);
             emit LoanRequestLenderChanged(msg.sender, _loanId, address(0));
         }
@@ -250,19 +251,19 @@ contract LoanRequest is MultiSig {
             "Only unsigned contracts can be accessed."
         );
 
-        _sign(_safeId);
+        bool success = _sign(_safeId);
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
-            require(
-                loanValue == msg.value,
-                "loan value doesn't match amount sent"
-            );
-            (bool success, ) = payable(_loanRequest.loanContract).call{
-                value: msg.value
-            }("");
-            require(success, "Transfer failed.");
+            // require(
+            //     loanValue == msg.value,
+            //     "loan value doesn't match amount sent"
+            // );
+            // (bool success, ) = payable(_loanRequest.loanContract).call{
+            //     value: msg.value
+            // }("");
+            // require(success, "Transfer failed.");
         }
     }
 
@@ -281,7 +282,7 @@ contract LoanRequest is MultiSig {
     {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
-        address _lender = getSigner(_loanId, lenderPosition);
+        address _lender = getSigner(_safeId, lenderPosition);
         _setConfirmedStatus(_safeId);
 
         LoanContract _loanContract = new LoanContract(
