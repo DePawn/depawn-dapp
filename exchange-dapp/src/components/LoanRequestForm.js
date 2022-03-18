@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function LoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
-    // console.log(props)
+    console.log(props)
 
     function renderNftDropdown() {
         return (
@@ -88,13 +88,77 @@ export default function LoanRequestForm(props) {
         return (
             !!props.currentAccountNfts || (imgUrl && props._dev)
                 ?
-                <img
-                    src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                    alt={imgUrl}
-                    className="image image-loan-request image-loan-request-nft"
-                />
+                <div className="card">
+                    <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
+                        <div className="card__face card__face--front">
+                            <img
+                                src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={imgUrl}
+                                className="image image-loan-request image-loan-request-nft image-loan-request-nft-front"
+                            />
+                        </div>
+
+                        <div className="card__face card__face--back">
+                            <div className="card__content">
+
+                                <div className="card__header">
+                                    <img
+                                        src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={imgUrl}
+                                        className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
+                                    />
+                                    <h3 className="h3__header__back">{props.currentAccountNfts[currentNft].name}</h3>
+                                </div>
+
+                                <div className="card__body">
+                                    <dl>
+                                        <dt>Contract Info:</dt>
+                                        <dd>{`\xa0\xa0- Mint Date: ${props.currentAccountNfts[currentNft].mint_date}`}</dd>
+                                        <dd>{`\xa0\xa0- Symbol: \xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].symbol}`}</dd>
+                                        <dd>{`\xa0\xa0- Type: \xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].type}`}</dd><br />
+                                        <dt>Sales Statistics</dt>
+                                        <dd>{`\xa0\xa0- Average Price`}</dd>
+
+                                        // .replace('_', ' ').split(' ').map(str => str.charAt(0).toUpperCase() + str.slice(1)).join(' ')
+
+                                        <dd>{`\xa0\xa0- Floor`}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                        <dd>{`\xa0\xa0- `}</dd>
+                                    </dl>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div >
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function setCardFlipEventListener(ev) {
+        const card = document.getElementById('card__inner__request');
+        card.classList.toggle('is-flipped');
     }
 
     function parseNftImageFromCurrentAccounts(idx) {
@@ -112,7 +176,6 @@ export default function LoanRequestForm(props) {
     }, [currentNft])
 
     return (
-
         <div className="container-loan-request-form-master">
 
             <h2>
@@ -167,6 +230,7 @@ export default function LoanRequestForm(props) {
                     </div>
                 </div>
             </div>
+
         </div>
     )
 }

@@ -8,6 +8,7 @@ const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
 export default function ExistingLoansForm(props) {
+    console.log(props)
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
 
@@ -119,14 +120,46 @@ export default function ExistingLoansForm(props) {
         return (
             !!props.imgUrl
                 ?
-                <img
-                    src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                    alt={props.imgUrl}
-                    key={props.loanNumber}
-                    className={`image image-existing-loan-nft image-existing-loan-nft-${props.loanNumber}`}
-                />
+                <div className="card">
+                    <div className="card__inner" id={`card__inner__existing-${props.loanNumber}`} onClick={() => setCardFlipEventListener(props.loanNumber)}>
+                        <div className="card__face card__face--front">
+                            <img
+                                src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={props.imgUrl}
+                                key={props.loanNumber}
+                                className={`image image-existing-loan-nft image-existing-loan-nft-front image-existing-loan-nft-${props.loanNumber}`}
+                            />
+                        </div>
+
+                        <div className="card__face card__face--back">
+                            <div className="card__content">
+
+                                <div className="card__header">
+                                    <img
+                                        src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={props.imgUrl}
+                                        key={props.loanNumber}
+                                        className={`image image-existing-loan-nft image-existing-loan-nft-back image-existing-loan-nft-${props.loanNumber}`}
+                                    />
+                                    <h3 className="h3__header__back">{props.nft.name}</h3>
+                                </div>
+
+                                <div className="card__body">
+                                    <p>Info here...</p>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function setCardFlipEventListener(idx) {
+        const card = document.getElementById(`card__inner__existing-${idx}`);
+        card.classList.toggle('is-flipped');
     }
 
     return (
@@ -280,9 +313,9 @@ export default function ExistingLoansForm(props) {
                 </div>
             </div>
 
-            {/* <div className="container-existing-loan-img"> */}
-            {renderNftImage()}
-            {/* </div> */}
+            <div className="container-existing-loan-img">
+                {renderNftImage()}
+            </div>
         </div >
     )
 }

@@ -57,10 +57,10 @@ export const fetchAccountNfts = async (account, network) => {
 }
 
 export const fetchNftData = async (nfts, network) => {
-    let { devBack, protocol, transferibles } = config(network);
+    let { devFront, protocol, transferibles } = config(network);
 
     // If nfts is passed as empty and in dev mode, swap to dev nfts
-    if (!!nfts && devBack) [nfts, transferibles] = [transferibles, nfts];
+    if (!!nfts && devFront) [nfts, transferibles] = [transferibles, nfts];
 
     // Get NFT metadata
     const nftMetaResponse = {
@@ -86,4 +86,28 @@ export const fetchNftData = async (nfts, network) => {
     [nfts, transferibles] = [transferibles, nfts];
 
     return nftMetaResponse.data;
+}
+
+export const fetchContractData = async (contracts, network) => {
+    let { protocol } = config(network);
+
+    // Get contract metadata
+    const contractMetaResponse = [];
+
+    for (let contract of contracts) {
+        const metaOptions = {
+            method: 'GET',
+            url: `https://api.nftport.xyz/v0/transactions/stats/${contract}`,
+            params: { chain: protocol },
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: env.NFT_PORT_KEY
+            }
+        };
+
+        let metaResponse = await axios.request(metaOptions);
+        contractMetaResponse.push(metaResponse.data.statistics);
+    }
+
+    return contractMetaResponse;
 }

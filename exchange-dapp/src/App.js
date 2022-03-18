@@ -1,4 +1,5 @@
-import './App.css';
+import './static/css/App.css';
+import './static/css/CardFlip.css';
 import LoanRequestForm from './components/LoanRequestForm';
 import ExistingLoansForm from './components/ExistingLoansForm';
 
@@ -6,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from './utils/getProvider';
 import { config } from './utils/config';
-import { fetchNftData } from './external/nftMetaFetcher';
+import { fetchNftData, fetchContractData } from './external/nftMetaFetcher';
 import { getSubAddress } from './utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -151,7 +152,7 @@ function App() {
 
     if (!!account && !!network) {
       // Fetch and store the current NFT data
-      console.log('Setting account NFT data...');
+      console.log('Fetching account NFT data...');
       nfts = await fetchNftData(account, network);
       setCurrentAccountNfts(nfts);
 
@@ -159,20 +160,40 @@ function App() {
       console.log('Getting account loan data...');
       loans = await getAccountLoanRequests(account, network, nfts);
       setCurrentAccountLoans(loans);
+
+      // Add contract statistics to NFTs
+      for (let nft of nfts) {
+        let stats = await fetchContractData(
+          [nft.contract_address],
+          network
+        )
+        nft.contract_statistics = stats[0]
+        // setTimeout(() => [], 1000);
+      };
     }
     else {
       console.log('disconnected');
     }
 
+    // Add NFTs of existing loan requests to loans
+    loans = loans.map((loan) => {
+      loan.nft = nfts.find((nft) =>
+        parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
+        loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
+      )
+
+      return loan;
+    });
+
     // Remove NFTs of existing loan requests
-    nfts = [...nfts].filter((nft) =>
+    nfts = nfts.filter((nft) =>
       !loans.find((loan) =>
         parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
         loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
       )
-    )
+    );
 
-    console.log(nfts)
+    console.log(nfts);
 
     setCurrentAccountNfts(nfts);
     setCurrentAccountLoans(loans);
