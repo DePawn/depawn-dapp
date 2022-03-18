@@ -2,15 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from '../utils/getProvider';
 import { config } from '../utils/config.js';
+import { capitalizeWords } from '../utils/stringUtils';
 
 const edit_emoji = "✍🏽";
 const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
 export default function ExistingLoansForm(props) {
-    console.log(props)
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentEdit, setCurrentEdit] = useState('');
+    const tabbedBullet = '\xa0\xa0- ';
+
+    console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -145,7 +148,14 @@ export default function ExistingLoansForm(props) {
                                 </div>
 
                                 <div className="card__body">
-                                    <p>Info here...</p>
+                                    <dl>
+                                        <dt>Contract Info:</dt>
+                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date: </span>{props.nft.mint_date}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Symbol: </span>{props.nft.symbol}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Type: </span>{props.nft.type}</dd><br />
+                                        <dt>Sales Statistics</dt>
+                                        {renderNftStat(props.nft.contract_statistics)}
+                                    </dl>
                                 </div>
 
                             </div>
@@ -155,6 +165,15 @@ export default function ExistingLoansForm(props) {
                 </div>
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function renderNftStat(contract_stats) {
+        const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
+            return (
+                <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key)}: </span>{contract_stats[key]}</dd>
+            )
+        })
+        return contractStatsElements;
     }
 
     function setCardFlipEventListener(idx) {

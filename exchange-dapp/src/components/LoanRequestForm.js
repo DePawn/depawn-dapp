@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { capitalizeWords } from '../utils/stringUtils';
 
 export default function LoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
+    const tabbedBullet = '\xa0\xa0- ';
+
     console.log(props)
 
     function renderNftDropdown() {
@@ -113,37 +116,11 @@ export default function LoanRequestForm(props) {
                                 <div className="card__body">
                                     <dl>
                                         <dt>Contract Info:</dt>
-                                        <dd>{`\xa0\xa0- Mint Date: ${props.currentAccountNfts[currentNft].mint_date}`}</dd>
-                                        <dd>{`\xa0\xa0- Symbol: \xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].symbol}`}</dd>
-                                        <dd>{`\xa0\xa0- Type: \xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].type}`}</dd><br />
+                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date:</span> {props.currentAccountNfts[currentNft].mint_date}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Symbol:</span> {props.currentAccountNfts[currentNft].symbol}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Type:</span> {props.currentAccountNfts[currentNft].type}</dd><br />
                                         <dt>Sales Statistics</dt>
-                                        <dd>{`\xa0\xa0- Average Price`}</dd>
-
-                                        // .replace('_', ' ').split(' ').map(str => str.charAt(0).toUpperCase() + str.slice(1)).join(' ')
-
-                                        <dd>{`\xa0\xa0- Floor`}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
+                                        {renderNftStat(props.currentAccountNfts[currentNft].contract_statistics)}
                                     </dl>
                                 </div>
 
@@ -154,6 +131,15 @@ export default function LoanRequestForm(props) {
                 </div >
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function renderNftStat(contract_stats) {
+        const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
+            return (
+                <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key) + ":"}</span> {contract_stats[key]}</dd>
+            )
+        })
+        return contractStatsElements;
     }
 
     function setCardFlipEventListener(ev) {

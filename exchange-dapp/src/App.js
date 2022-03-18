@@ -9,6 +9,7 @@ import getProvider from './utils/getProvider';
 import { config } from './utils/config';
 import { fetchNftData, fetchContractData } from './external/nftMetaFetcher';
 import { getSubAddress } from './utils/addressUtils';
+import { saveNftCookies, loadNftCookies } from './utils/cookieUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
   defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
@@ -162,18 +163,36 @@ function App() {
       setCurrentAccountLoans(loans);
 
       // Add contract statistics to NFTs
-      for (let nft of nfts) {
-        let stats = await fetchContractData(
-          [nft.contract_address],
-          network
-        )
-        nft.contract_statistics = stats[0]
-        // setTimeout(() => [], 1000);
-      };
+      nfts = await Promise.all(nfts.map(async (nft) => {
+        // Fetch NFTs from cookies
+        let cookieNft = loadNftCookies(nft);
+
+        if (!cookieNft) {
+          // If cookie does not exist for NFT, fetch it from NFT Port
+          console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from NFT Port...`);
+
+          let stats = await fetchContractData(
+            [nft.contract_address],
+            network
+          )
+          nft.contract_statistics = stats[0];
+          saveNftCookies([nft]);
+        }
+        else {
+          console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from cookies...`);
+          // If cookie does exist for NFT, replace nft with it and do
+          // not fetch from NFT Port
+          nft = cookieNft;
+        }
+
+        return nft;
+      }));
     }
     else {
       console.log('disconnected');
     }
+
+    console.log(nfts)
 
     // Add NFTs of existing loan requests to loans
     loans = loans.map((loan) => {
