@@ -101,6 +101,7 @@ div {
   width: 100%;
   margin: 0;
   border: node;
+  cursor: pointer;
 }
 
 /* .image-existing-loan-nft {

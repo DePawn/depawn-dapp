@@ -13,7 +13,7 @@ export default function ExistingLoansForm(props) {
     const [currentEdit, setCurrentEdit] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
-    console.log(props)
+    // console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {

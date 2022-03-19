@@ -23,6 +23,7 @@ const DEFAULT_LOAN_REQUEST_PARAMETERS = {
 }
 
 function App() {
+  const [isPageLoad, setIsPageLoad] = useState(true);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [currentNetwork, setCurrentNetwork] = useState(null);
   const [currentSubmitRequestStatus, setCurrentSubmitRequestStatus] = useState(false);
@@ -43,29 +44,38 @@ function App() {
     // eslint-disable-next-line
   }, [currentSubmitRequestStatus]);
 
-  useEffect(() => {
-    if (isNewLoanRequest) {
-      console.log('New request is loading...')
-      createdLoanRequestSequence();
-    }
+  // useEffect(() => {
+  //   if (isNewLoanRequest) {
+  //     console.log('New request is loading...')
+  //     createdLoanRequestSequence();
+  //   }
 
-    setIsNewLoanRequest(false);
-    // eslint-disable-next-line
-  }, [isNewLoanRequest])
+  //   setIsNewLoanRequest(false);
+  //   // eslint-disable-next-line
+  // }, [isNewLoanRequest])
 
   /* ---------------------------------------  *
    *       EVENT SEQUENCE FUNCTIONS           *
    * ---------------------------------------  */
   const pageLoadSequence = async () => {
+    /*
+     *  Sequence when the page is loaded.
+     */
+
     // Set account and network info
     const { account, chainId } = await checkIfWalletIsConnected();
     console.log('--pageLoadSequence-- Account: ', account);
     console.log('--pageLoadSequence-- Network: ', chainId);
 
     // Set account loan and nft data
-    const { nfts, loans } = await setAccountData(account, chainId);
+    const { nfts, loans, loanRequestContract } = await setAccountData(account, chainId);
     console.log('--pageLoadSequence-- NFTs: ', nfts);
     console.log('--pageLoadSequence-- Loans: ', loans);
+
+    // // Set LoanRequest event listeners
+    // setSubmittedLoanRequestListener(loanRequestContract);
+    // setLoanRequestChangedListeners(loanRequestContract);
+    // setLoanRequestLenderChangedListeners(loanRequestContract);
 
     // Render loan request elements for borrower
     await renderLoanRequestElements(nfts, chainId);
@@ -73,19 +83,61 @@ function App() {
     // Render existing loan elements for borrower
     const _existingLoanElements = await renderExistingLoanElements(account, chainId, loans);
     setExistingLoanElements(_existingLoanElements);
+
+    // Page-load flag needed to prevent events from
+    // triggering on page-load
+    setIsPageLoad(false);
   }
 
   const submitLoanRequestSequence = async () => {
+    /*
+     *  Sequence following the borrower submitting
+     *  a new loan request (clicking the 'Submit
+     *  Request' button).
+     * 
+     *  This triggers the call of the LoanRequest's
+     *  createLoanRequest() function.
+     */
+
     // Submit loan request
-    await submitLoanRequest();
+    const success = await submitLoanRequest();
+
+    // Set account loan and nft data
+    let nfts = currentAccountNfts;
+    let loans = currentAccountLoans;
+
+    if (success) {
+      const accountData = await setAccountData(currentAccount, currentNetwork);
+      nfts = accountData.nfts;
+      loans = accountData.loans;
+    }
+
+    console.log('--pageLoadSequence-- NFTs: ', nfts);
+    console.log('--pageLoadSequence-- Loans: ', loans);
+
+    // Render loan request elements for borrower
+    await renderLoanRequestElements(nfts, currentNetwork);
+
+    // Render existing loan elements for borrower
+    const _existingLoanElements = await renderExistingLoanElements(currentAccount, currentNetwork, loans);
+    setExistingLoanElements(_existingLoanElements);
 
     // Reset currentSubmitRequestStatus
     setCurrentSubmitRequestStatus(false);
   }
 
   const createdLoanRequestSequence = async () => {
+    /*
+     *  Sequence following LoanRequest's creation of
+     *  a new loan request.
+     * 
+     *  This will be triggered when LoanRequest triggers
+     *  the SubmittedLoanRequest event by its 
+     *  createLoanRequest() function.
+     */
+
     // Set account loan and nft data
-    const { nfts, loans } = await setAccountData(currentAccount, currentNetwork);
+    const { nfts, loans } = await trimNftsByNewLoanRequest(currentAccount, currentNetwork, currentAccountNfts);
     console.log('--pageLoadSequence-- NFTs: ', nfts);
     console.log('--pageLoadSequence-- Loans: ', loans);
 
@@ -139,36 +191,42 @@ function App() {
 
   const setAccountData = async (account, network) => {
     /*
-     * Set NFT and Account Loan data.
+     * Set NFT, Loan, and Contract data.
      *
      *  - NFT data is retrieved from NFT Port API.
-     *  - Account loan data is retrieved from LoanRequest
-     *    contract.
+     *  - Loan data is retrieved from LoanRequest.
+     *  - Contract data is retrieved from NFT Port API.
+     *
+     *  Function to read in NFT, Account, and Loan data from
+     *  sources. NFT and Contract data are merged and compared
+     *  to existing Loan data, and trimmed accordingly.
      */
+
     let nfts = null;
     let loans = [];
+    let loanRequestContract = null;
 
     const { devFront, transferibles } = config(network);
     if (devFront) account = transferibles[0].recipient;
 
     if (!!account && !!network) {
-      // Fetch and store the current NFT data
+      /* Fetch and store the current NFT data from NFT Port */
       console.log('Fetching account NFT data...');
       nfts = await fetchNftData(account, network);
-      setCurrentAccountNfts(nfts);
 
-      // Get account loan data
+      /* Get account loan data from LoanRequest contract */
       console.log('Getting account loan data...');
-      loans = await getAccountLoanRequests(account, network, nfts);
-      setCurrentAccountLoans(loans);
+      const accountLoanRequests = await getAccountLoanRequests(account, network, nfts);
+      loans = accountLoanRequests.loans;
+      loanRequestContract = accountLoanRequests.loanRequestContract;
 
-      // Add contract statistics to NFTs
+      /* Add contract statistics to NFTs */
       nfts = await Promise.all(nfts.map(async (nft) => {
         // Fetch NFTs from cookies
         let cookieNft = loadNftCookies(nft);
 
         if (!cookieNft) {
-          // If cookie does not exist for NFT, fetch it from NFT Port
+          // If cookies do not exist for NFT, fetch it from NFT Port
           console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from NFT Port...`);
 
           let stats = await fetchContractData(
@@ -180,7 +238,7 @@ function App() {
         }
         else {
           console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from cookies...`);
-          // If cookie does exist for NFT, replace nft with it and do
+          // If cookies do exist for NFT, replace nft with it and do
           // not fetch from NFT Port
           nft = cookieNft;
         }
@@ -194,7 +252,7 @@ function App() {
 
     console.log(nfts)
 
-    // Add NFTs of existing loan requests to loans
+    /* Add NFTs of existing loan requests to loans */
     loans = loans.map((loan) => {
       loan.nft = nfts.find((nft) =>
         parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
@@ -204,7 +262,7 @@ function App() {
       return loan;
     });
 
-    // Remove NFTs of existing loan requests
+    /* Remove NFTs of existing loan requests */
     nfts = nfts.filter((nft) =>
       !loans.find((loan) =>
         parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
@@ -212,7 +270,46 @@ function App() {
       )
     );
 
-    console.log(nfts);
+    setCurrentAccountNfts(nfts);
+    setCurrentAccountLoans(loans);
+
+    return { nfts, loans, loanRequestContract };
+  }
+
+  const trimNftsByNewLoanRequest = async (account, network, nfts) => {
+    /*
+     * Trim NFT (with Contract) data following creation of LoanRequest.
+     *
+     *  - NFT data should already be known.
+     *  - Loan data is retrieved from LoanRequest.
+     *  - Contract data is already known and contained in NFT data.
+     *
+     *  Function to read in Loan data from LoanRequest, compare it with
+     *  existing NFT data, and remove all NFTs with Loans from NFT data.
+     */
+
+    /* Get account loan data from LoanRequest contract */
+    console.log('Getting account loan data...');
+    console.log(nfts)
+    let { loans } = await getAccountLoanRequests(account, network, nfts);
+
+    /* Add NFTs of existing loan requests to loans */
+    loans = loans.map((loan) => {
+      loan.nft = nfts.find((nft) =>
+        parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
+        loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
+      )
+
+      return loan;
+    });
+
+    /* Remove NFTs of existing loan requests */
+    nfts = nfts.filter((nft) =>
+      !loans.find((loan) =>
+        parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
+        loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
+      )
+    );
 
     setCurrentAccountNfts(nfts);
     setCurrentAccountLoans(loans);
@@ -248,19 +345,23 @@ function App() {
         parseInt(collateral, 16) === parseInt(nft.contract_address, 16) &&
         tokenId.eq(ethers.BigNumber.from(nft.token_id))
       )
+
+      // If no NFT matched, exit
+      if (!nftData) return {};
+
+      // Get image URL
       const imgUrl = !!nftData.cached_file_url ? nftData.cached_file_url : nftData.file_url;
 
-      // Return loan request and nft image url
       return { collateral, tokenId, initialLoanValue, rate, duration, lender, imgUrl };
     });
 
-    return loans;
+    return { loanRequestContract, loans };
   }
 
   const submitLoanRequest = async () => {
     /*
-     * If all loan components are set and borrower and lender have signed off,
-     * this loan request will generate a loan contract.
+     * Function to trigger the LoanRequest's createLoanRequest()
+     * function.
      */
 
     // Get input values
@@ -289,21 +390,24 @@ function App() {
       borrower
     );
 
-    // Set contract event listeners
-    await setSubmittedLoanRequestListener(loanRequestContract);
-    await setLoanRequestChangedListeners(loanRequestContract);
-    await setLoanRequestLenderChangedListeners(loanRequestContract);
+    try {
+      // Create new loan request
+      const tx = await loanRequestContract.createLoanRequest(
+        nft,
+        tokenId,
+        initialLoanValue,
+        rate,
+        duration,
+      );
+      const receipt = await tx.wait();
+      console.log('receipt: ', receipt);
+    }
+    catch (err) {
+      console.log(err);
+      return false;
+    }
 
-    // Create new loan request
-    await loanRequestContract.createLoanRequest(
-      nft,
-      tokenId,
-      initialLoanValue,
-      rate,
-      duration,
-    );
-
-    console.log('here')
+    return true;
   }
 
   /* ---------------------------------------  *
@@ -427,30 +531,39 @@ function App() {
   /* ---------------------------------------  *
    *            EVENT LISTENERS               *
    * ---------------------------------------  */
-  const setSubmittedLoanRequestListener = async (loanRequestContract) => {
+  const setSubmittedLoanRequestListener = (loanRequestContract) => {
     // Set loan request listener
-    loanRequestContract.on('SubmittedLoanRequest', async () => {
-      setIsNewLoanRequest(true)
-      console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!')
+    loanRequestContract.on('SubmittedLoanRequest', () => {
+      if (!isPageLoad) {
+        setIsNewLoanRequest(true);
+        console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!');
+      }
     });
   }
 
-  const setLoanRequestChangedListeners = async (loanRequestContract, funcs) => {
+  const setLoanRequestChangedListeners = (loanRequestContract) => {
     // Set loan request listener
-    loanRequestContract.on('LoanRequestChanged', async () => {
-      setIsNewLoanRequest(true)
-      console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!')
+    loanRequestContract.on('LoanRequestChanged', () => {
+      if (!isPageLoad) {
+        // setIsNewLoanRequest(true);
+        console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!');
+      }
     });
   }
 
-  const setLoanRequestLenderChangedListeners = async (loanRequestContract, funcs) => {
+  const setLoanRequestLenderChangedListeners = (loanRequestContract) => {
     // Set loan request listener
-    loanRequestContract.on('LoanRequestLenderChanged', async () => {
-      setIsNewLoanRequest(true)
-      console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!')
+    loanRequestContract.on('LoanRequestLenderChanged', () => {
+      if (!isPageLoad) {
+        // setIsNewLoanRequest(true);
+        console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!');
+      }
     });
   }
 
+  /* ---------------------------------------  *
+   *             APP.JS RETURN                *
+   * ---------------------------------------  */
   return (
     <div className="App">
       <div>
