@@ -26,6 +26,7 @@ function App() {
   const [isPageLoad, setIsPageLoad] = useState(true);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [currentNetwork, setCurrentNetwork] = useState(null);
+  const [currentLoanRequestContract, setCurrentLoanRequestContract] = useState(null);
   const [currentSubmitRequestStatus, setCurrentSubmitRequestStatus] = useState(false);
   const [currentAccountNfts, setCurrentAccountNfts] = useState('');
   const [currentAccountLoans, setCurrentAccountLoans] = useState('');
@@ -71,7 +72,9 @@ function App() {
     await renderLoanRequestElements(nfts, chainId);
 
     // Render existing loan elements for borrower
-    const _existingLoanElements = await renderExistingLoanElements(account, chainId, loans);
+    const _existingLoanElements = await renderExistingLoanElements(
+      account, chainId, loans, loanRequestContract
+    );
     setExistingLoanElements(_existingLoanElements);
 
     // Page-load flag needed to prevent events from
@@ -95,11 +98,13 @@ function App() {
     // Set account loan and nft data
     let nfts = currentAccountNfts;
     let loans = currentAccountLoans;
+    let loanRequestContract = currentLoanRequestContract;
 
     if (success) {
       const accountData = await setAccountData(currentAccount, currentNetwork);
       nfts = accountData.nfts;
       loans = accountData.loans;
+      loanRequestContract = accountData.loanRequestContract;
     }
 
     console.log('--pageLoadSequence-- NFTs: ', nfts);
@@ -109,7 +114,9 @@ function App() {
     await renderLoanRequestElements(nfts, currentNetwork);
 
     // Render existing loan elements for borrower
-    const _existingLoanElements = await renderExistingLoanElements(currentAccount, currentNetwork, loans);
+    const _existingLoanElements = await renderExistingLoanElements(
+      currentAccount, currentNetwork, loans, loanRequestContract
+    );
     setExistingLoanElements(_existingLoanElements);
 
     // Reset currentSubmitRequestStatus
@@ -281,6 +288,8 @@ function App() {
       return { collateral, tokenId, initialLoanValue, rate, duration, lender, imgUrl };
     });
 
+    setCurrentLoanRequestContract(loanRequestContract);
+
     return { loanRequestContract, loans };
   }
 
@@ -428,7 +437,7 @@ function App() {
     )
   }
 
-  const renderExistingLoanElements = async (account, network, loans) => {
+  const renderExistingLoanElements = async (account, network, loans, loanRequestContract) => {
     const getExistingLoanElements = async () => {
       const existingLoanElements = loans.map((loan, i) => {
         return (
@@ -437,6 +446,7 @@ function App() {
             loanNumber={i}
             currentAccount={account}
             currentNetwork={network}
+            currentLoanRequestContract={loanRequestContract}
             updateLoanFunc={callback__UpdateLoan}
             fetchNftFunc={fetchNftData}
             {...loan}

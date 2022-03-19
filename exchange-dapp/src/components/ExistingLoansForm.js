@@ -10,6 +10,7 @@ const cancel_emoji = "\u{274c}";
 
 export default function ExistingLoansForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
+    const [currentSignStatus, setCurrentSignStatus] = useState(undefined);
     const [currentEdit, setCurrentEdit] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
@@ -50,8 +51,24 @@ export default function ExistingLoansForm(props) {
         setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
     }
 
+    async function currentSignStatusSetter() {
+        // Get Borrower sign status
+        try {
+            const signStatus = await props.currentLoanRequestContract.getSignStatus(
+                props.currentAccount, props.currentAccount, props.loanNumber
+            );
+            if (!signStatus) console.log('Not signed')
+            setCurrentSignStatus(signStatus);
+        }
+        catch (err) {
+            console.log(err);
+            return undefined;
+        }
+    }
+
     useEffect(() => {
         currentNftCommitStatusSetter();
+        currentSignStatusSetter();
         // eslint-disable-next-line
     }, []);
 
@@ -88,29 +105,52 @@ export default function ExistingLoansForm(props) {
             return true;
         }
         catch (err) {
-            return false;
+            console.log(err);
+            return currentNftCommitStatus;
         }
     }
 
     async function withdrawNft() {
-        // Get contract LoanRequest contract
-        const provider = getProvider();
-        const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, loanRequestABI } = config(props.currentNetwork);
-
-        const loanRequestContract = new ethers.Contract(
-            loanRequestAddress,
-            loanRequestABI,
-            borrower
-        );
-
         // Withdraw ERC721 from LoanRequest contract
         try {
-            await loanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+            await props.currentLoanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
             return true;
         }
         catch (err) {
+            console.log(err);
             return false;
+        }
+    }
+
+    async function signLoanRequest() {
+        // Sign LoanRequest contract
+        try {
+            console.log(props)
+            const tx = await props.currentLoanRequestContract.sign(
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+            );
+            await tx.wait();
+            return true;
+        }
+        catch (err) {
+            console.log(err);
+            return currentSignStatus;
+        }
+    }
+
+    async function removeSignatureFromLoanRequest() {
+        // Sign LoanRequest contract
+        try {
+            console.log(props)
+            const tx = await props.currentLoanRequestContract.removeSignature(
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+            );
+            await tx.wait();
+            return false;
+        }
+        catch (err) {
+            console.log(err);
+            return currentSignStatus;
         }
     }
 
@@ -310,7 +350,8 @@ export default function ExistingLoansForm(props) {
                             commitNft().then((res) => { setCurrentNftCommitStatus(res); });
                         }
                         else {
-                            withdrawNft().then((res) => { setCurrentNftCommitStatus(!res) })
+                            removeSignatureFromLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                            withdrawNft().then((res) => { setCurrentNftCommitStatus(!res) });
                         }
                     }}>
                     {currentNftCommitStatus ? "Withdraw NFT" : "Commit NFT"}
@@ -327,8 +368,16 @@ export default function ExistingLoansForm(props) {
 
                 <div
                     id={"button-existing-loan-sign-" + props.loanNumber}
-                    className={`button button - existing - loan button - existing - loan - sign ${currentNftCommitStatus ? " button-enabled" : " button-disabled"}`}>
-                    Sign
+                    className={`button button-existing-loan button-existing-loan-sign ${currentNftCommitStatus || currentSignStatus ? " button-enabled" : " button-disabled"}`}
+                    onClick={() => {
+                        if (!currentSignStatus && currentNftCommitStatus) {
+                            signLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                        }
+                        else if (currentSignStatus) {
+                            removeSignatureFromLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                        }
+                    }}>
+                    {!currentSignStatus ? "Sign" : "Unsign"}
                 </div>
             </div>
 
