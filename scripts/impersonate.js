@@ -105,7 +105,7 @@ async function main() {
     let loanId = await loanRequestContract.connect(borrower).createLoanRequest(
         borrowerNFT,
         borrowerTokenId,
-        1,
+        2,
         10,
         2
     );

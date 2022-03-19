@@ -13,11 +13,10 @@ contract LoanContract {
     address arbiter;
     address collateral;
     uint256 tokenId;
-    uint256 initialLoanValue;
+    uint256 currentLoanValue;
     uint256 rate;
     uint256 expiration;
     LoanStatus status;
-    uint256 calculatedRedemption;
     uint256 start;
 
     enum LoanStatus {
@@ -41,11 +40,12 @@ contract LoanContract {
         arbiter = address(this);
         collateral = _collateral;
         tokenId = _tokenId;
-        initialLoanValue = _intitialLoanValue;
+        currentLoanValue = _intitialLoanValue;
         rate = _rate;
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
         start = block.timestamp;
+        //interestAccrued = 0
     }
 
     function onERC721Received(
@@ -70,11 +70,11 @@ contract LoanContract {
 
     function calculateRedemption() public view returns (uint256) {
         uint256 daysPassed = (block.timestamp - start) / 60 / 60 / 24;
-        uint256 redemption = initialLoanValue
+        uint256 redemption = currentLoanValue
             .mul(rate)
             .div(100)
             .mul(daysPassed)
-            .div(365) + initialLoanValue;
+            .div(365) + currentLoanValue;
         return redemption;
     }
 
@@ -91,9 +91,16 @@ contract LoanContract {
             status == LoanStatus.ACTIVE || status == LoanStatus.DEFAULT,
             "Loan should be active or default to be prepaid"
         );
-        status = LoanStatus.PAID;
-        uint256 redemption = calculatedRedemption;
-        require(msg.value >= redemption, "Loan not paid in total");
+
+        uint redemption = calculateRedemption();
+        require(redemption >= msg.value, "Borrower can't pay more than owed");
+        uint256 interest = redemption - currentLoanValue;
+        currentLoanValue = currentLoanValue - (msg.value - interest);
+        payable(lender).transfer(msg.value);
+
+        if(currentLoanValue == 0)
+            status = LoanStatus.PAID;
+
     }
 
     function withdrawLoanLender() external checkMaturity {

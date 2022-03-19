@@ -7,7 +7,6 @@ import "hardhat/console.sol";
 
  import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
  import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-// import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
@@ -258,11 +257,12 @@ contract LoanRequest is MultiSig {
             "Only unsigned contracts can be accessed."
         );
 
-        bool success = _sign(_safeId);
+        _sign(_safeId);
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
+            console.log(loanValue, msg.value);
             require(
                 loanValue == msg.value,
                 "loan value doesn't match amount sent"
