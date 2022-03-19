@@ -5,7 +5,7 @@ export default function LoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
     const tabbedBullet = '\xa0\xa0- ';
 
-    console.log(props)
+    // console.log(props)
 
     function renderNftDropdown() {
         return (
