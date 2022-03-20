@@ -16,6 +16,8 @@ module.exports = {
       accounts: {
         mnemonic: process.env.MNEMONIC
       },
+      gas: 12000000,
+      allowUnlimitedContractSize: true,
       forking: {
         chainId: 31337,
         url: process.env.ALCHEMY_MAINNET_URL,

@@ -5,9 +5,8 @@ import "./MultiSig.sol";
 import "./LoanContract.sol";
 import "hardhat/console.sol";
 
-// import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-// import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-// import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
@@ -83,6 +82,12 @@ contract LoanRequest is MultiSig {
         _loanRequest.initialLoanValue = _initialLoanValue;
         _loanRequest.rate = _rate;
         _loanRequest.duration = _duration;
+
+        IERC721(_collateral).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _tokenId
+        );
 
         emit SubmittedLoanRequest(
             msg.sender,
@@ -208,7 +213,7 @@ contract LoanRequest is MultiSig {
      *   automatically sign off.
      */
     function setLender(address _borrower, uint256 _loanId)
-        external
+        external payable
         onlyHasLoan(_borrower)
         onlyNotConfirmed(_borrower, _loanId)
     {
@@ -221,6 +226,7 @@ contract LoanRequest is MultiSig {
 
             // Lender signs
             sign(_borrower, _loanId);
+            
 
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
@@ -251,19 +257,21 @@ contract LoanRequest is MultiSig {
             "Only unsigned contracts can be accessed."
         );
 
-        bool success = _sign(_safeId);
+        _sign(_safeId);
 
         // Conditionally create contract
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
-            // require(
-            //     loanValue == msg.value,
-            //     "loan value doesn't match amount sent"
-            // );
-            // (bool success, ) = payable(_loanRequest.loanContract).call{
-            //     value: msg.value
-            // }("");
-            // require(success, "Transfer failed.");
+            console.log(loanValue, msg.value);
+            require(
+                loanValue == msg.value,
+                "loan value doesn't match amount sent"
+            );
+            (bool success, ) = payable(_loanRequest.loanContract).call{
+                value: msg.value
+            }("");
+            require(success, "Transfer failed.");
+            console.log("done");
         }
     }
 
@@ -294,6 +302,7 @@ contract LoanRequest is MultiSig {
             _loanRequest.duration
         );
         address _loanContractAddress = address(_loanContract);
+        console.log(_loanContractAddress);
 
         IERC721(_loanRequest.collateral).approve(
             _loanContractAddress,

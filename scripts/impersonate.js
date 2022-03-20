@@ -94,12 +94,20 @@ async function main() {
     
     let borrower = provider.getSigner(borrowerAddress);
 
+    let nftContract = new hre.ethers.Contract(borrowerNFT, erc721, borrower);
+
+    let txn0 = await nftContract.ownerOf(borrowerTokenId);
+    console.log("Owner is indeed borrower:", txn0);
+
+    let txn1 = await nftContract.approve(loanRequestContract.address, borrowerTokenId);
+    await txn1.wait();
+
     let loanId = await loanRequestContract.connect(borrower).createLoanRequest(
         borrowerNFT,
         borrowerTokenId,
-        1,
+        ethers.utils.parseEther("2"),
         10,
-        2
+        Math.floor(new Date(2022,3,7).getTime() / 1000)
     );
     await loanId.wait();
 
@@ -113,8 +121,10 @@ async function main() {
     let lenderAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
     let lender = provider.getSigner(lenderAddress);
     // Signoff and create new contract
-    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId);
+    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, {value: ethers.utils.parseEther("2")});
     receipt = await tx.wait();
+
+
 
 
 
