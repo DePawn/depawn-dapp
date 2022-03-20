@@ -1,15 +1,18 @@
-import '../static/css/BorrowerPage.css';
-import '../static/css/CardFlip.css';
-import LoanRequestForm from './LoanRequestForm';
-import ExistingLoansForm from './ExistingLoansForm';
+import '../../static/css/BorrowerPage.css';
+import '../../static/css/CardFlip.css';
+import LenderAvailableLoanForm from './LenderAvailableLoanForm';
+import LenderExistingLoanForm from './LenderExistingLoanForm';
 
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import getProvider from '../utils/getProvider';
-import { config } from '../utils/config';
-import { fetchNftData, fetchContractData } from '../external/nftMetaFetcher';
-import { getSubAddress } from '../utils/addressUtils';
-import { saveNftCookies, loadNftCookies } from '../utils/cookieUtils';
+import getProvider from '../../utils/getProvider';
+import { config } from '../../utils/config';
+import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
+import { getSubAddress } from '../../utils/addressUtils';
+import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
+
+import { fetchTable, insertTableEntry } from '../../external/tablelandInterface';
+
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
     defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
@@ -57,25 +60,60 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
+        // console.log(await fetchAllTables(account, chainId));
+        // for (let i = 75; i < 85; i++) {
+        //     console.log(await addTableEntry(`insert into demo_539 values (${i}, 'Numbah ${i}');`))
+        // }
 
-        // Set account loan and nft data
-        const { nfts, loans, loanRequestContract } = await setAccountData(account, chainId);
-        console.log('--pageLoadSequence-- NFTs: ', nfts);
-        console.log('--pageLoadSequence-- Loans: ', loans);
+        console.log(await fetchTable('demo_539'))
 
-        // Set LoanRequest event listeners
-        setSubmittedLoanRequestListener(loanRequestContract);
-        setLoanRequestChangedListeners(loanRequestContract);
-        setLoanRequestLenderChangedListeners(loanRequestContract);
+        // const tbl = await connect({ network: 'testnet' });
 
-        // Render loan request elements for borrower
-        await renderLoanRequestElements(nfts, chainId);
+        // console.log(tbl);
 
-        // Render existing loan elements for borrower
-        const _existingLoanElements = await renderExistingLoanElements(
-            account, chainId, loans, loanRequestContract
-        );
-        setExistingLoanElements(_existingLoanElements);
+        // // const createRes = await tbl.create(
+        // //     "CREATE TABLE helloWorldTable (name text, id int, primary key (id));"
+        // // );
+
+        // // console.log(createRes)
+        // // console.log(createRes.name)
+
+        // // const tables = await tbl.list();
+        // // console.log(tables)
+
+        // // const one = await tbl.query(
+        // //     `INSERT INTO ${createRes.name} (id, name) VALUES (0, 'Jason Garcia');`
+        // // );
+        // // console.log(one)
+
+        // // const two = await tbl.query(
+        // //     `INSERT INTO ${createRes.name} (id, name) VALUES (1, 'Rachel San Diego');`
+        // // )
+        // // console.log(two)
+
+        // const { data: { rows, columns } } = await tbl.query(`SELECT * FROM ${"helloworldtable_538"};`);
+
+        // console.log(rows)
+        // console.log(columns)
+
+        // // Set account loan and nft data
+        // const { nfts, loans, loanRequestContract } = await setAccountData(account, chainId);
+        // console.log('--pageLoadSequence-- NFTs: ', nfts);
+        // console.log('--pageLoadSequence-- Loans: ', loans);
+
+        // // Set LoanRequest event listeners
+        // setSubmittedLoanRequestListener(loanRequestContract);
+        // setLoanRequestChangedListeners(loanRequestContract);
+        // setLoanRequestLenderChangedListeners(loanRequestContract);
+
+        // // Render loan request elements for borrower
+        // await renderLoanRequestElements(nfts, chainId);
+
+        // // Render existing loan elements for borrower
+        // const _existingLoanElements = await renderExistingLoanElements(
+        //     account, chainId, loans, loanRequestContract
+        // );
+        // setExistingLoanElements(_existingLoanElements);
 
         // Page-load flag needed to prevent events from
         // triggering on page-load
@@ -183,7 +221,7 @@ export default function BorrowerPage() {
         const { devFront, transferibles } = config(network);
         if (devFront) account = transferibles[0].recipient;
 
-        if (!!account && !!network) {
+        if (false && !!account && !!network) {
             /* Fetch and store the current NFT data from NFT Port */
             console.log('Fetching account NFT data...');
             nfts = await fetchNftData(account, network);
@@ -237,12 +275,14 @@ export default function BorrowerPage() {
         });
 
         /* Remove NFTs of existing loan requests */
-        nfts = nfts.filter((nft) =>
-            !loans.find((loan) =>
-                parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
-                loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
-            )
-        );
+        if (!!nfts) {
+            nfts = nfts.filter((nft) =>
+                !loans.find((loan) =>
+                    parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
+                    loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
+                )
+            );
+        }
 
         setCurrentAccountNfts(nfts);
         setCurrentAccountLoans(loans);
@@ -428,7 +468,7 @@ export default function BorrowerPage() {
         const { devFront } = config(network);
 
         setLoanRequestElement(
-            <LoanRequestForm
+            <LenderAvailableLoanForm
                 currentAccountNfts={nfts}
                 submitCallback={callback__SubmitLoanRequest}
                 {...DEFAULT_LOAN_REQUEST_PARAMETERS}
@@ -441,7 +481,7 @@ export default function BorrowerPage() {
         const getExistingLoanElements = async () => {
             const existingLoanElements = loans.map((loan, i) => {
                 return (
-                    <ExistingLoansForm
+                    <LenderExistingLoanForm
                         key={i}
                         loanNumber={i}
                         currentAccount={account}

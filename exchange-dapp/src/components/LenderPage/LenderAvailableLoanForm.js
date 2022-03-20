@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { capitalizeWords } from '../utils/stringUtils';
+import { capitalizeWords } from '../../utils/stringUtils';
 
-export default function LoanRequestForm(props) {
+export default function LenderAvailableLoanForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
     const tabbedBullet = '\xa0\xa0- ';
 

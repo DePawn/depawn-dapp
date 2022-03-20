@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import getProvider from '../utils/getProvider';
-import { config } from '../utils/config.js';
-import { capitalizeWords } from '../utils/stringUtils';
+import getProvider from '../../utils/getProvider';
+import { config } from '../../utils/config.js';
+import { capitalizeWords } from '../../utils/stringUtils';
 
 const edit_emoji = "✍🏽";
 const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
-export default function ExistingLoansForm(props) {
+export default function LenderExistingLoanForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentSignStatus, setCurrentSignStatus] = useState(undefined);
     const [currentEdit, setCurrentEdit] = useState('');

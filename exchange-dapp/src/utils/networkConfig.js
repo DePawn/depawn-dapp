@@ -1,4 +1,4 @@
-const networks = {
+export const networks = {
   "0x1": "Mainnet",
   "0x3": "Ropsten",
   "0x2a": "Kovan",
@@ -11,5 +11,3 @@ const networks = {
   "0xa86a": "AVAX Mainnet",
   "0x5a7": "Ganache 8555"
 }
-
-export { networks };
