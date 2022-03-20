@@ -8,6 +8,7 @@ import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
+import { insertTableRow } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 
@@ -32,6 +33,8 @@ export default function BorrowerPage() {
     const [currentAccountLoans, setCurrentAccountLoans] = useState('');
     const [loanRequestElement, setLoanRequestElement] = useState('');
     const [existingLoanElements, setExistingLoanElements] = useState('');
+
+    const DB_TABLE_NAME = 'demo_depawn_556';
 
     useEffect(() => {
         console.log('Page loading...');
@@ -93,7 +96,7 @@ export default function BorrowerPage() {
          */
 
         // Submit loan request
-        const success = await submitLoanRequest();
+        const { success, collateral, tokenId } = await submitLoanRequest();
 
         // Set account loan and nft data
         let nfts = currentAccountNfts;
@@ -101,7 +104,7 @@ export default function BorrowerPage() {
         let loanRequestContract = currentLoanRequestContract;
 
         if (success) {
-            const accountData = await setAccountData(currentAccount, currentNetwork);
+            const accountData = await setAccountData(currentAccount, currentNetwork, collateral, tokenId);
             nfts = accountData.nfts;
             loans = accountData.loans;
             loanRequestContract = accountData.loanRequestContract;
@@ -163,7 +166,7 @@ export default function BorrowerPage() {
         return { account, chainId };
     }
 
-    const setAccountData = async (account, network) => {
+    const setAccountData = async (account, network, collateral = undefined, tokenId = undefined) => {
         /*
          * Set NFT, Loan, and Contract data.
          *
@@ -243,6 +246,39 @@ export default function BorrowerPage() {
                 loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
             )
         );
+
+        // Update Tableland database
+        if (!!collateral && !!tokenId) {
+            const newLoan = loans.find((loan) => {
+                return parseInt(loan.collateral, 16) === parseInt(collateral) &&
+                    loan.tokenId.eq(ethers.BigNumber.from(tokenId))
+            });
+
+            console.log(newLoan);
+
+            // Store new LoanRequest in Tableland
+            const dbParams = {
+                collateral: collateral,
+                token_id: newLoan.tokenId,
+                lender: ethers.constants.AddressZero,
+                duration: newLoan.duration,
+                imgUrl: newLoan.imgUrl,
+                initialLoanValue: newLoan.initialLoanValue,
+                chain: newLoan.nft.chain,
+                contract_statistics: newLoan.nft.contract_statistics,
+                metadata: newLoan.nft.metadata,
+                mint_date: newLoan.nft.mint_date,
+                name: newLoan.nft.name,
+                symbol: newLoan.nft.symbol,
+                type: newLoan.nft.type,
+                rate: newLoan.rate,
+                committed: false,
+                borrower_signed: false,
+                lender_signed: false
+            }
+
+            await insertTableRow(DB_TABLE_NAME, currentAccount, dbParams);
+        }
 
         setCurrentAccountNfts(nfts);
         setCurrentAccountLoans(loans);
@@ -339,10 +375,10 @@ export default function BorrowerPage() {
         }
         catch (err) {
             console.log(err);
-            return false;
+            return { success: false, collateral: undefined, tokenId: undefined };
         }
 
-        return true;
+        return { success: true, collateral: nft, tokenId: tokenId };
     }
 
     /* ---------------------------------------  *

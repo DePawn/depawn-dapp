@@ -16,14 +16,14 @@ export default function App() {
     <Router>
       <div>
         <Link to="/home">Home</Link>
-        <Link to="/borrower">Borrowing</Link>
-        <Link to="/">Lending</Link>
+        <Link to="/">Borrowing</Link>
+        {/* <Link to="/">Lending</Link> */}
       </div>
 
       <Routes>
         <Route path="/home" element={<Home />} exact />
-        <Route path="/borrower" element={<BorrowerPage />} exact />
-        <Route path="/" element={<LenderPage />} exact />
+        <Route path="/" element={<BorrowerPage />} exact />
+        {/* <Route path="/" element={<LenderPage />} exact /> */}
       </Routes>
     </Router>
 

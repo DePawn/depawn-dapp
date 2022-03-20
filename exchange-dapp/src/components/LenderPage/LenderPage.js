@@ -11,7 +11,7 @@ import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
 import { getSubAddress } from '../../utils/addressUtils';
 import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 import { connect } from "@tableland/sdk";
-import { fetchTable, insertTableEntry, createTable } from '../../external/tablelandInterface';
+import { fetchTable, insertTableRow, updateTable, createTable } from '../../external/tablelandInterface';
 
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -60,14 +60,20 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
+        await createTable('demo_depawn');
+
         // console.log(await fetchAllTables(account, chainId));
         // for (let i = 75; i < 85; i++) {
         //     console.log(await addTableEntry(`insert into demo_539 values (${i}, 'Numbah ${i}');`))
         // }
 
-        // const tbl = await createTable('demo_depawn_01');
+        // await insertTableRow('demo_depawn_01_548', account, {
+        //     collateral: '0x2d35bd9bec501955e82437c1a96e4baade2b8eeb', token_id: '3', duration: 36, rate: 0.2, initialLoanValue: 122
+        // });
 
-        const conn = await connect({ network: 'testnet' });
+        // console.log(await fetchTable('demo_depawn_01_548'));
+
+        // const conn = await connect({ network: 'testnet' });
 
         // console.log(tbl);
 
@@ -78,8 +84,8 @@ export default function BorrowerPage() {
         // // console.log(createRes)
         // // console.log(createRes.name)
 
-        const tables = await conn.list();
-        console.log(tables)
+        // const tables = await conn.list();
+        // console.log(tables)
 
         // // const one = await tbl.query(
         // //     `INSERT INTO ${createRes.name} (id, name) VALUES (0, 'Jason Garcia');`
