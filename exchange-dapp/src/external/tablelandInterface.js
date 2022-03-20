@@ -32,7 +32,7 @@ export const fetchAllTables = async (account) => {
 }
 
 export const fetchTable = async (tableName, signer) => {
-    const tbl = await connectTableland('https://testnet.tableland.network', signer);
+    const tbl = await connectTableland('https://testnet.tableland.network');
     const res = await tbl.query(`SELECT * FROM ${tableName};`);
     const out = JSON.stringify(res, null, 2);
 
@@ -40,9 +40,34 @@ export const fetchTable = async (tableName, signer) => {
 };
 
 export const insertTableEntry = async (tableName, key, val) => {
-    const tbl = await connectTableland('https://testnet.tableland.network', null);
+    const tbl = await connectTableland('https://testnet.tableland.network');
     const res = await tbl.query(`INSERT INTO ${tableName} VALUES (${key}, '${val}');`);
     const out = JSON.stringify(res, null, 2);
 
     return out;
 };
+
+export const createTable = async (tableName) => {
+    const cols =
+        'collateral_tokenId text, ' +
+        'borrower text, ' +
+        'lender text, ' +
+        'duration text, ' +
+        'imgUrl text, ' +
+        'initialLoanValue text, ' +
+        'nft text, ' +
+        'rate text, ' +
+        'committed bool, ' +
+        'borrower_signed bool, ' +
+        'lender_signed bool, ' +
+        'contract_address text';
+
+    const query = `CREATE TABLE ${tableName} (${cols}, primary key (collateral_tokenId));`;
+    console.log(query);
+
+    const conn = await connect({ network: 'testnet' });
+    const tbl = await conn.create(query);
+    console.log(tbl);
+
+    return tbl;
+}

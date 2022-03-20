@@ -397,28 +397,70 @@ export default function BorrowerPage() {
         );
 
         // Update parameter
-        switch (param) {
-            case 'duration':
-                await loanRequestContract.setLoanParam(
-                    loanId,
-                    param.replace('-', '_'),
-                    ethers.BigNumber.from(paramElement.value),
-                );
-                break;
-            case 'value':
-            case 'rate':
-                await loanRequestContract.setLoanParam(
-                    loanId,
-                    param,
-                    ethers.utils.parseUnits(paramElement.value),
-                );
-                break;
-            case 'lender':
-                await loanRequestContract.setLender(currentAccount, loanId);
-                break;
-            default:
-                console.log("Incorrect params string for callback__UpdateLoan().");
+        let tx;
+        let receipt;
+
+        try {
+            switch (param) {
+                case 'duration':
+                    tx = await loanRequestContract.setLoanParam(
+                        loanId,
+                        param.replace('-', '_'),
+                        ethers.BigNumber.from(paramElement.value),
+                    );
+                    receipt = await tx.wait();
+                    console.log(receipt);
+                    break;
+                case 'value':
+                case 'rate':
+                    tx = await loanRequestContract.setLoanParam(
+                        loanId,
+                        param,
+                        ethers.utils.parseUnits(paramElement.value),
+                    );
+                    receipt = await tx.wait();
+                    break;
+                case 'lender':
+                    tx = await loanRequestContract.setLender(currentAccount, loanId);
+                    receipt = await tx.wait();
+                    break;
+                default:
+                    console.log("Incorrect params string for callback__UpdateLoan().");
+            }
         }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    /* ---------------------------------------  *
+     *            EVENT LISTENERS               *
+     * ---------------------------------------  */
+    const setSubmittedLoanRequestListener = (loanRequestContract) => {
+        // Set loan request listener
+        loanRequestContract.on('SubmittedLoanRequest', () => {
+            if (!isPageLoad) {
+                console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!');
+            }
+        });
+    }
+
+    const setLoanRequestChangedListeners = (loanRequestContract) => {
+        // Set loan request listener
+        loanRequestContract.on('LoanRequestChanged', () => {
+            if (!isPageLoad) {
+                console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!');
+            }
+        });
+    }
+
+    const setLoanRequestLenderChangedListeners = (loanRequestContract) => {
+        // Set loan request listener
+        loanRequestContract.on('LoanRequestLenderChanged', () => {
+            if (!isPageLoad) {
+                console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!');
+            }
+        });
     }
 
     /* ---------------------------------------  *
@@ -465,40 +507,10 @@ export default function BorrowerPage() {
     }
 
     /* ---------------------------------------  *
-     *            EVENT LISTENERS               *
-     * ---------------------------------------  */
-    const setSubmittedLoanRequestListener = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('SubmittedLoanRequest', () => {
-            if (!isPageLoad) {
-                console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestLenderChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestLenderChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    /* ---------------------------------------  *
      *         BORROWERPAGE.JS RETURN           *
      * ---------------------------------------  */
     return (
-        <div className="BorrowerPage">
+        <div className="borrower-page">
             <div>
                 <h1>DePawn</h1>
                 {currentAccount

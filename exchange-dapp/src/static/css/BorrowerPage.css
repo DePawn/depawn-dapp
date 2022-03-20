@@ -4,6 +4,12 @@ html {
   background: #222;
 }
 
+.borrower-page {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+}
+
 h1, h2, h3, .label, .button-edit {  
   font-weight: bold;
   text-shadow: 1px 1px 3px #000;
@@ -19,7 +25,7 @@ div {
 
 .container {
   margin: 0;
-  padding: 24px;
+  padding: 10px 24px 0 24px;
   border: none;
 }
 
@@ -38,7 +44,8 @@ div {
 
 .container-loan-contracts-master {
   overflow-y: auto;
-  height: 89vh;
+  height: 90vh;
+  margin-top: 0;
 }
 
 .wedge {
@@ -55,7 +62,7 @@ div {
 .container-existing-loan-form,
 .container-loan-contracts {
   width: 510px;
-  margin: 40px auto;
+  margin: 40px auto 0 auto;
   padding: 24px;
   position: relative;
   border-radius: 12px;

@@ -10,8 +10,8 @@ import { config } from '../../utils/config';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
 import { getSubAddress } from '../../utils/addressUtils';
 import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
-
-import { fetchTable, insertTableEntry } from '../../external/tablelandInterface';
+import { connect } from "@tableland/sdk";
+import { fetchTable, insertTableEntry, createTable } from '../../external/tablelandInterface';
 
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -65,9 +65,9 @@ export default function BorrowerPage() {
         //     console.log(await addTableEntry(`insert into demo_539 values (${i}, 'Numbah ${i}');`))
         // }
 
-        // console.log(await fetchTable('demo_539'))
+        // const tbl = await createTable('demo_depawn_01');
 
-        // const tbl = await connect({ network: 'testnet' });
+        const conn = await connect({ network: 'testnet' });
 
         // console.log(tbl);
 
@@ -78,8 +78,8 @@ export default function BorrowerPage() {
         // // console.log(createRes)
         // // console.log(createRes.name)
 
-        // // const tables = await tbl.list();
-        // // console.log(tables)
+        const tables = await conn.list();
+        console.log(tables)
 
         // // const one = await tbl.query(
         // //     `INSERT INTO ${createRes.name} (id, name) VALUES (0, 'Jason Garcia');`

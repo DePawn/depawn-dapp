@@ -1,0 +1,43 @@
+{
+    "data": {
+        "columns": [
+            {
+                "name": "collateral_tokenid"
+            },
+            {
+                "name": "borrower"
+            },
+            {
+                "name": "lender"
+            },
+            {
+                "name": "duration"
+            },
+            {
+                "name": "imgurl"
+            },
+            {
+                "name": "initialloanvalue"
+            },
+            {
+                "name": "nft"
+            },
+            {
+                "name": "rate"
+            },
+            {
+                "name": "committed"
+            },
+            {
+                "name": "borrower_signed"
+            },
+            {
+                "name": "lender_signed"
+            },
+            {
+                "name": "contract_address"
+            }
+        ],
+        "rows": []
+    }
+}
