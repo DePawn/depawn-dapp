@@ -4,20 +4,22 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 contract LoanContract {
     using SafeMath for uint256;
 
-    address borrower;
-    address lender;
-    address arbiter;
-    address collateral;
-    uint256 tokenId;
+    address public borrower;
+    address public lender;
+    address public arbiter;
+    address public collateral;
+    uint256 public tokenId;
     uint256 currentLoanValue;
-    uint256 rate;
-    uint256 expiration;
+    uint256 public rate;
+    uint256 public expiration;
     LoanStatus status;
     uint256 start;
+    uint256 accruedInterest;
 
     enum LoanStatus {
         WITHDRAWABLE,
@@ -44,8 +46,9 @@ contract LoanContract {
         rate = _rate;
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
-        start = block.timestamp;
-        //interestAccrued = 0
+
+        //start = block.timestamp;
+        start = 1644202800;// 2022-02-7
     }
 
     function onERC721Received(
@@ -61,24 +64,32 @@ contract LoanContract {
     }
 
     function getStatus() external view returns (string memory) {
-        if (status == LoanStatus.WITHDRAWABLE) return "WITHDRAWABLE";
-        if (status == LoanStatus.ACTIVE) return "ACTIVE";
-        if (status == LoanStatus.PAID) return "PAID";
-        if (status == LoanStatus.DEFAULT) return "DEFAULT";
-        if (status == LoanStatus.CLOSED) return "CLOSED";
+        string memory result;
+        if (status == LoanStatus.WITHDRAWABLE) result = "WITHDRAWABLE";
+        if (status == LoanStatus.ACTIVE) result = "ACTIVE";
+        if (status == LoanStatus.PAID) result = "PAID";
+        if (status == LoanStatus.DEFAULT) result = "DEFAULT";
+        if (status == LoanStatus.CLOSED) result = "CLOSED";
+        return result;
     }
 
-    function calculateRedemption() public view returns (uint256) {
+    function calculateInterest() public view returns(uint256) {
         uint256 daysPassed = (block.timestamp - start) / 60 / 60 / 24;
-        uint256 redemption = currentLoanValue
+        console.log("days passed", daysPassed);
+        return currentLoanValue
             .mul(rate)
             .div(100)
             .mul(daysPassed)
-            .div(365) + currentLoanValue;
-        return redemption;
+            .div(365);
     }
 
-    function issueLoanBorrower() external checkMaturity {
+    function calculateRedemption() public view returns (uint256) {
+
+        return calculateInterest() + currentLoanValue + accruedInterest;
+
+    }
+
+    function getMyLoan() external checkMaturity {
         require(msg.sender == borrower, "Only borrower can take balance out");
         require(status == LoanStatus.WITHDRAWABLE);
         status = LoanStatus.ACTIVE;
@@ -89,16 +100,34 @@ contract LoanContract {
         require(msg.sender == borrower, "Only borrower can prepay loan");
         require(
             status == LoanStatus.ACTIVE || status == LoanStatus.DEFAULT,
-            "Loan should be active or default to be prepaid"
+            "Loan should be active or default to be paid"
         );
+        
 
         uint redemption = calculateRedemption();
         require(redemption >= msg.value, "Borrower can't pay more than owed");
-        uint256 interest = redemption - currentLoanValue;
-        currentLoanValue = currentLoanValue - (msg.value - interest);
+
+        uint256 currentInterest = calculateInterest();
+
+        console.log(currentLoanValue);
+        console.log(msg.value);
+
+        accruedInterest += currentInterest;
+        start = block.timestamp;
+        console.log("accrued interest", accruedInterest);
+
+        if(currentLoanValue >= msg.value) {
+            currentLoanValue = currentLoanValue - msg.value;    
+        }
+            
+        else {
+            accruedInterest -= (msg.value - currentLoanValue);
+            currentLoanValue = 0;
+            console.log("accrued interes", accruedInterest);
+        }
         payable(lender).transfer(msg.value);
 
-        if(currentLoanValue == 0)
+        if(currentLoanValue + accruedInterest == 0 )
             status = LoanStatus.PAID;
 
     }
@@ -112,12 +141,14 @@ contract LoanContract {
         if (status == LoanStatus.PAID) {
             payable(lender).transfer(address(this).balance);
         }
-        if (status == LoanStatus.DEFAULT) {
+        else if (status == LoanStatus.DEFAULT) {
             //Take NFT
             IERC721(collateral).safeTransferFrom(address(this), lender, tokenId);
 
             status = LoanStatus.CLOSED;
         }
+        else
+            require(false, "Not available for withdraw at the moment");
     }
 
     function withdrawNFTBorrower() external checkMaturity {
@@ -129,6 +160,8 @@ contract LoanContract {
             // Take NFT back
             IERC721(collateral).safeTransferFrom(address(this), borrower, tokenId);
         }
+        else
+            require(false, "Not available for withdraw at the moment");
     }
 
     modifier checkMaturity() {

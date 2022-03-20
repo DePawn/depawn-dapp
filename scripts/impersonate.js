@@ -105,9 +105,9 @@ async function main() {
     let loanId = await loanRequestContract.connect(borrower).createLoanRequest(
         borrowerNFT,
         borrowerTokenId,
-        2,
+        ethers.utils.parseEther("2"),
         10,
-        2
+        Math.floor(new Date(2022,3,7).getTime() / 1000)
     );
     await loanId.wait();
 
@@ -121,8 +121,10 @@ async function main() {
     let lenderAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
     let lender = provider.getSigner(lenderAddress);
     // Signoff and create new contract
-    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, {value: 2});
+    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, {value: ethers.utils.parseEther("2")});
     receipt = await tx.wait();
+
+
 
 
 
