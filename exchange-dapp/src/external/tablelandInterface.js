@@ -31,8 +31,8 @@ export const fetchAllTables = async (account) => {
     return out;
 }
 
-export const fetchTable = async (tableName) => {
-    const tbl = await connectTableland('https://testnet.tableland.network');
+export const fetchTable = async (tableName, signer) => {
+    const tbl = await connectTableland('https://testnet.tableland.network', signer);
     const res = await tbl.query(`SELECT * FROM ${tableName};`);
     const out = JSON.stringify(res, null, 2);
 
@@ -40,7 +40,7 @@ export const fetchTable = async (tableName) => {
 };
 
 export const insertTableEntry = async (tableName, key, val) => {
-    const tbl = await connectTableland('https://testnet.tableland.network');
+    const tbl = await connectTableland('https://testnet.tableland.network', null);
     const res = await tbl.query(`INSERT INTO ${tableName} VALUES (${key}, '${val}');`);
     const out = JSON.stringify(res, null, 2);
 

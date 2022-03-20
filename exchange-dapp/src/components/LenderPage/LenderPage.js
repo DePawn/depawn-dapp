@@ -65,7 +65,7 @@ export default function BorrowerPage() {
         //     console.log(await addTableEntry(`insert into demo_539 values (${i}, 'Numbah ${i}');`))
         // }
 
-        console.log(await fetchTable('demo_539'))
+        // console.log(await fetchTable('demo_539'))
 
         // const tbl = await connect({ network: 'testnet' });
 
