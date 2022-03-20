@@ -5,8 +5,8 @@ import "./MultiSig.sol";
 import "./LoanContract.sol";
 import "hardhat/console.sol";
 
- import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
- import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract LoanRequest is MultiSig {
     struct LoanStatus {
@@ -145,7 +145,7 @@ contract LoanRequest is MultiSig {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
         uint256 _safeId = _loanRequest.safeId;
         address _lender = getSigner(_safeId, lenderPosition);
-        
+
         _isReady =
             _getSignStatus(_safeId, _borrower) &&
             _getSignStatus(_safeId, _lender) &&
@@ -213,7 +213,8 @@ contract LoanRequest is MultiSig {
      *   automatically sign off.
      */
     function setLender(address _borrower, uint256 _loanId)
-        external payable
+        external
+        payable
         onlyHasLoan(_borrower)
         onlyNotConfirmed(_borrower, _loanId)
     {
@@ -226,7 +227,6 @@ contract LoanRequest is MultiSig {
 
             // Lender signs
             sign(_borrower, _loanId);
-            
 
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {

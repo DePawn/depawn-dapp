@@ -36,6 +36,7 @@ const formatParams = (params) => {
     params.committed = params.committed !== undefined ? params.committed.toString() : undefined;
     params.borrower_signed = params.borrower_signed !== undefined ? params.borrower_signed.toString() : undefined;
     params.lender_signed = params.lender_signed !== undefined ? params.lender_signed.toString() : undefined;
+    params.unpaid_balance = params.unpaid_balance !== undefined ? params.unpaid_balance.toString() : undefined;
 
     return params;
 }
@@ -58,7 +59,8 @@ export const insertTableRow = async (tableName, account, params = {
     committed: undefined,
     borrower_signed: undefined,
     lender_signed: undefined,
-    contract_address: undefined
+    contract_address: undefined,
+    unpaid_balance: undefined
 }) => {
     if (!params.collateral || !params.token_id) {
         console.log('Cannot add row to table. Collateral or Token ID not provided.');
@@ -86,7 +88,8 @@ export const insertTableRow = async (tableName, account, params = {
         `${!!params.committed ? "committed, " : ''}` +
         `${!!params.borrower_signed ? "borrower_signed, " : ''}` +
         `${!!params.lender_signed ? "lender_signed, " : ''}` +
-        `${!!params.contract_address ? "contract_address, " : ''}`;
+        `${!!params.contract_address ? "contract_address, " : ''}` +
+        `${!!params.unpaid_balance ? "unpaid_balance, " : ''}`;
     cols = cols.slice(0, -2);
 
     let vals =
@@ -107,7 +110,8 @@ export const insertTableRow = async (tableName, account, params = {
         `${!!params.committed ? params.committed + ", " : ''}` +
         `${!!params.borrower_signed ? params.borrower_signed + ", " : ''}` +
         `${!!params.lender_signed ? params.lender_signed + ", " : ''}` +
-        `${!!params.contract_address ? "'" + params.contract_address + "', " : ''}`;
+        `${!!params.contract_address ? "'" + params.contract_address + "', " : ''}` +
+        `${!!params.unpaid_balance ? "'" + params.unpaid_balance + "', " : ''}`;
     vals = vals.slice(0, -2);
 
     // Perform update
@@ -136,7 +140,8 @@ export const updateTable = async (tableName, account, params = {
     committed: undefined,
     borrower_signed: undefined,
     lender_signed: undefined,
-    contract_address: undefined
+    contract_address: undefined,
+    unpaid_balance: undefined
 }) => {
     if (!params.collateral || !params.token_id) {
         console.log('Cannot update table. Collateral or Token ID not provided.');
@@ -164,7 +169,8 @@ export const updateTable = async (tableName, account, params = {
         `${!!params.committed ? "committed=" + params.committed + ", " : ''}` +
         `${!!params.borrower_signed ? "borrower_signed=" + params.borrower_signed + ", " : ''}` +
         `${!!params.lender_signed ? "lender_signed=" + params.lender_signed + ", " : ''}` +
-        `${!!params.contract_address ? "contract_address='" + params.contract_address + "', " : ''}`;
+        `${!!params.contract_address ? "contract_address='" + params.contract_address + "', " : ''}` +
+        `${!!params.unpaid_balance ? "unpaid_balance='" + params.unpaid_balance + "', " : ''}`;
     updates = updates.slice(0, -2);
 
     // Perform update

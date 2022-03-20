@@ -53,7 +53,7 @@ const main = async () => {
         await tx.wait();
 
         tx = await nftContract.ownerOf(tr.tokenId);
-        console.log("Owner is", tx);
+        console.log("New owner is", tx);
 
         await hre.network.provider.request({
             method: "hardhat_stopImpersonatingAccount",

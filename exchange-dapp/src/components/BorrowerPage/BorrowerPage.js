@@ -15,8 +15,8 @@ import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
     defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
     defaultTokenId: '6491',
-    defaultInitialLoanValue: '3.2',
-    defaultRate: '0.02',
+    defaultInitialLoanValue: '3',
+    defaultRate: '2',
     defaultDuration: '24',
     defaultImageUrl: 'https://storage.googleapis.com/sentinel-nft/raw-assets/e5a44a819a164708012efbb36298051ebf6453544c28a7ea358bc6547d7b1335.png',
     defaultNetwork: config('31337').network,
@@ -272,7 +272,8 @@ export default function BorrowerPage() {
                 rate: newLoan.rate,
                 committed: false,
                 borrower_signed: false,
-                lender_signed: false
+                lender_signed: false,
+                unpaid_balance: newLoan.initialLoanValue
             }
 
             await insertTableRow(dbTableName, currentAccount, dbParams);
@@ -337,13 +338,14 @@ export default function BorrowerPage() {
         const nft = document.getElementById('datalist-nft').value;
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
         const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
-        const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
+        const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
         const duration = document.getElementById('input-duration').value;
 
         // Get contract
         const {
             loanRequestAddress,
             loanRequestABI,
+            erc721,
             devFront,
             transferibles
         } = config(currentNetwork);
@@ -360,8 +362,15 @@ export default function BorrowerPage() {
         );
 
         try {
-            // Create new loan request
-            const tx = await loanRequestContract.createLoanRequest(
+            console.log('Submitting loan request...');
+
+            // Approve transfer of NFT to LoanRequest from Borrower
+            const nftContract = new ethers.Contract(nft, erc721, borrower);
+            let tx = await nftContract.approve(loanRequestContract.address, tokenId);
+            await tx.wait();
+
+            // Create new LoanRequest
+            tx = await loanRequestContract.createLoanRequest(
                 nft,
                 tokenId,
                 initialLoanValue,

@@ -327,11 +327,14 @@ export default function BorrowerExistingLoanForm(props) {
             <div className="container-existing-loan-component">
                 <div className="label label-rate">Rate:</div>
                 <input
-                    type="string"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
                     id={"input-existing-loan-rate-" + props.loanNumber}
                     className="input input-existing-loan-rate"
                     placeholder='Rate...'
-                    defaultValue={ethers.utils.formatEther(props.rate)}
+                    defaultValue={props.rate}
                     readOnly={currentEdit !== "rate"}>
                 </input>
                 <div

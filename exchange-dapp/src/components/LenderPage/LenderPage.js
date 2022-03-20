@@ -60,7 +60,7 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
-        await createTable('demo_depawn');
+        // await createTable('demo_depawn');
 
         // console.log(await fetchAllTables(account, chainId));
         // for (let i = 75; i < 85; i++) {
