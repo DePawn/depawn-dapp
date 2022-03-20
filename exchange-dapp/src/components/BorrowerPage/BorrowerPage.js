@@ -8,7 +8,7 @@ import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
-import { insertTableRow } from '../../external/tablelandInterface';
+import { insertTableRow, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 
@@ -33,8 +33,6 @@ export default function BorrowerPage() {
     const [currentAccountLoans, setCurrentAccountLoans] = useState('');
     const [loanRequestElement, setLoanRequestElement] = useState('');
     const [existingLoanElements, setExistingLoanElements] = useState('');
-
-    const DB_TABLE_NAME = 'demo_depawn_556';
 
     useEffect(() => {
         console.log('Page loading...');
@@ -183,7 +181,7 @@ export default function BorrowerPage() {
         let loans = [];
         let loanRequestContract = null;
 
-        const { devFront, transferibles } = config(network);
+        const { devFront, transferibles, dbTableName } = config(network);
         if (devFront) account = transferibles[0].recipient;
 
         if (!!account && !!network) {
@@ -277,7 +275,7 @@ export default function BorrowerPage() {
                 lender_signed: false
             }
 
-            await insertTableRow(DB_TABLE_NAME, currentAccount, dbParams);
+            await insertTableRow(dbTableName, currentAccount, dbParams);
         }
 
         setCurrentAccountNfts(nfts);
@@ -416,15 +414,15 @@ export default function BorrowerPage() {
         setCurrentSubmitRequestStatus(true);
     }
 
-    const callback__UpdateLoan = async (loanId, param) => {
+    const callback__UpdateLoan = async (loanId, attribute, params) => {
         // Get parameter to change
-        const paramElement = document.getElementById(`input-existing-loan-${param}-${loanId}`);
+        const paramElement = document.getElementById(`input-existing-loan-${attribute}-${loanId}`);
 
         // Get contract
         const provider = getProvider();
         const borrower = provider.getSigner(currentAccount);
 
-        const { loanRequestAddress, loanRequestABI } = config(currentNetwork);
+        const { loanRequestAddress, loanRequestABI, dbTableName } = config(currentNetwork);
 
         const loanRequestContract = new ethers.Contract(
             loanRequestAddress,
@@ -435,30 +433,61 @@ export default function BorrowerPage() {
         // Update parameter
         let tx;
         let receipt;
+        let dbParams;
 
         try {
-            switch (param) {
+            switch (attribute) {
                 case 'duration':
                     tx = await loanRequestContract.setLoanParam(
                         loanId,
-                        param.replace('-', '_'),
+                        attribute,
                         ethers.BigNumber.from(paramElement.value),
                     );
                     receipt = await tx.wait();
                     console.log(receipt);
+
+                    // Update Tableland database
+                    dbParams = {
+                        collateral: params.collateral,
+                        token_id: params.tokenId,
+                        duration: ethers.BigNumber.from(paramElement.value)
+                    };
+
+                    await updateTable(dbTableName, currentAccount, dbParams);
+
                     break;
                 case 'value':
                 case 'rate':
                     tx = await loanRequestContract.setLoanParam(
                         loanId,
-                        param,
+                        attribute,
                         ethers.utils.parseUnits(paramElement.value),
                     );
                     receipt = await tx.wait();
+
+                    // Update Tableland database
+                    dbParams = {
+                        collateral: params.collateral,
+                        token_id: params.tokenId,
+                    };
+                    dbParams[attribute === 'value' ? 'initialLoanValue' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
+
+                    await updateTable(dbTableName, currentAccount, dbParams);
+
                     break;
                 case 'lender':
                     tx = await loanRequestContract.setLender(currentAccount, loanId);
                     receipt = await tx.wait();
+
+                    // Update Tableland database
+                    dbParams = {
+                        collateral: params.collateral,
+                        token_id: params.tokenId,
+                        lender: paramElement.value
+                    };
+
+                    await updateTable(dbTableName, currentAccount, dbParams);
+
                     break;
                 default:
                     console.log("Incorrect params string for callback__UpdateLoan().");

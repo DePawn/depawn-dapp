@@ -1,5 +1,5 @@
 import env from 'react-dotenv';
-
+import fs from 'fs';
 import { Wallet } from "ethers";
 import fetch from "node-fetch";
 import { connect } from "@tableland/sdk";
@@ -26,6 +26,7 @@ const connectTableland = async (url) => {
 
 const formatParams = (params) => {
     // Reformat param values to fit database types
+    params.collateral = params.collateral.toLowerCase();
     params.token_id = params.token_id.toString();
     params.duration = !!params.duration ? params.duration.toString() : undefined;
     params.initialLoanValue = !!params.initialLoanValue ? params.initialLoanValue.toString() : undefined;
@@ -111,12 +112,10 @@ export const insertTableRow = async (tableName, account, params = {
 
     // Perform update
     const query = `INSERT INTO ${tableName} (${cols}) VALUES (${vals});`;
-    console.log(query);
-
     const conn = await connectTableland('https://testnet.tableland.network');
-    await conn.query(query);
+    const res = await conn.query(query);
 
-    // return res;
+    return res;
 }
 
 export const updateTable = async (tableName, account, params = {
@@ -220,7 +219,8 @@ export const createTable = async (tableName) => {
         'committed bool, ' +
         'borrower_signed bool, ' +
         'lender_signed bool, ' +
-        'contract_address text';
+        'contract_address text, ' +
+        'unpaid_balance text';
 
     const query = `CREATE TABLE ${tableName} (${cols}, primary key (collateral_tokenId));`;
     console.log(query);
@@ -228,6 +228,8 @@ export const createTable = async (tableName) => {
     const conn = await connect({ network: 'testnet' });
     const tbl = await conn.create(query);
     console.log(tbl);
+
+    fs.writeFileSync('../static/tableland/tableland_depawn.json', JSON.stringify({ tableName: tbl }, null, 2))
 
     return tbl;
 }

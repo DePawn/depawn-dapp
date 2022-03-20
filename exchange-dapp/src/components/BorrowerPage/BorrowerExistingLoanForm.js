@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config.js';
 import { capitalizeWords } from '../../utils/stringUtils';
+import { updateTable } from '../../external/tablelandInterface';
 
 const edit_emoji = "✍🏽";
 const delete_emoji = "🗑️";
@@ -14,7 +15,7 @@ export default function BorrowerExistingLoanForm(props) {
     const [currentEdit, setCurrentEdit] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
-    // console.log(props)
+    console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -92,7 +93,7 @@ export default function BorrowerExistingLoanForm(props) {
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
+        const { loanRequestAddress, erc721, dbTableName } = config(props.currentNetwork);
 
         try {
             // Get ERC721 contract
@@ -102,6 +103,16 @@ export default function BorrowerExistingLoanForm(props) {
             await nftContract["safeTransferFrom(address,address,uint256)"](
                 props.currentAccount, loanRequestAddress, props.tokenId
             );
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                committed: true
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
             return true;
         }
         catch (err) {
@@ -111,9 +122,21 @@ export default function BorrowerExistingLoanForm(props) {
     }
 
     async function withdrawNft() {
+        const { dbTableName } = config(props.currentNetwork);
+
         // Withdraw ERC721 from LoanRequest contract
         try {
             await props.currentLoanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                committed: false
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
             return true;
         }
         catch (err) {
@@ -123,6 +146,8 @@ export default function BorrowerExistingLoanForm(props) {
     }
 
     async function signLoanRequest() {
+        const { dbTableName } = config(props.currentNetwork);
+
         // Sign LoanRequest contract
         try {
             console.log(props)
@@ -130,6 +155,16 @@ export default function BorrowerExistingLoanForm(props) {
                 props.currentAccount, ethers.BigNumber.from(props.loanNumber)
             );
             await tx.wait();
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                borrower_signed: true
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
             return true;
         }
         catch (err) {
@@ -139,6 +174,8 @@ export default function BorrowerExistingLoanForm(props) {
     }
 
     async function removeSignatureFromLoanRequest() {
+        const { dbTableName } = config(props.currentNetwork);
+
         // Sign LoanRequest contract
         try {
             console.log(props)
@@ -146,6 +183,15 @@ export default function BorrowerExistingLoanForm(props) {
                 props.currentAccount, ethers.BigNumber.from(props.loanNumber)
             );
             await tx.wait();
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                borrower_signed: false
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
             return false;
         }
         catch (err) {
@@ -360,7 +406,7 @@ export default function BorrowerExistingLoanForm(props) {
                     id={"button-existing-loan-update-" + props.loanNumber}
                     className="button button-existing-loan button-existing-loan-update button-enabled"
                     onClick={() => {
-                        props.updateLoanFunc(props.loanNumber, currentEdit)
+                        props.updateLoanFunc(props.loanNumber, currentEdit, props)
                             .then(() => { setCurrentEdit(''); });
                     }}>
                     Update
