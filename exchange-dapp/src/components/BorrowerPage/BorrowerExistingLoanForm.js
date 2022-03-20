@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import getProvider from '../utils/getProvider';
-import { config } from '../utils/config.js';
+import getProvider from '../../utils/getProvider';
+import { config } from '../../utils/config.js';
+import { capitalizeWords } from '../../utils/stringUtils';
+import { updateTable } from '../../external/tablelandInterface';
 
 const edit_emoji = "✍🏽";
 const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
-export default function ExistingLoansForm(props) {
-    console.log(props)
+export default function BorrowerExistingLoanForm(props) {
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
+    const [currentSignStatus, setCurrentSignStatus] = useState(undefined);
     const [currentEdit, setCurrentEdit] = useState('');
+    const tabbedBullet = '\xa0\xa0- ';
+
+    console.log(props)
 
     function setEditName(name) {
         if (name === currentEdit) {
@@ -47,8 +52,24 @@ export default function ExistingLoansForm(props) {
         setCurrentNftCommitStatus(nftOwner === loanRequestAddress);
     }
 
+    async function currentSignStatusSetter() {
+        // Get Borrower sign status
+        try {
+            const signStatus = await props.currentLoanRequestContract.getSignStatus(
+                props.currentAccount, props.currentAccount, props.loanNumber
+            );
+            if (!signStatus) console.log('Not signed')
+            setCurrentSignStatus(signStatus);
+        }
+        catch (err) {
+            console.log(err);
+            return undefined;
+        }
+    }
+
     useEffect(() => {
         currentNftCommitStatusSetter();
+        currentSignStatusSetter();
         // eslint-disable-next-line
     }, []);
 
@@ -72,7 +93,7 @@ export default function ExistingLoansForm(props) {
         // Get contract LoanRequest contract
         const provider = getProvider();
         const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, erc721 } = config(props.currentNetwork);
+        const { loanRequestAddress, erc721, dbTableName } = config(props.currentNetwork);
 
         try {
             // Get ERC721 contract
@@ -82,32 +103,100 @@ export default function ExistingLoansForm(props) {
             await nftContract["safeTransferFrom(address,address,uint256)"](
                 props.currentAccount, loanRequestAddress, props.tokenId
             );
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                committed: true
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
             return true;
         }
         catch (err) {
-            return false;
+            console.log(err);
+            return currentNftCommitStatus;
         }
     }
 
     async function withdrawNft() {
-        // Get contract LoanRequest contract
-        const provider = getProvider();
-        const borrower = provider.getSigner(props.currentAccount);
-        const { loanRequestAddress, loanRequestABI } = config(props.currentNetwork);
-
-        const loanRequestContract = new ethers.Contract(
-            loanRequestAddress,
-            loanRequestABI,
-            borrower
-        );
+        const { dbTableName } = config(props.currentNetwork);
 
         // Withdraw ERC721 from LoanRequest contract
         try {
-            await loanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+            await props.currentLoanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                committed: false
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
             return true;
         }
         catch (err) {
+            console.log(err);
             return false;
+        }
+    }
+
+    async function signLoanRequest() {
+        const { dbTableName } = config(props.currentNetwork);
+
+        // Sign LoanRequest contract
+        try {
+            console.log(props)
+            const tx = await props.currentLoanRequestContract.sign(
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+            );
+            await tx.wait();
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                borrower_signed: true
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+
+            return true;
+        }
+        catch (err) {
+            console.log(err);
+            return currentSignStatus;
+        }
+    }
+
+    async function removeSignatureFromLoanRequest() {
+        const { dbTableName } = config(props.currentNetwork);
+
+        // Sign LoanRequest contract
+        try {
+            console.log(props)
+            const tx = await props.currentLoanRequestContract.removeSignature(
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+            );
+            await tx.wait();
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                borrower_signed: false
+            };
+
+            await updateTable(dbTableName, props.currentAccount, dbParams);
+            return false;
+        }
+        catch (err) {
+            console.log(err);
+            return currentSignStatus;
         }
     }
 
@@ -145,7 +234,14 @@ export default function ExistingLoansForm(props) {
                                 </div>
 
                                 <div className="card__body">
-                                    <p>Info here...</p>
+                                    <dl>
+                                        <dt>Contract Info:</dt>
+                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date: </span>{props.nft.mint_date}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Symbol: </span>{props.nft.symbol}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Type: </span>{props.nft.type}</dd><br />
+                                        <dt>Sales Statistics</dt>
+                                        {renderNftStat(props.nft.contract_statistics)}
+                                    </dl>
                                 </div>
 
                             </div>
@@ -155,6 +251,15 @@ export default function ExistingLoansForm(props) {
                 </div>
                 : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
         )
+    }
+
+    function renderNftStat(contract_stats) {
+        const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
+            return (
+                <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key)}: </span>{contract_stats[key]}</dd>
+            )
+        })
+        return contractStatsElements;
     }
 
     function setCardFlipEventListener(idx) {
@@ -291,7 +396,8 @@ export default function ExistingLoansForm(props) {
                             commitNft().then((res) => { setCurrentNftCommitStatus(res); });
                         }
                         else {
-                            withdrawNft().then((res) => { setCurrentNftCommitStatus(!res) })
+                            removeSignatureFromLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                            withdrawNft().then((res) => { setCurrentNftCommitStatus(!res) });
                         }
                     }}>
                     {currentNftCommitStatus ? "Withdraw NFT" : "Commit NFT"}
@@ -300,7 +406,7 @@ export default function ExistingLoansForm(props) {
                     id={"button-existing-loan-update-" + props.loanNumber}
                     className="button button-existing-loan button-existing-loan-update button-enabled"
                     onClick={() => {
-                        props.updateLoanFunc(props.loanNumber, currentEdit)
+                        props.updateLoanFunc(props.loanNumber, currentEdit, props)
                             .then(() => { setCurrentEdit(''); });
                     }}>
                     Update
@@ -308,8 +414,16 @@ export default function ExistingLoansForm(props) {
 
                 <div
                     id={"button-existing-loan-sign-" + props.loanNumber}
-                    className={`button button - existing - loan button - existing - loan - sign ${currentNftCommitStatus ? " button-enabled" : " button-disabled"}`}>
-                    Sign
+                    className={`button button-existing-loan button-existing-loan-sign ${currentNftCommitStatus || currentSignStatus ? " button-enabled" : " button-disabled"}`}
+                    onClick={() => {
+                        if (!currentSignStatus && currentNftCommitStatus) {
+                            signLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                        }
+                        else if (currentSignStatus) {
+                            removeSignatureFromLoanRequest().then((res) => { setCurrentSignStatus(res) });
+                        }
+                    }}>
+                    {!currentSignStatus ? "Sign" : "Unsign"}
                 </div>
             </div>
 

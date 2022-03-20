@@ -13,6 +13,9 @@ module.exports = {
   defaultNetwork: 'localhost',
   networks: {
     hardhat: {
+      accounts: {
+        mnemonic: process.env.MNEMONIC
+      },
       forking: {
         chainId: 31337,
         url: process.env.ALCHEMY_MAINNET_URL,

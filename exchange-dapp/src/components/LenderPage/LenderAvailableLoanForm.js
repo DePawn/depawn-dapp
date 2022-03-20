@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { capitalizeWords } from '../../utils/stringUtils';
 
-export default function LoanRequestForm(props) {
+export default function LenderAvailableLoanForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
-    console.log(props)
+    const tabbedBullet = '\xa0\xa0- ';
+
+    // console.log(props)
 
     function renderNftDropdown() {
         return (
@@ -58,6 +61,8 @@ export default function LoanRequestForm(props) {
     }
 
     function renderTokenIdDropdown() {
+        const _currentNft = safeCurrentNft();
+
         return (
             <div className="container-loan-request-component">
                 <div className="label label-token-id">Token ID:</div>
@@ -66,11 +71,9 @@ export default function LoanRequestForm(props) {
                     id="input-token-id"
                     className="input input-loan-request input-token-id"
                     placeholder='Token ID...'
-                    value={!!props.currentAccountNfts
-                        ? props.currentAccountNfts[currentNft].token_id
-                        : !!props._dev
-                            ? props.defaultTokenId
-                            : ""
+                    value={!!props.currentAccountNfts.length
+                        ? props.currentAccountNfts[_currentNft].token_id
+                        : ""
                     }
                     readOnly={true}>
                 </input>
@@ -79,14 +82,16 @@ export default function LoanRequestForm(props) {
     }
 
     function renderNftImage() {
-        const imgUrl = props.currentAccountNfts
-            ? parseNftImageFromCurrentAccounts(currentNft)
+        const _currentNft = safeCurrentNft();
+
+        const imgUrl = !!props.currentAccountNfts.length
+            ? parseNftImageFromCurrentAccounts(_currentNft)
             : props._dev
                 ? props.defaultImageUrl
                 : undefined;
 
         return (
-            !!props.currentAccountNfts || (imgUrl && props._dev)
+            !!props.currentAccountNfts.length && !!imgUrl
                 ?
                 <div className="card">
                     <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
@@ -107,43 +112,17 @@ export default function LoanRequestForm(props) {
                                         alt={imgUrl}
                                         className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
                                     />
-                                    <h3 className="h3__header__back">{props.currentAccountNfts[currentNft].name}</h3>
+                                    <h3 className="h3__header__back">{props.currentAccountNfts[_currentNft].name}</h3>
                                 </div>
 
                                 <div className="card__body">
                                     <dl>
                                         <dt>Contract Info:</dt>
-                                        <dd>{`\xa0\xa0- Mint Date: ${props.currentAccountNfts[currentNft].mint_date}`}</dd>
-                                        <dd>{`\xa0\xa0- Symbol: \xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].symbol}`}</dd>
-                                        <dd>{`\xa0\xa0- Type: \xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0${props.currentAccountNfts[currentNft].type}`}</dd><br />
+                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date:</span> {props.currentAccountNfts[_currentNft].mint_date}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Symbol:</span> {props.currentAccountNfts[_currentNft].symbol}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Type:</span> {props.currentAccountNfts[_currentNft].type}</dd><br />
                                         <dt>Sales Statistics</dt>
-                                        <dd>{`\xa0\xa0- Average Price`}</dd>
-
-                                        // .replace('_', ' ').split(' ').map(str => str.charAt(0).toUpperCase() + str.slice(1)).join(' ')
-
-                                        <dd>{`\xa0\xa0- Floor`}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
-                                        <dd>{`\xa0\xa0- `}</dd>
+                                        {renderNftStat(props.currentAccountNfts[_currentNft].contract_statistics)}
                                     </dl>
                                 </div>
 
@@ -152,11 +131,22 @@ export default function LoanRequestForm(props) {
 
                     </div>
                 </div >
-                : <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
+                : !!props.currentAccountNfts.length
+                    ? <div className="container-no-image">☹️💀 No image rendered 💀☹️</div>
+                    : <div className="container-no-image">😝🙅 You have to ERC721 NFTs to leverage 🙅😝</div>
         )
     }
 
-    function setCardFlipEventListener(ev) {
+    function renderNftStat(contract_stats) {
+        const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
+            return (
+                <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key) + ":"}</span> {contract_stats[key]}</dd>
+            )
+        })
+        return contractStatsElements;
+    }
+
+    function setCardFlipEventListener() {
         const card = document.getElementById('card__inner__request');
         card.classList.toggle('is-flipped');
     }
@@ -167,6 +157,15 @@ export default function LoanRequestForm(props) {
             : props.currentAccountNfts[idx].file_url;
 
         return imgUrl;
+    }
+
+    function safeCurrentNft() {
+        // Needed to handle changes where currentNft === props.currentAccountNfts.length
+        const _currentNft = currentNft <= props.currentAccountNfts.length - 1
+            ? currentNft
+            : props.currentAccountNfts.length - 1;
+
+        return _currentNft;
     }
 
     useEffect(() => {
@@ -225,7 +224,7 @@ export default function LoanRequestForm(props) {
                 <div className="container-loan-request-create">
                     <div
                         className="button button-loan-request button-loan-request-create  button-enabled"
-                        onClick={() => props.submitCallback()}>
+                        onClick={props.submitCallback}>
                         Submit Request
                     </div>
                 </div>

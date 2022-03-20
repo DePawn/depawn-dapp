@@ -114,19 +114,23 @@
   
   .card__body {
     padding: 10px;
+    overflow-y: scroll;
+    height: 200px;
   }
   
   .card__body dl {
     color: var(--dark);
     font-size: 14px;
-    /* line-height: 1.4; */
     margin: 0;
     padding: 0 5px 0 5px;
     text-align: left;
-    /* background: orange; */
   }
 
   .card__body dt {
-      font-size: 14px;
-      font-weight: bold;
+      font-size: 16px;
+      font-weight: 900;
+  }
+
+  .card__body .attr_label {
+      font-weight: 650;
   }
