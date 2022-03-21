@@ -25,4 +25,4 @@ yarn-error.log*
 ./db
 
 .env
-./public/env.js
+*/public/env.js
