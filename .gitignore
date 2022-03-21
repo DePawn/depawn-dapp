@@ -9,4 +9,4 @@ package-lock.json
 ./exchange-dapp/__config.json
 ./exchanged-dapp/db
 .*.env*
-./exchange-dapp/public/env.js
+*/exchange-dapp/public/env.js
