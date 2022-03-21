@@ -8,5 +8,5 @@ cache
 package-lock.json
 ./exchange-dapp/__config.json
 ./exchanged-dapp/db
-.env*
+.*.env*
 ./exchange-dapp/public/env.js
