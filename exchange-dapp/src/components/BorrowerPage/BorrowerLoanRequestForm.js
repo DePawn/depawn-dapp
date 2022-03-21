@@ -24,10 +24,10 @@ export default function BorrowerLoanRequestForm(props) {
                             {props.currentAccountNfts.map((nft, i) => {
                                 return (
                                     <option
-                                        value={nft.contract_address}
+                                        value={nft.collateral}
                                         key={i}
                                     >
-                                        {nft.contract_address}
+                                        {nft.collateral}
                                     </option>
                                 )
                             })}
@@ -72,7 +72,7 @@ export default function BorrowerLoanRequestForm(props) {
                     className="input input-loan-request input-token-id"
                     placeholder='Token ID...'
                     value={!!props.currentAccountNfts.length
-                        ? props.currentAccountNfts[_currentNft].token_id
+                        ? props.currentAccountNfts[_currentNft].tokenId
                         : ""
                     }
                     readOnly={true}>
@@ -84,21 +84,17 @@ export default function BorrowerLoanRequestForm(props) {
     function renderNftImage() {
         const _currentNft = safeCurrentNft();
 
-        const imgUrl = !!props.currentAccountNfts.length
-            ? parseNftImageFromCurrentAccounts(_currentNft)
-            : props._dev
-                ? props.defaultImageUrl
-                : undefined;
+        console.log(_currentNft)
 
         return (
-            !!props.currentAccountNfts.length && !!imgUrl
+            !!props.currentAccountNfts.length && !!props.currentAccountNfts[_currentNft].imgurl
                 ?
                 <div className="card">
                     <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
                         <div className="card__face card__face--front">
                             <img
-                                src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                alt={imgUrl}
+                                src={props.currentAccountNfts[_currentNft].imgurl.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={props.currentAccountNfts[_currentNft].imgurl}
                                 className="image image-loan-request image-loan-request-nft image-loan-request-nft-front"
                             />
                         </div>
@@ -108,8 +104,8 @@ export default function BorrowerLoanRequestForm(props) {
 
                                 <div className="card__header">
                                     <img
-                                        src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                        alt={imgUrl}
+                                        src={props.currentAccountNfts[_currentNft].imgurl.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={props.currentAccountNfts[_currentNft].imgurl}
                                         className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
                                     />
                                     <h3 className="h3__header__back">{props.currentAccountNfts[_currentNft].name}</h3>
@@ -138,6 +134,7 @@ export default function BorrowerLoanRequestForm(props) {
     }
 
     function renderNftStat(contract_stats) {
+        console.log(contract_stats)
         const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
             return (
                 <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key) + ":"}</span> {contract_stats[key]}</dd>
@@ -149,14 +146,6 @@ export default function BorrowerLoanRequestForm(props) {
     function setCardFlipEventListener() {
         const card = document.getElementById('card__inner__request');
         card.classList.toggle('is-flipped');
-    }
-
-    function parseNftImageFromCurrentAccounts(idx) {
-        const imgUrl = !!props.currentAccountNfts[idx].cached_file_url
-            ? props.currentAccountNfts[idx].cached_file_url
-            : props.currentAccountNfts[idx].file_url;
-
-        return imgUrl;
     }
 
     function safeCurrentNft() {

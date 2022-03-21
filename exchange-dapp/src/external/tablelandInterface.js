@@ -28,14 +28,20 @@ const formatParams = (params) => {
     // Reformat param values to fit database types
     params.collateral = params.collateral.toLowerCase();
     params.token_id = params.token_id.toString();
+    params.loan_requested = params.loan_requested !== undefined ? params.loan_requested.toString() : undefined;
+    params.lender = !!params.lender ? params.lender.toLowerCase() : undefined;
     params.duration = !!params.duration ? params.duration.toString() : undefined;
     params.initialLoanValue = !!params.initialLoanValue ? params.initialLoanValue.toString() : undefined;
+    params.chain = !!params.chain ? params.chain.toLowerCase() : undefined;
     params.contract_statistics = !!params.contract_statistics ? JSON.stringify(params.contract_statistics) : undefined;
     params.metadata = !!params.metadata ? JSON.stringify(params.metadata) : undefined;
+    params.symbol = !!params.symbol ? params.symbol.toUpperCase() : undefined;
+    params.type = !!params.type ? params.type.toLowerCase() : undefined;
     params.rate = !!params.rate ? params.rate.toString() : undefined;
     params.committed = params.committed !== undefined ? params.committed.toString() : undefined;
     params.borrower_signed = params.borrower_signed !== undefined ? params.borrower_signed.toString() : undefined;
     params.lender_signed = params.lender_signed !== undefined ? params.lender_signed.toString() : undefined;
+    params.contract_address = !!params.contract_address ? params.contract_address.toLowerCase() : undefined;
     params.unpaid_balance = params.unpaid_balance !== undefined ? params.unpaid_balance.toString() : undefined;
 
     return params;
@@ -44,6 +50,7 @@ const formatParams = (params) => {
 export const insertTableRow = async (tableName, account, params = {
     collateral: undefined,
     token_id: undefined,
+    loan_requested: undefined,
     lender: undefined,
     duration: undefined,
     imgUrl: undefined,
@@ -73,6 +80,7 @@ export const insertTableRow = async (tableName, account, params = {
     let cols =
         `collateral_tokenid, ` +
         `borrower, ` +
+        `${!!params.loan_requested ? "loan_requested, " : ''}` +
         `${!!params.lender ? "lender, " : ''}` +
         `${!!params.duration ? "duration, " : ''}` +
         `${!!params.imgUrl ? "imgUrl, " : ''}` +
@@ -94,7 +102,8 @@ export const insertTableRow = async (tableName, account, params = {
 
     let vals =
         `'${params.collateral}_${params.token_id}', ` +
-        `'${account}', ` +
+        `'${account.toLowerCase()}', ` +
+        `${!!params.loan_requested ? "'" + params.loan_requested + "', " : ''}` +
         `${!!params.lender ? "'" + params.lender + "', " : ''}` +
         `${!!params.duration ? "'" + params.duration + "', " : ''}` +
         `${!!params.imgUrl ? "'" + params.imgUrl + "', " : ''}` +
@@ -116,6 +125,7 @@ export const insertTableRow = async (tableName, account, params = {
 
     // Perform update
     const query = `INSERT INTO ${tableName} (${cols}) VALUES (${vals});`;
+    console.log(query)
     const conn = await connectTableland('https://testnet.tableland.network');
     const res = await conn.query(query);
 
@@ -125,6 +135,7 @@ export const insertTableRow = async (tableName, account, params = {
 export const updateTable = async (tableName, account, params = {
     collateral: undefined,
     token_id: undefined,
+    loan_requested: undefined,
     lender: undefined,
     duration: undefined,
     imgUrl: undefined,
@@ -153,7 +164,8 @@ export const updateTable = async (tableName, account, params = {
     // Set row values
     const primaryKey = `collateral_tokenid='${params.collateral}_${params.token_id}'`;
     let updates =
-        `borrower='${account}', ` +
+        `borrower='${account.toLowerCase()}', ` +
+        `${!!params.loan_requested ? "loan_requested='" + params.loan_requested + "', " : ''}` +
         `${!!params.lender ? "lender='" + params.lender + "', " : ''}` +
         `${!!params.duration ? "duration='" + params.duration + "', " : ''}` +
         `${!!params.imgUrl ? "imgUrl='" + params.imgUrl + "', " : ''}` +
@@ -198,6 +210,31 @@ export const fetchTable = async (tableName) => {
     return out;
 };
 
+export const fetchRowsWhere = async (tableName, conditions) => {
+    conditions[conditions.length - 1][1] = '';
+    conditions = conditions.reduce(
+        (prev, curr) => prev + `${curr[0]} ${curr[1]} `, ''
+    );
+    conditions = conditions.slice(0, -2);
+
+    // Perform update
+    const query = `SELECT * FROM ${tableName} WHERE ${conditions};`;
+    const conn = await connectTableland('https://testnet.tableland.network');
+    const res = await conn.query(query);
+    const cols = res.data.columns;
+    const rows = res.data.rows;
+
+    const data = rows.map((row) => {
+        const elem = {};
+        row.forEach((val, i) => elem[cols[i].name] = val);
+        [elem.collateral, elem.tokenId] = elem.collateral_tokenid.split('_');
+
+        return elem;
+    });
+
+    return data;
+}
+
 export const insertTableEntry = async (tableName, key, val) => {
     const conn = await connectTableland('https://testnet.tableland.network');
     const res = await conn.query(`INSERT INTO ${tableName} VALUES (${key}, '${val}');`);
@@ -209,6 +246,7 @@ export const insertTableEntry = async (tableName, key, val) => {
 export const createTable = async (tableName) => {
     const cols =
         'collateral_tokenId text, ' +
+        'loan_requested bool, ' +
         'borrower text, ' +
         'lender text, ' +
         'duration text, ' +

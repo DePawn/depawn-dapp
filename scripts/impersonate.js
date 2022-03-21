@@ -129,8 +129,7 @@ async function main() {
     tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, { value: ethers.utils.parseEther("2") });
     receipt = await tx.wait();
 
-
-
+    console.log(receipt)
 
 
 

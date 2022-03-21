@@ -44,7 +44,7 @@ export default function BorrowerExistingLoanForm(props) {
 
         // Get ERC721 contract
         const nftContract = new ethers.Contract(props.collateral, props.ercType === 'erc115' ? erc1155 : erc721, borrower);
-        let nftOwner = await nftContract.ownerOf(props.tokenId);
+        let nftOwner = await nftContract.ownerOf(ethers.BigNumber.from(props.tokenId));
 
         nftContract.on('Transfer', async (ev) => { })
 
@@ -54,17 +54,7 @@ export default function BorrowerExistingLoanForm(props) {
 
     async function currentSignStatusSetter() {
         // Get Borrower sign status
-        try {
-            const signStatus = await props.currentLoanRequestContract.getSignStatus(
-                props.currentAccount, props.currentAccount, props.loanNumber
-            );
-            if (!signStatus) console.log('Not signed')
-            setCurrentSignStatus(signStatus);
-        }
-        catch (err) {
-            console.log(err);
-            return undefined;
-        }
+        setCurrentSignStatus(props.borrower_signed);
     }
 
     useEffect(() => {
@@ -83,8 +73,8 @@ export default function BorrowerExistingLoanForm(props) {
 
         if (exclusion !== "nft") nftElement.value = props.collateral;
         if (exclusion !== "token-id") tokenIdElement.value = props.tokenId;
-        if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initialLoanValue);
-        if (exclusion !== "rate") rateElement.value = ethers.utils.formatEther(props.rate);
+        if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initialloanvalue);
+        if (exclusion !== "rate") rateElement.value = props.rate;
         if (exclusion !== "duration") durationElement.value = props.duration;
         if (exclusion !== "lender") lenderElement.value = !!parseInt(props.lender, 16) ? props.lender : "Unassigned 😞";
     }
@@ -101,7 +91,7 @@ export default function BorrowerExistingLoanForm(props) {
 
             // Transfer ERC721 to LoanRequest contract
             await nftContract["safeTransferFrom(address,address,uint256)"](
-                props.currentAccount, loanRequestAddress, props.tokenId
+                props.currentAccount, loanRequestAddress, ethers.BigNumber.from(props.tokenId)
             );
 
             // Update Tableland database
@@ -126,7 +116,7 @@ export default function BorrowerExistingLoanForm(props) {
 
         // Withdraw ERC721 from LoanRequest contract
         try {
-            await props.currentLoanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loanNumber));
+            await props.currentLoanRequestContract.withdrawNFT(props.loanNumber);
 
             // Update Tableland database
             const dbParams = {
@@ -152,7 +142,7 @@ export default function BorrowerExistingLoanForm(props) {
         try {
             console.log(props)
             const tx = await props.currentLoanRequestContract.sign(
-                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber.toString())
             );
             await tx.wait();
 
@@ -180,7 +170,7 @@ export default function BorrowerExistingLoanForm(props) {
         try {
             console.log(props)
             const tx = await props.currentLoanRequestContract.removeSignature(
-                props.currentAccount, ethers.BigNumber.from(props.loanNumber)
+                props.currentAccount, ethers.BigNumber.from(props.loanNumber.toString())
             );
             await tx.wait();
 
@@ -206,16 +196,17 @@ export default function BorrowerExistingLoanForm(props) {
     }
 
     function renderNftImage() {
+        console.log(props.imgurl)
         return (
-            !!props.imgUrl
+            !!props.imgurl
                 ?
                 <div className="card">
                     <div className="card__inner" id={`card__inner__existing-${props.loanNumber}`} onClick={() => setCardFlipEventListener(props.loanNumber)}>
                         <div className="card__face card__face--front">
                             <img
-                                src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                alt={props.imgUrl}
-                                key={props.loanNumber}
+                                src={props.imgurl.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={props.imgurl}
+                                key={props.loanNumber.toString()}
                                 className={`image image-existing-loan-nft image-existing-loan-nft-front image-existing-loan-nft-${props.loanNumber}`}
                             />
                         </div>
@@ -225,22 +216,22 @@ export default function BorrowerExistingLoanForm(props) {
 
                                 <div className="card__header">
                                     <img
-                                        src={props.imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                        alt={props.imgUrl}
-                                        key={props.loanNumber}
+                                        src={props.imgurl.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={props.imgurl}
+                                        key={props.loanNumber.toString()}
                                         className={`image image-existing-loan-nft image-existing-loan-nft-back image-existing-loan-nft-${props.loanNumber}`}
                                     />
-                                    <h3 className="h3__header__back">{props.nft.name}</h3>
+                                    <h3 className="h3__header__back">{props.name}</h3>
                                 </div>
 
                                 <div className="card__body">
                                     <dl>
                                         <dt>Contract Info:</dt>
-                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date: </span>{props.nft.mint_date}</dd>
-                                        <dd>{tabbedBullet}<span className="attr_label">Symbol: </span>{props.nft.symbol}</dd>
-                                        <dd>{tabbedBullet}<span className="attr_label">Type: </span>{props.nft.type}</dd><br />
+                                        <dd>{tabbedBullet}<span className="attr_label">Mint Date: </span>{props.mint_date}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Symbol: </span>{props.symbol}</dd>
+                                        <dd>{tabbedBullet}<span className="attr_label">Type: </span>{props.type}</dd><br />
                                         <dt>Sales Statistics</dt>
-                                        {renderNftStat(props.nft.contract_statistics)}
+                                        {renderNftStat(props.contract_statistics)}
                                     </dl>
                                 </div>
 
@@ -310,7 +301,7 @@ export default function BorrowerExistingLoanForm(props) {
                     id={"input-existing-loan-value-" + props.loanNumber}
                     className="input input-existing-loan-value"
                     placeholder='Loan Value (ETH)...'
-                    defaultValue={ethers.utils.formatEther(props.initialLoanValue)}
+                    defaultValue={ethers.utils.formatEther(props.initialloanvalue)}
                     readOnly={currentEdit !== "value"}>
                 </input>
                 <div

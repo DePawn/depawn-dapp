@@ -18,15 +18,15 @@ export default function App() {
       <div>
         <Link to="/home">Home</Link>
         <Link to="/borrower">Borrowing</Link>
-        <Link to="/">Lending</Link>
-        <Link to="/table">Table Generator</Link>
+        <Link to="/lending">Lending</Link>
+        <Link to="/">Table Generator</Link>
       </div>
 
       <Routes>
         <Route path="/home" element={<Home />} exact />
         <Route path="/borrower" element={<BorrowerPage />} exact />
-        <Route path="/" element={<LenderPage />} exact />
-        <Route path="/table" element={<TableGen />} exact />
+        <Route path="/lending" element={<LenderPage />} exact />
+        <Route path="/" element={<TableGen />} exact />
       </Routes>
     </Router>
 
