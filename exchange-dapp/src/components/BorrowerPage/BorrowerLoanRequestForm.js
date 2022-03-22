@@ -73,14 +73,14 @@ export default function BorrowerLoanRequestForm(props) {
         console.log(_currentNft)
 
         return (
-            !!props.currentAccountNfts.length && !!props.currentAccountNfts[_currentNft].imgurl
+            !!props.currentAccountNfts.length && !!props.currentAccountNfts[_currentNft].img_url
                 ?
                 <div className="card">
                     <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
                         <div className="card__face card__face--front">
                             <img
-                                src={props.currentAccountNfts[_currentNft].imgurl.replace('ipfs://', 'https://ipfs.io/')}
-                                alt={props.currentAccountNfts[_currentNft].imgurl}
+                                src={props.currentAccountNfts[_currentNft].img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={props.currentAccountNfts[_currentNft].img_url}
                                 className="image image-loan-request image-loan-request-nft image-loan-request-nft-front"
                             />
                         </div>
@@ -90,8 +90,8 @@ export default function BorrowerLoanRequestForm(props) {
 
                                 <div className="card__header">
                                     <img
-                                        src={props.currentAccountNfts[_currentNft].imgurl.replace('ipfs://', 'https://ipfs.io/')}
-                                        alt={props.currentAccountNfts[_currentNft].imgurl}
+                                        src={props.currentAccountNfts[_currentNft].img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={props.currentAccountNfts[_currentNft].img_url}
                                         className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
                                     />
                                     <h3 className="h3__header__back">{props.currentAccountNfts[_currentNft].name}</h3>
@@ -120,7 +120,6 @@ export default function BorrowerLoanRequestForm(props) {
     }
 
     function renderNftStat(contract_stats) {
-        console.log(contract_stats)
         const contractStatsElements = Object.keys(contract_stats).map((key, i) => {
             return (
                 <dd key={i}>{tabbedBullet}<span className="attr_label">{capitalizeWords(key) + ":"}</span> {contract_stats[key]}</dd>
@@ -152,9 +151,7 @@ export default function BorrowerLoanRequestForm(props) {
     return (
         <div className="container-loan-request-form-master">
 
-            <h2>
-                Loan Requests
-            </h2>
+            <h2>Loan Requests</h2>
 
             <div className="container-loan-request-form">
 

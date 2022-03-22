@@ -197,25 +197,29 @@ export default function BorrowerPage() {
         const { dbTableName } = config(network);
 
         if (!!account && !!network) {
+            console.log(account)
             /* Fetch current account NFT data from NFT Port */
             console.log('Fetching account NFT data...');
             nfts = await fetchNftData(account, network);
+            console.log(nfts)
 
             /* Fetch current account LoanRequest data from Tableland */
             loans = await fetchBorrowerLoans(account, network);
+            console.log(loans)
 
             loans = await Promise.all(nfts.map(async (nft) => {
                 let commonNft = loans.find((loan) => {
                     return parseInt(nft.contract_address, 16) === parseInt(loan.collateral, 16) &&
                         nft.token_id === loan.tokenId
                 })
+                console.log(commonNft)
 
                 if (!commonNft) {
 
                     /* If NFTs do not exist in Tableland, fetch contract stats from NFT Port */
                     console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} contract stats from NFT Port...`);
 
-                    let stats = await fetchContractData(
+                    const stats = await fetchContractData(
                         [nft.contract_address],
                         network
                     )
@@ -226,13 +230,13 @@ export default function BorrowerPage() {
                     // console.log(nft)
 
                     /* Store potential LoanRequest in Tableland */
-                    let dbParams = {
+                    const dbParams = {
                         collateral: nft.contract_address,
                         token_id: nft.token_id,
                         loan_requested: false,
                         borrower: nft.borrower,
                         lender: nft.lender,
-                        imgUrl: !!nft.cached_file_url ? nft.cached_file_url : nft.file_url,
+                        img_url: !!nft.cached_file_url ? nft.cached_file_url : nft.file_url,
                         chain: nft.chain,
                         contract_statistics: nft.contract_statistics,
                         metadata: nft.metadata,
@@ -268,9 +272,14 @@ export default function BorrowerPage() {
         console.log(dbTableName)
         console.log(account)
 
+        const colsInclude = ['borrower'];
+        const valsInclude = [[account]];
+        const conjInclude = [''];
+
         const loans = await fetchRowsWhere(
-            dbTableName, [[`borrower='${account}'`, '']]
+            dbTableName, [colsInclude, valsInclude, conjInclude]
         );
+        console.log(loans)
 
         return loans;
     }
@@ -284,7 +293,7 @@ export default function BorrowerPage() {
         // Get input values
         const nft = document.getElementById('datalist-nft').value;
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
-        const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+        const initial_loan_value = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
         const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
         const duration = document.getElementById('input-duration').value;
 
@@ -318,7 +327,7 @@ export default function BorrowerPage() {
             tx = await loanRequestContract.createLoanRequest(
                 nft,
                 tokenId,
-                initialLoanValue,
+                initial_loan_value,
                 rate,
                 duration,
             );
@@ -332,13 +341,13 @@ export default function BorrowerPage() {
                 token_id: tokenId,
                 loan_requested: true,
                 duration: duration,
-                initialLoanValue: initialLoanValue,
+                initial_loan_value: initial_loan_value,
                 rate: rate,
                 committed: true,
-                unpaid_balance: initialLoanValue
+                unpaid_balance: initial_loan_value
             }
 
-            await updateTable(dbTableName, currentAccount, dbParams);
+            await updateTable(dbTableName, dbParams);
         }
         catch (err) {
             console.log(err);
@@ -422,7 +431,7 @@ export default function BorrowerPage() {
                         duration: ethers.BigNumber.from(paramElement.value)
                     };
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 case 'value':
@@ -439,9 +448,9 @@ export default function BorrowerPage() {
                         collateral: params.collateral,
                         token_id: params.tokenId,
                     };
-                    dbParams[attribute === 'value' ? 'initialLoanValue' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
+                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 case 'lender':
@@ -455,7 +464,7 @@ export default function BorrowerPage() {
                         lender: paramElement.value
                     };
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 default:
@@ -516,22 +525,43 @@ export default function BorrowerPage() {
 
     const renderExistingLoanElements = async (account, network, loans, loanRequestContract) => {
         const getExistingLoanElements = async () => {
-            const existingLoans = loans.filter(loan => loan.loan_requested);
+            const activeLoans = loans.filter(loan => loan.loan_requested && !!loan.contract_address);
+            const requestedLoans = loans.filter(loan => loan.loan_requested && !loan.contract_address);
 
-            const existingLoanElements = existingLoans.map((loan, i) => {
-                return (
-                    <BorrowerExistingLoanForm
-                        key={i}
-                        loanNumber={i}
-                        currentAccount={account}
-                        currentNetwork={network}
-                        currentLoanRequestContract={loanRequestContract}
-                        updateLoanFunc={callback__UpdateLoan}
-                        fetchNftFunc={fetchNftData}
-                        {...loan}
-                    />
-                )
-            });
+            const existingLoanElements = [];
+            existingLoanElements.push(
+                activeLoans.map((loan, i) => {
+                    return (
+                        <BorrowerExistingLoanForm
+                            key={i}
+                            loanNumber={i}
+                            currentAccount={account}
+                            currentNetwork={network}
+                            currentLoanRequestContract={loanRequestContract}
+                            updateLoanFunc={callback__UpdateLoan}
+                            fetchNftFunc={fetchNftData}
+                            {...loan}
+                        />
+                    )
+                })
+            );
+
+            existingLoanElements.push(
+                requestedLoans.map((loan, i) => {
+                    return (
+                        <BorrowerExistingLoanForm
+                            key={i}
+                            loanNumber={i}
+                            currentAccount={account}
+                            currentNetwork={network}
+                            currentLoanRequestContract={loanRequestContract}
+                            updateLoanFunc={callback__UpdateLoan}
+                            fetchNftFunc={fetchNftData}
+                            {...loan}
+                        />
+                    )
+                })
+            );
 
             return existingLoanElements;
         }

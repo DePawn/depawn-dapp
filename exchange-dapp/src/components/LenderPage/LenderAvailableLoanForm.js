@@ -84,21 +84,21 @@ export default function LenderAvailableLoanForm(props) {
     function renderNftImage() {
         const _currentNft = safeCurrentNft();
 
-        const imgUrl = !!props.currentAccountNfts.length
+        const img_url = !!props.currentAccountNfts.length
             ? parseNftImageFromCurrentAccounts(_currentNft)
             : props._dev
                 ? props.defaultImageUrl
                 : undefined;
 
         return (
-            !!props.currentAccountNfts.length && !!imgUrl
+            !!props.currentAccountNfts.length && !!img_url
                 ?
                 <div className="card">
                     <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
                         <div className="card__face card__face--front">
                             <img
-                                src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                alt={imgUrl}
+                                src={img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={img_url}
                                 className="image image-loan-request image-loan-request-nft image-loan-request-nft-front"
                             />
                         </div>
@@ -108,8 +108,8 @@ export default function LenderAvailableLoanForm(props) {
 
                                 <div className="card__header">
                                     <img
-                                        src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                        alt={imgUrl}
+                                        src={img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={img_url}
                                         className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
                                     />
                                     <h3 className="h3__header__back">{props.currentAccountNfts[_currentNft].name}</h3>
@@ -152,11 +152,11 @@ export default function LenderAvailableLoanForm(props) {
     }
 
     function parseNftImageFromCurrentAccounts(idx) {
-        const imgUrl = !!props.currentAccountNfts[idx].cached_file_url
+        const img_url = !!props.currentAccountNfts[idx].cached_file_url
             ? props.currentAccountNfts[idx].cached_file_url
             : props.currentAccountNfts[idx].file_url;
 
-        return imgUrl;
+        return img_url;
     }
 
     function safeCurrentNft() {

@@ -61,7 +61,7 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Network: ', chainId);
 
         const loanRequestContract = __getLoanRequestContract(account, chainId);
-        const loans = await __fetchAvailableLoans(chainId);
+        const loans = await __fetchAvailableLoans(account, chainId);
 
         console.log(loans);
 
@@ -176,12 +176,24 @@ export default function BorrowerPage() {
         return { account, chainId };
     }
 
-    const __fetchAvailableLoans = async (network) => {
+    const __fetchAvailableLoans = async (account, network) => {
         const { dbTableName } = config(network);
+        console.log(dbTableName)
+
+        const colsInclude = ['lender', 'loan_requested'];
+        const valsInclude = [[ethers.constants.AddressZero], ['true']];
+        const conjInclude = ['AND', ''];
+
+        const colsExclude = ['borrower'];
+        const valsExclude = [[account.toLowerCase()]];
+        const conjExclude = [''];
 
         const nfts = await fetchRowsWhere(
-            dbTableName, [[`lender='${ethers.constants.AddressZero}'`, '']]
+            dbTableName,
+            [colsInclude, valsInclude, conjInclude],
+            [colsExclude, valsExclude, conjExclude]
         );
+        console.log(nfts)
 
         setCurrentAvailableLoans(nfts);
 
@@ -297,25 +309,11 @@ export default function BorrowerPage() {
             const dbParams = {
                 collateral: collateral,
                 token_id: newLoan.tokenId,
-                lender: ethers.constants.AddressZero,
-                duration: newLoan.duration,
-                imgUrl: newLoan.imgUrl,
-                initialLoanValue: newLoan.initialLoanValue,
-                chain: newLoan.nft.chain,
-                contract_statistics: newLoan.nft.contract_statistics,
-                metadata: newLoan.nft.metadata,
-                mint_date: newLoan.nft.mint_date,
-                name: newLoan.nft.name,
-                symbol: newLoan.nft.symbol,
-                type: newLoan.nft.type,
-                rate: newLoan.rate,
-                committed: false,
-                borrower_signed: false,
-                lender_signed: false,
-                unpaid_balance: newLoan.initialLoanValue
+                lender: account,
+                lender_signed: true
             }
 
-            await insertTableRow(dbTableName, currentAccount, dbParams);
+            await updateTable(dbTableName, dbParams);
         }
 
         setCurrentAccountNfts(nfts);
@@ -345,7 +343,7 @@ export default function BorrowerPage() {
         const loanRequests = await loanRequestContract.getLoans(account);
         const loans = loanRequests.map((loan) => {
             // Loan request data
-            const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
+            const { collateral, tokenId, initial_loan_value, rate, duration, lender } = loan;
 
             // Nft image url
             const nftData = [...nfts].find(nft =>
@@ -357,9 +355,9 @@ export default function BorrowerPage() {
             if (!nftData) return {};
 
             // Get image URL
-            const imgUrl = !!nftData.cached_file_url ? nftData.cached_file_url : nftData.file_url;
+            const img_url = !!nftData.cached_file_url ? nftData.cached_file_url : nftData.file_url;
 
-            return { collateral, tokenId, initialLoanValue, rate, duration, lender, imgUrl };
+            return { collateral, tokenId, initial_loan_value, rate, duration, lender, img_url };
         });
 
         setCurrentLoanRequestContract(loanRequestContract);
@@ -376,7 +374,7 @@ export default function BorrowerPage() {
         // Get input values
         const nft = document.getElementById('datalist-nft').value;
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
-        const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+        const initial_loan_value = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
         const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
         const duration = document.getElementById('input-duration').value;
 
@@ -412,7 +410,7 @@ export default function BorrowerPage() {
             tx = await loanRequestContract.createLoanRequest(
                 nft,
                 tokenId,
-                initialLoanValue,
+                initial_loan_value,
                 rate,
                 duration,
             );
@@ -518,7 +516,7 @@ export default function BorrowerPage() {
                         collateral: params.collateral,
                         token_id: params.tokenId,
                     };
-                    dbParams[attribute === 'value' ? 'initialLoanValue' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
+                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
 
                     await updateTable(dbTableName, currentAccount, dbParams);
 
@@ -615,7 +613,7 @@ export default function BorrowerPage() {
         setAvailableLoanElements(
             !!loans.length && !!account && !!network
                 ? (<div>{await getExistingLoanElements()}</div>)
-                : (<div><div className="container-existing-loan-form">☹️💀 No loans atm 💀☹️</div></div>)
+                : (<div><div className="container-existing-loan-form">☹️💀 No available loans atm 💀☹️</div></div>)
         )
     }
 
@@ -666,7 +664,7 @@ export default function BorrowerPage() {
                         </div>
                         <div className="wedge"></div>
                         <div className="container-loan-contracts-master">
-                            <h2>Existing Loans</h2>
+                            <h2>Sponsored Loans</h2>
                             {!!existingLoanElements && existingLoanElements}
                         </div>
                     </div>

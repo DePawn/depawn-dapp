@@ -4,6 +4,8 @@ import BorrowerPage from './components/BorrowerPage/BorrowerPage';
 import LenderPage from './components/LenderPage/LenderPage';
 import TableGen from './components/TableGen/TableGen';
 
+const sep = '\xa0-\xa0';
+
 const Home = () => {
   return (
     <div>
@@ -16,9 +18,9 @@ export default function App() {
   return (
     <Router>
       <div>
-        <Link to="/home">Home</Link>
-        <Link to="/borrower">Borrowing</Link>
-        <Link to="/lending">Lending</Link>
+        <Link to="/home">Home</Link>{sep}
+        <Link to="/borrower">Borrowing</Link>{sep}
+        <Link to="/lending">Lending</Link>{sep}
         <Link to="/">Table Generator</Link>
       </div>
 

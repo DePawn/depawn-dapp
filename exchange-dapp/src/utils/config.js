@@ -7,7 +7,7 @@ export const alchemy = (ALCHEMY_MAINNET_URL) => {
 export const config = (network) => {
     /* DEV ONLY */
     const DEV_FRONT = true;
-    const DEV_BACK = true;
+    const DEV_BACK = false;
     /* ******** */
 
     network = DEV_FRONT || DEV_BACK ? '31337' : network;
