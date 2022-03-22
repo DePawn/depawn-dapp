@@ -273,7 +273,5 @@ export const createTable = async (tableName) => {
     const tbl = await conn.create(query);
     console.log(tbl);
 
-    fs.writeFileSync('../static/tableland/tableland_depawn.json', JSON.stringify({ tableName: tbl }, null, 2))
-
     return tbl;
 }

@@ -33,27 +33,13 @@ export default function BorrowerLoanRequestForm(props) {
                             })}
                         </select>
                     ) : (
-                        !!props._dev ? (
-                            // Dev ONLY
-                            <select
-                                id="datalist-nft"
-                                className="datalist datalist-loan-request datalist-nft">
-                                <option
-                                    value={props.defaultNft}
-                                    key={0}
-                                >
-                                    {props.defaultNft}
-                                </option>
-                            </select>
-                        ) : (
-                            // No NFTs for account
-                            <select
-                                id="datalist-nft"
-                                className="datalist datalist-loan-request datalist-nft"
-                            >
-                                ""
-                            </select>
-                        )
+                        // No NFTs for account
+                        <select
+                            id="datalist-nft"
+                            className="datalist datalist-loan-request datalist-nft"
+                        >
+                            ""
+                        </select>
                     )}
                 </div>
             </div >
@@ -167,7 +153,7 @@ export default function BorrowerLoanRequestForm(props) {
         <div className="container-loan-request-form-master">
 
             <h2>
-                Loan Requests {props._dev && !props.currentAccountNfts ? "(dev)" : ""}
+                Loan Requests
             </h2>
 
             <div className="container-loan-request-form">

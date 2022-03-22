@@ -22,7 +22,7 @@ export default function LenderExistingLoanForm(props) {
                 throw new Error("Lender cannot be the borrower for a loan!");
             }
 
-            console.log(ethers.BigNumber.from(props.loanNumber))
+            console.log(ethers.BigNumber.from(props))
 
             const tx = await props.currentLoanRequestContract.setLender(
                 props.borrower, props.loanNumber, { value: ethers.BigNumber.from(props.initialloanvalue) }
@@ -37,23 +37,17 @@ export default function LenderExistingLoanForm(props) {
 
             console.log(log)
 
-            if (!!log) {
+            dbParams = {
+                        collateral: props.collateral,
+                        token_id: props.tokenId,
+                        lender: props.currentAccount,
+                        lender_signed: true,
+                    };
+
+            if (!log) {
                 const triggeredEvent = props.currentLoanRequestContract.interface.parseLog(log);
                 const loanContractAddress = triggeredEvent.args['_contract'];
-                dbParams = {
-                    collateral: props.collateral,
-                    token_id: props.tokenId,
-                    lender_signed: true,
-                    contract_address: loanContractAddress
-                };
-
-            }
-            else {
-                dbParams = {
-                    collateral: props.collateral,
-                    token_id: props.tokenId,
-                    lender_signed: true
-                };
+                dbParams.contract_address = loanContractAddress;
             }
 
             // Update Tableland database

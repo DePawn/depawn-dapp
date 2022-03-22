@@ -57,16 +57,8 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
-        // Get LoanRequest contract
-        const provider = getProvider();
-        const borrower = provider.getSigner(account);
-        const { loanRequestAddress, loanRequestABI } = config(chainId);
-
-        const loanRequestContract = new ethers.Contract(
-            loanRequestAddress,
-            loanRequestABI,
-            borrower
-        );
+        // Get LoanRequestContract
+        const loanRequestContract = getLoanRequestContract(account, chainId);
 
         // Set account loan and nft data
         const loans = await setAccountData(account, chainId);
@@ -106,7 +98,6 @@ export default function BorrowerPage() {
 
         // Set account loan and nft data
         let loans = currentAccountLoans;
-        let loanRequestContract = currentLoanRequestContract;
 
         if (success) {
             loans = await setAccountData(currentAccount, currentNetwork);
@@ -118,7 +109,7 @@ export default function BorrowerPage() {
 
         // Render existing loan elements for borrower
         const _existingLoanElements = await renderExistingLoanElements(
-            currentAccount, currentNetwork, loans, loanRequestContract
+            currentAccount, currentNetwork, loans, currentLoanRequestContract
         );
         setExistingLoanElements(_existingLoanElements);
 
@@ -166,6 +157,23 @@ export default function BorrowerPage() {
         return { account, chainId };
     }
 
+    const getLoanRequestContract = (account, network) => {
+        // Get LoanRequest contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(account);
+        const { loanRequestAddress, loanRequestABI } = config(network);
+
+        const loanRequestContract = new ethers.Contract(
+            loanRequestAddress,
+            loanRequestABI,
+            borrower
+        );
+
+        setCurrentLoanRequestContract(loanRequestContract);
+
+        return loanRequestContract
+    }
+
     const setAccountData = async (account, network) => {
         /*
          * Set NFT, Loan, and Contract data.
@@ -183,11 +191,10 @@ export default function BorrowerPage() {
         let loans = [];
 
         const waitInsertTableRow = async (tblName, borrower, params) => {
-            setTimeout(await insertTableRow(tblName, borrower, params), 500);
+            setTimeout(await insertTableRow(tblName, borrower, params), 2000);
         };
 
-        const { devFront, transferibles, dbTableName } = config(network);
-        if (devFront) account = transferibles[0].recipient;
+        const { dbTableName } = config(network);
 
         if (!!account && !!network) {
             /* Fetch current account NFT data from NFT Port */
@@ -286,15 +293,12 @@ export default function BorrowerPage() {
             loanRequestAddress,
             loanRequestABI,
             dbTableName,
-            erc721,
-            devFront,
-            transferibles
+            erc721
         } = config(currentNetwork);
 
         const provider = getProvider();
-        const borrower = provider.getSigner(
-            !devFront ? currentAccount : transferibles[0].recipient
-        );
+        const borrower = provider.getSigner(currentAccount);
+        console.log(borrower)
 
         const loanRequestContract = new ethers.Contract(
             loanRequestAddress,
@@ -306,14 +310,9 @@ export default function BorrowerPage() {
             console.log('Submitting loan request...');
 
             // Approve transfer of NFT to LoanRequest from Borrower
-            console.log(loanRequestAddress)
-            console.log(nft)
             const nftContract = new ethers.Contract(nft, erc721, borrower);
-            console.log('a')
-            console.log(nftContract)
             let tx = await nftContract.approve(loanRequestAddress, tokenId);
             await tx.wait();
-            console.log('b')
 
             // Create new LoanRequest
             tx = await loanRequestContract.createLoanRequest(
@@ -323,7 +322,7 @@ export default function BorrowerPage() {
                 rate,
                 duration,
             );
-            console.log('c')
+
             const receipt = await tx.wait();
             console.log('receipt: ', receipt);
 
