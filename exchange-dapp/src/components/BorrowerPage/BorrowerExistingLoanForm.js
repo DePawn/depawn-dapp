@@ -148,14 +148,27 @@ export default function BorrowerExistingLoanForm(props) {
             const tx = await props.currentLoanRequestContract.sign(
                 props.currentAccount, ethers.BigNumber.from(props.loan_number)
             );
-            await tx.wait();
+            const receipt = await tx.wait();
+
+            // Determine if a LoanContract has been created
+            const topic = props.currentLoanRequestContract.interface.getEventTopic('DeployedLoanContract');
+            const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+            console.log(log)
 
             // Update Tableland database
-            const dbParams = {
+            let dbParams = {
                 collateral: props.collateral,
                 token_id: props.tokenId,
                 borrower_signed: true
             };
+
+            if (log) {
+                console.log('LOAN CONTRACT DEPLOYED!!!', log)
+                const triggeredEvent = props.currentLoanRequestContract.interface.parseLog(log);
+                const loanContractAddress = triggeredEvent.args['_contract'];
+                dbParams.contract_address = loanContractAddress;
+            }
 
             await updateTable(dbTableName, dbParams);
 
