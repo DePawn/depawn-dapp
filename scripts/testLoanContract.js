@@ -1,6 +1,6 @@
-const _loanContractAddress = "0xF404Ef3a637d7e88A016C4C893b5B1F1fa8Cf8D7";
-const borrowerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-const lenderAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+const _loanContractAddress = "0x515be5c447705f9c9ade8e3b7ff84454567fbc4c";
+const borrowerAddress = "0xe67b33D7C5ff1Db9Bb12e5672c49Db3eEB87f3c6";
+const lenderAddress = "0x08922a1e2a0a760ac9b1ad6dcbc1d9ce6a07cd98";
 
 
 const { ethers } = require("hardhat");

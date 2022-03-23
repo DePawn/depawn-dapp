@@ -85,6 +85,13 @@ async function main() {
         });
     }
 
+    /*
+    const LoanRequestEventsFactory = await hre.ethers.getContractFactory("LoanRequestEvents", signers[19]);
+
+    let loanRequestEventsContract = await LoanRequestEventsFactory.deploy();
+    await loanRequestEventsContract.deployed();
+    */
+
     const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest", signers[19]);
 
     let loanRequestContract = await LoanRequestFactory.deploy();
