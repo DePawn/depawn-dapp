@@ -30,8 +30,8 @@ export default function BorrowerPage() {
     const [currentLoanRequestContract, setCurrentLoanRequestContract] = useState(null);
     const [currentSubmitRequestStatus, setCurrentSubmitRequestStatus] = useState(false);
     const [currentAccountLoans, setCurrentAccountLoans] = useState('');
-    const [loanRequestElement, setLoanRequestElement] = useState('');
-    const [existingLoanElements, setExistingLoanElements] = useState('');
+    const [currentLoanRequestElement, setCurrentLoanRequestElement] = useState('');
+    const [currentExistingLoanElements, setCurrentExistingLoanElements] = useState('');
 
     useEffect(() => {
         console.log('Page loading...');
@@ -64,19 +64,14 @@ export default function BorrowerPage() {
         const loans = await setAccountData(account, chainId);
         console.log('--pageLoadSequence-- Loans: ', loans);
 
-        // Set LoanRequest event listeners
-        setSubmittedLoanRequestListener(loanRequestContract);
-        setLoanRequestChangedListeners(loanRequestContract);
-        setLoanRequestLenderChangedListeners(loanRequestContract);
-
         // Render loan request elements for borrower
         await renderLoanRequestElements(loans, chainId);
 
         // Render existing loan elements for borrower
-        const _existingLoanElements = await renderExistingLoanElements(
+        const existingLoanElements = await renderExistingLoanElements(
             account, chainId, loans, loanRequestContract
         );
-        setExistingLoanElements(_existingLoanElements);
+        setCurrentExistingLoanElements(existingLoanElements);
 
         // Page-load flag needed to prevent events from
         // triggering on page-load
@@ -108,10 +103,10 @@ export default function BorrowerPage() {
         await renderLoanRequestElements(loans, currentNetwork);
 
         // Render existing loan elements for borrower
-        const _existingLoanElements = await renderExistingLoanElements(
+        const existingLoanElements = await renderExistingLoanElements(
             currentAccount, currentNetwork, loans, currentLoanRequestContract
         );
-        setExistingLoanElements(_existingLoanElements);
+        setCurrentExistingLoanElements(existingLoanElements);
 
         // Reset currentSubmitRequestStatus
         setCurrentSubmitRequestStatus(false);
@@ -295,7 +290,7 @@ export default function BorrowerPage() {
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
         const initial_loan_value = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
         const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
-        const duration = document.getElementById('input-duration').value;
+        const expiration = document.getElementById('input-expiration').value;
 
         // Get contract
         const {
@@ -329,7 +324,7 @@ export default function BorrowerPage() {
                 tokenId,
                 initial_loan_value,
                 rate,
-                duration,
+                expiration,
             );
 
             const receipt = await tx.wait();
@@ -340,7 +335,7 @@ export default function BorrowerPage() {
                 collateral: nft,
                 token_id: tokenId,
                 loan_requested: true,
-                duration: duration,
+                expiration: expiration,
                 initial_loan_value: initial_loan_value,
                 rate: rate,
                 committed: true,
@@ -415,7 +410,7 @@ export default function BorrowerPage() {
 
         try {
             switch (attribute) {
-                case 'duration':
+                case 'expiration':
                     tx = await loanRequestContract.setLoanParam(
                         loanId,
                         attribute,
@@ -428,7 +423,7 @@ export default function BorrowerPage() {
                     dbParams = {
                         collateral: params.collateral,
                         token_id: params.tokenId,
-                        duration: ethers.BigNumber.from(paramElement.value)
+                        expiration: ethers.BigNumber.from(paramElement.value)
                     };
 
                     await updateTable(dbTableName, dbParams);
@@ -477,43 +472,13 @@ export default function BorrowerPage() {
     }
 
     /* ---------------------------------------  *
-     *            EVENT LISTENERS               *
-     * ---------------------------------------  */
-    const setSubmittedLoanRequestListener = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('SubmittedLoanRequest', () => {
-            if (!isPageLoad) {
-                console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestLenderChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestLenderChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    /* ---------------------------------------  *
      *           FRONTEND RENDERING             *
      * ---------------------------------------  */
     const renderLoanRequestElements = async (loans, network) => {
         const { devFront } = config(network);
         const potentialLoans = loans.filter(loan => !loan.loan_requested);
 
-        setLoanRequestElement(
+        setCurrentLoanRequestElement(
             <BorrowerLoanRequestForm
                 currentAccountNfts={potentialLoans}
                 submitCallback={callback__SubmitLoanRequest}
@@ -528,13 +493,17 @@ export default function BorrowerPage() {
             const activeLoans = loans.filter(loan => loan.loan_requested && !!loan.contract_address);
             const requestedLoans = loans.filter(loan => loan.loan_requested && !loan.contract_address);
 
-            const existingLoanElements = [];
-            existingLoanElements.push(
+            const numActiveLoans = activeLoans.length;
+            console.log(numActiveLoans)
+
+            const currentExistingLoanElements = [];
+            currentExistingLoanElements.push(
                 activeLoans.map((loan, i) => {
                     return (
                         <BorrowerExistingLoanForm
                             key={i}
                             loanNumber={i}
+                            offset={0}
                             currentAccount={account}
                             currentNetwork={network}
                             currentLoanRequestContract={loanRequestContract}
@@ -546,12 +515,15 @@ export default function BorrowerPage() {
                 })
             );
 
-            existingLoanElements.push(
+            currentExistingLoanElements.push(
                 requestedLoans.map((loan, i) => {
+                    console.log(i)
+                    console.log(i + numActiveLoans)
                     return (
                         <BorrowerExistingLoanForm
-                            key={i}
-                            loanNumber={i}
+                            key={i + numActiveLoans}
+                            loanNumber={i + numActiveLoans}
+                            offset={numActiveLoans}
                             currentAccount={account}
                             currentNetwork={network}
                             currentLoanRequestContract={loanRequestContract}
@@ -563,7 +535,7 @@ export default function BorrowerPage() {
                 })
             );
 
-            return existingLoanElements;
+            return currentExistingLoanElements;
         }
 
         return (
@@ -587,11 +559,11 @@ export default function BorrowerPage() {
 
                 <div className="container">
                     <div className="container-loan-forms">
-                        {loanRequestElement}
+                        {currentLoanRequestElement}
                         <div className="wedge"></div>
                         <div className="container-loan-contracts-master">
                             <h2>Existing Loans</h2>
-                            {!!existingLoanElements && existingLoanElements}
+                            {!!currentExistingLoanElements && currentExistingLoanElements}
                         </div>
                     </div>
                 </div>

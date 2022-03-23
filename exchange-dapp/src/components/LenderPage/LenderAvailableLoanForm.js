@@ -209,12 +209,12 @@ export default function LenderAvailableLoanForm(props) {
                 </div>
 
                 <div className="container-loan-request-component">
-                    <div className="label label-duration">Duration:</div>
+                    <div className="label label-expiration">Maturity:</div>
                     <input
                         type="string"
-                        id="input-duration"
-                        className="input input-loan-request input-duration"
-                        placeholder='Duration (months)...'
+                        id="input-expiration"
+                        className="input input-loan-request input-expiration"
+                        placeholder='YYYY/MM/DD...'
                         defaultValue={props.defaultDuration}>
                     </input>
                 </div>

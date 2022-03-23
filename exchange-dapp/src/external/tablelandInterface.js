@@ -30,7 +30,7 @@ const formatParams = (params) => {
     params.loan_requested = params.loan_requested !== undefined ? params.loan_requested.toString() : undefined;
     params.borrower = !!params.borrower ? params.borrower.toLowerCase() : undefined;
     params.lender = !!params.lender ? params.lender.toLowerCase() : undefined;
-    params.duration = !!params.duration ? params.duration.toString() : undefined;
+    params.expiration = !!params.expiration ? params.expiration.toString() : undefined;
     params.initial_loan_value = !!params.initial_loan_value ? params.initial_loan_value.toString() : undefined;
     params.chain = !!params.chain ? params.chain.toLowerCase() : undefined;
     params.contract_statistics = !!params.contract_statistics ? JSON.stringify(params.contract_statistics) : undefined;
@@ -52,7 +52,7 @@ export const insertTableRow = async (tableName, account, params = {
     token_id: undefined,
     loan_requested: undefined,
     lender: undefined,
-    duration: undefined,
+    expiration: undefined,
     img_url: undefined,
     initial_loan_value: undefined,
     chain: undefined,
@@ -82,7 +82,7 @@ export const insertTableRow = async (tableName, account, params = {
         `borrower, ` +
         `${!!params.loan_requested ? "loan_requested, " : ''}` +
         `${!!params.lender ? "lender, " : ''}` +
-        `${!!params.duration ? "duration, " : ''}` +
+        `${!!params.expiration ? "expiration, " : ''}` +
         `${!!params.img_url ? "img_url, " : ''}` +
         `${!!params.initial_loan_value ? "initial_loan_value, " : ''}` +
         `${!!params.chain ? "chain, " : ''}` +
@@ -105,7 +105,7 @@ export const insertTableRow = async (tableName, account, params = {
         `'${account.toLowerCase()}', ` +
         `${!!params.loan_requested ? "'" + params.loan_requested + "', " : ''}` +
         `${!!params.lender ? "'" + params.lender + "', " : ''}` +
-        `${!!params.duration ? "'" + params.duration + "', " : ''}` +
+        `${!!params.expiration ? "'" + params.expiration + "', " : ''}` +
         `${!!params.img_url ? "'" + params.img_url + "', " : ''}` +
         `${!!params.initial_loan_value ? "'" + params.initial_loan_value + "', " : ''}` +
         `${!!params.chain ? "'" + params.chain + "', " : ''}` +
@@ -138,7 +138,7 @@ export const updateTable = async (tableName, params = {
     loan_requested: undefined,
     borrower: undefined,
     lender: undefined,
-    duration: undefined,
+    expiration: undefined,
     img_url: undefined,
     initial_loan_value: undefined,
     chain: undefined,
@@ -168,7 +168,7 @@ export const updateTable = async (tableName, params = {
         `${!!params.loan_requested ? "loan_requested='" + params.loan_requested + "', " : ''}` +
         `${!!params.borrower ? "borrower='" + params.borrower + "', " : ''}` +
         `${!!params.lender ? "lender='" + params.lender + "', " : ''}` +
-        `${!!params.duration ? "duration='" + params.duration + "', " : ''}` +
+        `${!!params.expiration ? "expiration='" + params.expiration + "', " : ''}` +
         `${!!params.img_url ? "img_url='" + params.img_url + "', " : ''}` +
         `${!!params.initial_loan_value ? "initial_loan_value='" + params.initial_loan_value + "', " : ''}` +
         `${!!params.chain ? "chain='" + params.chain + "', " : ''}` +
@@ -267,7 +267,7 @@ export const createTable = async (tableName) => {
         'loan_requested bool, ' +
         'borrower text, ' +
         'lender text, ' +
-        'duration text, ' +
+        'expiration text, ' +
         'img_url text, ' +
         'initial_loan_value text, ' +
         'chain text, ' +

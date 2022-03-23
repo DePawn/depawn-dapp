@@ -159,7 +159,7 @@ export default function BorrowerLoanRequestForm(props) {
                 {renderTokenIdDropdown()}
 
                 <div className="container-loan-request-component">
-                    <div className="label label-value">Amount:</div>
+                    <div className="label label-value">Value:</div>
                     <input
                         type="string"
                         id="input-initial-value"
@@ -181,12 +181,12 @@ export default function BorrowerLoanRequestForm(props) {
                 </div>
 
                 <div className="container-loan-request-component">
-                    <div className="label label-duration">Duration:</div>
+                    <div className="label label-expiration">Maturity:</div>
                     <input
                         type="string"
-                        id="input-duration"
-                        className="input input-loan-request input-duration"
-                        placeholder='Duration (months)...'
+                        id="input-expiration"
+                        className="input input-loan-request input-expiration"
+                        placeholder='YYYY/MM/DD...'
                         defaultValue={props.defaultDuration}>
                     </input>
                 </div>

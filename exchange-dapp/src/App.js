@@ -18,14 +18,12 @@ export default function App() {
   return (
     <Router>
       <div>
-        <Link to="/home">Home</Link>{sep}
-        <Link to="/borrower">Borrowing</Link>{sep}
-        <Link to="/lending">Lending</Link>{sep}
-        <Link to="/">Table Generator</Link>
+        <Link to="/borrower" className='link'>Borrowing</Link>{sep}
+        <Link to="/lending" className='link'>Lending</Link>{sep}
+        <Link to="/" className='link'>Table Generator</Link>
       </div>
 
       <Routes>
-        <Route path="/home" element={<Home />} exact />
         <Route path="/borrower" element={<BorrowerPage />} exact />
         <Route path="/lending" element={<LenderPage />} exact />
         <Route path="/" element={<TableGen />} exact />
