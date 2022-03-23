@@ -67,12 +67,12 @@ export default function BorrowerExistingLoanForm(props) {
     }, []);
 
     function restoreVals(exclusion) {
-        const nftElement = document.getElementById("input-existing-loan-nft-" + props.loanNumber);
-        const tokenIdElement = document.getElementById("input-existing-loan-token-id-" + props.loanNumber);
-        const valueElement = document.getElementById("input-existing-loan-value-" + props.loanNumber);
-        const rateElement = document.getElementById("input-existing-loan-rate-" + props.loanNumber);
-        const durationElement = document.getElementById("input-existing-loan-expiration-" + props.loanNumber);
-        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loanNumber);
+        const nftElement = document.getElementById("input-existing-loan-nft-" + props.loan_number);
+        const tokenIdElement = document.getElementById("input-existing-loan-token-id-" + props.loan_number);
+        const valueElement = document.getElementById("input-existing-loan-value-" + props.loan_number);
+        const rateElement = document.getElementById("input-existing-loan-rate-" + props.loan_number);
+        const durationElement = document.getElementById("input-existing-loan-expiration-" + props.loan_number);
+        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loan_number);
 
         if (exclusion !== "nft") nftElement.value = props.collateral;
         if (exclusion !== "token-id") tokenIdElement.value = props.tokenId;
@@ -120,7 +120,7 @@ export default function BorrowerExistingLoanForm(props) {
 
         // Withdraw ERC721 from LoanRequest contract
         try {
-            await props.currentLoanRequestContract.withdrawNFT(props.loanNumber);
+            await props.currentLoanRequestContract.withdrawNFT(ethers.BigNumber.from(props.loan_number));
 
             // Update Tableland database
             const dbParams = {
@@ -146,7 +146,7 @@ export default function BorrowerExistingLoanForm(props) {
         try {
             console.log(props)
             const tx = await props.currentLoanRequestContract.sign(
-                props.currentAccount, ethers.BigNumber.from(props.loanNumber.toString())
+                props.currentAccount, ethers.BigNumber.from(props.loan_number)
             );
             await tx.wait();
 
@@ -174,7 +174,7 @@ export default function BorrowerExistingLoanForm(props) {
         try {
             console.log(props)
             const tx = await props.currentLoanRequestContract.removeSignature(
-                props.currentAccount, ethers.BigNumber.from(props.loanNumber.toString())
+                props.currentAccount, ethers.BigNumber.from(props.loan_number)
             );
             await tx.wait();
 
@@ -195,7 +195,7 @@ export default function BorrowerExistingLoanForm(props) {
     }
 
     function removeLender() {
-        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loanNumber);
+        const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loan_number);
         lenderElement.value = ethers.constants.AddressZero;
     }
 
@@ -204,13 +204,13 @@ export default function BorrowerExistingLoanForm(props) {
             !!props.img_url
                 ?
                 <div className="card">
-                    <div className="card__inner" id={`card__inner__existing-${props.loanNumber}`} onClick={() => setCardFlipEventListener(props.loanNumber)}>
+                    <div className="card__inner" id={`card__inner__existing-${props.loan_number}`} onClick={() => setCardFlipEventListener(props.loan_number)}>
                         <div className="card__face card__face--front">
                             <img
                                 src={props.img_url.replace('ipfs://', 'https://ipfs.io/')}
                                 alt={props.img_url}
-                                key={props.loanNumber.toString()}
-                                className={`image image-existing-loan-nft image-existing-loan-nft-front image-existing-loan-nft-${props.loanNumber}`}
+                                key={props.loan_number}
+                                className={`image image-existing-loan-nft image-existing-loan-nft-front image-existing-loan-nft-${props.loan_number}`}
                             />
                         </div>
 
@@ -221,8 +221,8 @@ export default function BorrowerExistingLoanForm(props) {
                                     <img
                                         src={props.img_url.replace('ipfs://', 'https://ipfs.io/')}
                                         alt={props.img_url}
-                                        key={props.loanNumber.toString()}
-                                        className={`image image-existing-loan-nft image-existing-loan-nft-back image-existing-loan-nft-${props.loanNumber}`}
+                                        key={props.loan_number}
+                                        className={`image image-existing-loan-nft image-existing-loan-nft-back image-existing-loan-nft-${props.loan_number}`}
                                     />
                                     <h3 className="h3__header__back">{props.name}</h3>
                                 </div>
@@ -260,7 +260,7 @@ export default function BorrowerExistingLoanForm(props) {
         return (
             <div className="container-existing-loan-buttons">
                 <div
-                    id={"button-existing-loan-update-" + props.loanNumber}
+                    id={"button-existing-loan-update-" + props.loan_number}
                     className="button button-existing-loan button-existing-loan-commit button-enabled"
                     onClick={() => {
                         if (!currentNftCommitStatus) {
@@ -275,7 +275,7 @@ export default function BorrowerExistingLoanForm(props) {
                 </div>
 
                 <div
-                    id={"button-existing-loan-update-" + props.loanNumber}
+                    id={"button-existing-loan-update-" + props.loan_number}
                     className={`button button-existing-loan button-existing-loan-update ${!!currentEdit ? " button-enabled" : " button-disabled"}`}
                     onClick={() => {
                         if (!!currentEdit) {
@@ -287,7 +287,7 @@ export default function BorrowerExistingLoanForm(props) {
                 </div>
 
                 <div
-                    id={"button-existing-loan-sign-" + props.loanNumber}
+                    id={"button-existing-loan-sign-" + props.loan_number}
                     className={`button button-existing-loan button-existing-loan-sign ${currentNftCommitStatus || currentSignStatus ? " button-enabled" : " button-disabled"}`}
                     onClick={() => {
                         if (!currentSignStatus && currentNftCommitStatus) {
@@ -309,7 +309,7 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="label label-contract">Contract:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-contract-" + props.loanNumber}
+                    id={"input-existing-loan-contract-" + props.loan_number}
                     className="input input-existing-loan-contract"
                     defaultValue={props.contract_address}
                     readOnly={true}>
@@ -327,11 +327,11 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="button-existing-loan-pay button-enabled">Pay</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-lender-" + props.loanNumber}
+                    id={"input-existing-loan-lender-" + props.loan_number}
                     className="input input-existing-loan-pay"
                     placeholder='(ETH)...'>
                 </input>
-                <div id={"edit-pay-" + props.loanNumber} className="button-none"></div>
+                <div id={"edit-pay-" + props.loan_number} className="button-none"></div>
             </div>
         );
     }
@@ -347,14 +347,14 @@ export default function BorrowerExistingLoanForm(props) {
                 {!!props.contract_address && 'Active Loan '}
                 {!!props.contract_address
                     ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(props.contract_address)}</span>
-                    : `Loan Request #${props.loanNumber + 1 - props.offset}`}
+                    : `Loan Request #${parseInt(props.loan_number) + 1}`}
             </h3>
 
             <div className="container-existing-loan-component">
                 <div className="label label-nft">NFT:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-nft-" + props.loanNumber}
+                    id={"input-existing-loan-nft-" + props.loan_number}
                     className="input input-existing-loan-nft"
                     placeholder='NFT Address...'
                     defaultValue={props.collateral}
@@ -362,7 +362,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-nft-" + props.loanNumber}
+                    id={"edit-nft-" + props.loan_number}
                     className="button button-edit button-edit-nft button-disabled">
                 </div>
             </div>
@@ -371,7 +371,7 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="label label-token-id">Token ID:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-token-id-" + props.loanNumber}
+                    id={"input-existing-loan-token-id-" + props.loan_number}
                     className="input input-existing-loan-token-id"
                     placeholder='Token ID...'
                     defaultValue={props.tokenId}
@@ -379,7 +379,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-token-id-" + props.loanNumber}
+                    id={"edit-token-id-" + props.loan_number}
                     className="button button-edit button-edit-token-id button-disabled">
                 </div>
             </div>
@@ -388,7 +388,7 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="label label-value">{!!props.contract_address ? 'Balance:' : 'Amount:'}</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-value-" + props.loanNumber}
+                    id={"input-existing-loan-value-" + props.loan_number}
                     className="input input-existing-loan-value"
                     placeholder='Loan Value (ETH)...'
                     defaultValue={ethers.utils.formatEther(props.unpaid_balance)}
@@ -396,7 +396,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-value-" + props.loanNumber}
+                    id={"edit-value-" + props.loan_number}
                     className={`${!!props.contract_address ? 'button-none' : 'button button-edit button-edit-value'}`}
                     onClick={() => {
                         if (!props.contract_address) {
@@ -415,7 +415,7 @@ export default function BorrowerExistingLoanForm(props) {
                     min="0"
                     max="100"
                     step="1"
-                    id={"input-existing-loan-rate-" + props.loanNumber}
+                    id={"input-existing-loan-rate-" + props.loan_number}
                     className="input input-existing-loan-rate"
                     placeholder='Rate...'
                     defaultValue={props.rate}
@@ -423,7 +423,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-rate-{props.loanNumber}"}
+                    id={"edit-rate-{props.loan_number}"}
                     className={`${!!props.contract_address ? 'button-none' : 'button button-edit button-edit-rate button-enabled'}`}
                     onClick={() => {
                         if (!props.contract_address) {
@@ -439,7 +439,7 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="label label-expiration">Maturity:</div>
                 <input
                     type="date"
-                    id={"input-existing-loan-expiration-" + props.loanNumber}
+                    id={"input-existing-loan-expiration-" + props.loan_number}
                     className="input input-existing-loan-expiration"
                     min={displayContractTime(props.expiration)}
                     defaultValue={displayContractTime(props.expiration)}
@@ -447,7 +447,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-expiration-" + props.loanNumber}
+                    id={"edit-expiration-" + props.loan_number}
                     className={`${!!props.contract_address ? 'button-none' : 'button button-edit button-edit-expiration button-enabled'}`}
                     onClick={() => {
                         if (!props.contract_address) {
@@ -463,7 +463,7 @@ export default function BorrowerExistingLoanForm(props) {
                 <div className="label label-lender">Lender:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-lender-" + props.loanNumber}
+                    id={"input-existing-loan-lender-" + props.loan_number}
                     className="input input-existing-loan-lender"
                     placeholder='Not set...'
                     defaultValue={!!parseInt(props.lender, 16) ? props.lender : "Unassigned 😞"}
@@ -471,7 +471,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
                 <div
-                    id={"edit-lender-" + props.loanNumber}
+                    id={"edit-lender-" + props.loan_number}
                     className={`${!!props.contract_address ? 'button-none' : 'button button-edit button-edit-lender button-enabled'}`}
                     onClick={() => {
                         if (!props.contract_address) {

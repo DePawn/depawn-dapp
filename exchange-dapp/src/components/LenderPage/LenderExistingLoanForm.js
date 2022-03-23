@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config.js';
 import { capitalizeWords } from '../../utils/stringUtils';
 import { getSubAddress } from '../../utils/addressUtils';
@@ -9,10 +8,9 @@ import { updateTable } from '../../external/tablelandInterface';
 
 export default function LenderExistingLoanForm(props) {
     const [currentLenderSignStatus, setCurrentLenderSignStatus] = useState(undefined);
-    const offsetLoanNumber = props.loanNumber + props.offset;
     const tabbedBullet = '\xa0\xa0- ';
 
-    // console.log(props)
+    console.log(props)
 
     async function currentSignStatusSetter() {
         // Get Borrower sign status
@@ -31,7 +29,7 @@ export default function LenderExistingLoanForm(props) {
         try {
             console.log(props)
             const tx = await props.loanRequestContract.removeSignature(
-                props.borrower, ethers.BigNumber.from(offsetLoanNumber)
+                props.borrower, ethers.BigNumber.from(props.loan_number)
             );
             await tx.wait();
 
@@ -59,15 +57,15 @@ export default function LenderExistingLoanForm(props) {
                 <div className="card">
                     <div
                         className="card__inner"
-                        id={`card__inner__existing-${offsetLoanNumber}`}
-                        onClick={() => setCardFlipEventListener(offsetLoanNumber)}
+                        id={`card__inner__existing-${props.loan_number}`}
+                        onClick={() => setCardFlipEventListener(props.loan_number)}
                     >
                         <div className={`card__face card__face--front ${props.committed ? 'card__face--nft-committed' : 'card__face--nft-uncommitted'}`}>
                             <img
                                 src={props.img_url.replace('ipfs://', 'https://ipfs.io/')}
                                 alt={props.img_url}
-                                key={offsetLoanNumber}
-                                className={`image image-available-loan-nft image-available-loan-nft-front image-available-loan-nft-${offsetLoanNumber}`}
+                                key={props.loan_number}
+                                className={`image image-available-loan-nft image-available-loan-nft-front image-available-loan-nft-${props.loan_number}`}
                             />
                         </div>
 
@@ -78,8 +76,8 @@ export default function LenderExistingLoanForm(props) {
                                     <img
                                         src={props.img_url.replace('ipfs://', 'https://ipfs.io/')}
                                         alt={props.img_url}
-                                        key={offsetLoanNumber}
-                                        className={`image image-available-loan-nft image-available-loan-nft-back image-available-loan-nft-${offsetLoanNumber}`}
+                                        key={props.loan_number}
+                                        className={`image image-available-loan-nft image-available-loan-nft-back image-available-loan-nft-${props.loan_number}`}
                                     />
                                     <h3 className="h3__header__back">{props.name}</h3>
                                 </div>
@@ -113,26 +111,23 @@ export default function LenderExistingLoanForm(props) {
         return contractStatsElements;
     }
 
-    function setCardFlipEventListener(idx) {
-        const card = document.getElementById(`card__inner__existing-${idx}`);
+    function setCardFlipEventListener(loanNumber) {
+        const card = document.getElementById(`card__inner__existing-${loanNumber}`);
         card.classList.toggle('is-flipped');
     }
-
-    console.log(props)
-    // console.log(ethers.utils.formatEther(props.initial_loan_value))
 
     return (
         <div className="container-available-loan-form">
             <h3>Loan {!!props.contract_address
                 ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(`${props.contract_address}`)}</span>
-                : `# ${props.loanNumber + 1}`}
+                : `# ${parseInt(props.loan_number) + 1}`}
             </h3>
 
             <div className="container-available-loan-component">
                 <div className="label label-nft">NFT:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-nft-" + offsetLoanNumber}
+                    id={"input-available-loan-nft-" + props.loan_number}
                     className="input input-available-loan-nft"
                     placeholder='NFT Address...'
                     value={props.collateral}
@@ -144,7 +139,7 @@ export default function LenderExistingLoanForm(props) {
                 <div className="label label-token-id">Token ID:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-token-id-" + offsetLoanNumber}
+                    id={"input-available-loan-token-id-" + props.loan_number}
                     className="input input-available-loan-token-id"
                     placeholder='Token ID...'
                     value={props.tokenId}
@@ -156,7 +151,7 @@ export default function LenderExistingLoanForm(props) {
                 <div className="label label-value">Amount:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-value-" + offsetLoanNumber}
+                    id={"input-available-loan-value-" + props.loan_number}
                     className="input input-available-loan-value"
                     placeholder='Loan Value (ETH)...'
                     value={ethers.utils.formatEther(props.initial_loan_value)}
@@ -168,7 +163,7 @@ export default function LenderExistingLoanForm(props) {
                 <div className="label label-rate">Rate:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-rate-" + offsetLoanNumber}
+                    id={"input-available-loan-rate-" + props.loan_number}
                     className="input input-available-loan-rate"
                     placeholder='Rate...'
                     value={props.rate}
@@ -180,7 +175,7 @@ export default function LenderExistingLoanForm(props) {
                 <div className="label label-expiration">Maturity:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-expiration-" + offsetLoanNumber}
+                    id={"input-available-loan-expiration-" + props.loan_number}
                     className="input input-available-loan-expiration"
                     defaultValue={displayContractTime(props.expiration)}
                     readOnly={true}>
@@ -191,7 +186,7 @@ export default function LenderExistingLoanForm(props) {
                 <div className="label label-borrower">Borrower:</div>
                 <input
                     type="string"
-                    id={"input-available-loan-borrower-" + offsetLoanNumber}
+                    id={"input-available-loan-borrower-" + props.loan_number}
                     className={`input input-available-loan-borrower ${props.borrower_signed ? 'input-available-loan-borrower--signed' : 'input-available-loan-borrower--unsigned'}`}
                     placeholder='Not set...'
                     value={props.borrower}
@@ -202,7 +197,7 @@ export default function LenderExistingLoanForm(props) {
             <div className="container-available-loan-buttons">
 
                 <div
-                    id={"button-available-loan-sign-" + offsetLoanNumber}
+                    id={"button-available-loan-sign-" + props.loan_number}
                     className="button button-available-loan button-available-loan-sign"
                     onClick={() => {
                         !!currentLenderSignStatus

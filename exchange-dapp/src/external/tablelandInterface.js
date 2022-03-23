@@ -28,6 +28,7 @@ const formatParams = (params) => {
     params.collateral = params.collateral.toLowerCase();
     params.token_id = params.token_id.toString();
     params.loan_requested = params.loan_requested !== undefined ? params.loan_requested.toString() : undefined;
+    params.loan_number = params.loan_number !== undefined ? params.loan_number.toString() : undefined;
     params.borrower = !!params.borrower ? params.borrower.toLowerCase() : undefined;
     params.lender = !!params.lender ? params.lender.toLowerCase() : undefined;
     params.expiration = !!params.expiration ? params.expiration.toString() : undefined;
@@ -51,6 +52,7 @@ export const insertTableRow = async (tableName, account, params = {
     collateral: undefined,
     token_id: undefined,
     loan_requested: undefined,
+    loan_number: undefined,
     lender: undefined,
     expiration: undefined,
     img_url: undefined,
@@ -81,6 +83,7 @@ export const insertTableRow = async (tableName, account, params = {
         `collateral_tokenid, ` +
         `borrower, ` +
         `${!!params.loan_requested ? "loan_requested, " : ''}` +
+        `${!!params.loan_number ? "loan_number, " : ''}` +
         `${!!params.lender ? "lender, " : ''}` +
         `${!!params.expiration ? "expiration, " : ''}` +
         `${!!params.img_url ? "img_url, " : ''}` +
@@ -104,6 +107,7 @@ export const insertTableRow = async (tableName, account, params = {
         `'${params.collateral}_${params.token_id}', ` +
         `'${account.toLowerCase()}', ` +
         `${!!params.loan_requested ? "'" + params.loan_requested + "', " : ''}` +
+        `${!!params.loan_number ? "'" + params.loan_number + "', " : ''}` +
         `${!!params.lender ? "'" + params.lender + "', " : ''}` +
         `${!!params.expiration ? "'" + params.expiration + "', " : ''}` +
         `${!!params.img_url ? "'" + params.img_url + "', " : ''}` +
@@ -136,6 +140,7 @@ export const updateTable = async (tableName, params = {
     collateral: undefined,
     token_id: undefined,
     loan_requested: undefined,
+    loan_number: undefined,
     borrower: undefined,
     lender: undefined,
     expiration: undefined,
@@ -166,6 +171,7 @@ export const updateTable = async (tableName, params = {
     const primaryKey = `collateral_tokenid='${params.collateral}_${params.token_id}'`;
     let updates =
         `${!!params.loan_requested ? "loan_requested='" + params.loan_requested + "', " : ''}` +
+        `${!!params.loan_number ? "loan_number='" + params.loan_number + "', " : ''}` +
         `${!!params.borrower ? "borrower='" + params.borrower + "', " : ''}` +
         `${!!params.lender ? "lender='" + params.lender + "', " : ''}` +
         `${!!params.expiration ? "expiration='" + params.expiration + "', " : ''}` +
@@ -265,6 +271,7 @@ export const createTable = async (tableName) => {
     const cols =
         'collateral_tokenid text, ' +
         'loan_requested bool, ' +
+        'loan_number text, ' +
         'borrower text, ' +
         'lender text, ' +
         'expiration text, ' +

@@ -125,7 +125,7 @@ export default function BorrowerPage() {
         console.log(currentAccount, currentNetwork)
 
         const { dbTableName } = config(currentNetwork);
-        const { attribute, loanNumber, collateral, tokenId } = currentUpdateRequestStatus;
+        const { attribute, loan_number, collateral, tokenId } = currentUpdateRequestStatus;
 
         // // Set account
         // const { account, chainId } = await checkIfWalletIsConnected();
@@ -135,7 +135,7 @@ export default function BorrowerPage() {
 
         // Update LoanRequest
         const { success, dbParams } = await updateLoanRequest(
-            currentAccount, currentNetwork, attribute, loanNumber, collateral, tokenId
+            currentAccount, currentNetwork, attribute, loan_number, collateral, tokenId
         );
 
         if (success) {
@@ -380,11 +380,18 @@ export default function BorrowerPage() {
             const receipt = await tx.wait();
             console.log('receipt: ', receipt);
 
+            // Pull _loanId from SubmittedLoanRequest triggered event
+            const topic = loanRequestContract.interface.getEventTopic('SubmittedLoanRequest');
+            const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+            const triggeredEvent = loanRequestContract.interface.parseLog(log);
+            const loan_number = triggeredEvent.args['_loanId'];
+
             // Update Tableland with newly submitted LoanRequest parameters
             const dbParams = {
                 collateral: nft,
                 token_id: tokenId,
                 loan_requested: true,
+                loan_number: loan_number,
                 expiration: expiration,
                 initial_loan_value: initial_loan_value,
                 rate: rate,
@@ -403,10 +410,10 @@ export default function BorrowerPage() {
     }
 
     const updateLoanRequest = async (
-        account, network, attribute, loanNumber, collateral, tokenId
+        account, network, attribute, loan_number, collateral, tokenId
     ) => {
         // Get parameter to change
-        const paramElement = document.getElementById(`input-existing-loan-${attribute}-${loanNumber}`);
+        const paramElement = document.getElementById(`input-existing-loan-${attribute}-${loan_number}`);
 
         // Get contract
         const provider = getProvider();
@@ -429,7 +436,7 @@ export default function BorrowerPage() {
             switch (attribute) {
                 case 'expiration':
                     tx = await loanRequestContract.setLoanParam(
-                        loanNumber,
+                        loan_number,
                         attribute,
                         ethers.BigNumber.from(paramElement.value),
                     );
@@ -447,7 +454,7 @@ export default function BorrowerPage() {
                 case 'value':
                 case 'rate':
                     tx = await loanRequestContract.setLoanParam(
-                        loanNumber,
+                        loan_number,
                         attribute,
                         ethers.utils.parseUnits(paramElement.value),
                     );
@@ -462,7 +469,7 @@ export default function BorrowerPage() {
 
                     break;
                 case 'lender':
-                    tx = await loanRequestContract.setLender(account, loanNumber);
+                    tx = await loanRequestContract.setLender(account, loan_number);
                     receipt = await tx.wait();
 
                     // Update Tableland database
@@ -474,7 +481,7 @@ export default function BorrowerPage() {
                     };
 
                     // Set UI
-                    const lenderElement = document.getElementById("input-existing-loan-lender-" + loanNumber);
+                    const lenderElement = document.getElementById("input-existing-loan-lender-" + loan_number);
                     lenderElement.value = "Unassigned 😞";
 
                     break;
@@ -551,18 +558,17 @@ export default function BorrowerPage() {
         const getExistingLoanElements = async () => {
             const activeLoans = loans.filter(loan => loan.loan_requested && !!loan.contract_address);
             const requestedLoans = loans.filter(loan => loan.loan_requested && !loan.contract_address);
+            console.log(requestedLoans)
 
             const numActiveLoans = activeLoans.length;
             console.log(numActiveLoans)
 
             const currentExistingLoanElements = [];
             currentExistingLoanElements.push(
-                activeLoans.map((loan, i) => {
+                activeLoans.map((loan) => {
                     return (
                         <BorrowerExistingLoanForm
-                            key={i}
-                            loanNumber={i}
-                            offset={0}
+                            key={loan.loan_number}
                             currentAccount={account}
                             currentNetwork={network}
                             currentLoanRequestContract={loanRequestContract}
@@ -576,13 +582,9 @@ export default function BorrowerPage() {
 
             currentExistingLoanElements.push(
                 requestedLoans.map((loan, i) => {
-                    console.log(i)
-                    console.log(i + numActiveLoans)
                     return (
                         <BorrowerExistingLoanForm
-                            key={i + numActiveLoans}
-                            loanNumber={i + numActiveLoans}
-                            offset={numActiveLoans}
+                            key={loan.loan_number}
                             currentAccount={account}
                             currentNetwork={network}
                             currentLoanRequestContract={loanRequestContract}

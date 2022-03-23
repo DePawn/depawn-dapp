@@ -107,7 +107,6 @@ contract LoanRequest {
     function withdrawNFT(uint256 _loanId) external {
         onlyHasLoan(msg.sender);
         onlyNotConfirmed(msg.sender, _loanId);
-        multiSig.onlyBorrower(loanRequests[msg.sender][_loanId].safeId);
 
         address collateral = loanRequests[msg.sender][_loanId].collateral;
         uint256 tokenId = loanRequests[msg.sender][_loanId].tokenId;
@@ -167,7 +166,6 @@ contract LoanRequest {
         uint256 _value
     ) external {
         onlyHasLoan(msg.sender);
-        multiSig.onlyBorrower(loanRequests[msg.sender][_loanId].safeId);
         onlyNotConfirmed(msg.sender, _loanId);
 
         LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
@@ -330,18 +328,6 @@ contract LoanRequest {
             _loanId
         );
     }
-
-    // function onlyBorrower(uint256 _loanId) private view {
-    //     //uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-    //     require(
-    //         msg.sender ==
-    //             multiSig.getSafesSigner(
-    //                 loanRequests[msg.sender][_loanId].safeId,
-    //                 0
-    //             ),
-    //         "You are not the borrower."
-    //     );
-    // }
 
     function onlyHasLoan(address _borrower) private view {
         require(

@@ -188,10 +188,6 @@ contract MultiSig {
         safes[_safeId].signStatus[_arbiter] = safe.signStatus[_arbiter];
     }
 
-    function onlyBorrower(uint256 _safeId) public safeKey(_safeId) {
-        require(msg.sender == safe.signers[0], "You are not the borrower.");
-    }
-
     modifier safeKey(uint256 _safeId) {
         console.log("runs here", msg.sender);
         safeLock = false;
