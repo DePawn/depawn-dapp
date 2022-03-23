@@ -11,21 +11,21 @@ transferibles = [
         ownerAddress: "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
         tokenId: 5465,
-        recipient: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        recipient: "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6",
         abi: erc721
     },
     {
         ownerAddress: "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
         nft: "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
         tokenId: 22,
-        recipient: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        recipient: "0x2d35bd9bec501955e82437c1a96e4baade2b8eeb",
         abi: erc721
     },
     {
         ownerAddress: "0x8cb377959625e693986c6adef82fff01d4d91af8",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
         tokenId: 6482,
-        recipient: "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        recipient: "0xb3010c222301a6f5479cad8fadd4d5c163fa7d8a",
         abi: erc721
     }
 
@@ -80,6 +80,13 @@ async function main() {
 
     }
 
+    /*
+    const LoanRequestEventsFactory = await hre.ethers.getContractFactory("LoanRequestEvents", signers[19]);
+
+    let loanRequestEventsContract = await LoanRequestEventsFactory.deploy();
+    await loanRequestEventsContract.deployed();
+    */
+
     const LoanRequestFactory = await hre.ethers.getContractFactory("LoanRequest", signers[19]);
 
     let loanRequestContract = await LoanRequestFactory.deploy();
@@ -88,7 +95,7 @@ async function main() {
 
 
     // Borrower with NFT"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
-    let borrowerAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+    let borrowerAddress = "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6";
     let borrowerNFT = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
     let borrowerTokenId = 5465;
     
@@ -118,7 +125,7 @@ async function main() {
     let receipt = await tx.wait();
     console.log("ok");
 
-    let lenderAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    let lenderAddress = "0x08922a1e2a0a760ac9b1ad6dcbc1d9ce6a07cd98";
     let lender = provider.getSigner(lenderAddress);
     // Signoff and create new contract
     tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, {value: ethers.utils.parseEther("2")});

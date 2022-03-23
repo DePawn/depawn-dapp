@@ -17,11 +17,11 @@ module.exports = {
         mnemonic: process.env.MNEMONIC
       },
       gas: 12000000,
-      allowUnlimitedContractSize: true,
+      //allowUnlimitedContractSize: true,
       forking: {
         chainId: 31337,
         url: process.env.ALCHEMY_MAINNET_URL,
-        blockNumber: 14407300 // Alberto's: 14343332
+        blockNumber: 14343332 // Alberto's: 14343332
       }
     }
   }

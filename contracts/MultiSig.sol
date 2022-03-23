@@ -2,7 +2,7 @@
 pragma solidity ^0.8.5;
 import "hardhat/console.sol";
 
-abstract contract MultiSig {
+contract MultiSig {
     uint256 public required;
 
     struct Safe {
@@ -11,7 +11,7 @@ abstract contract MultiSig {
         mapping(address => bool) signStatus;
     }
 
-    Safe[] safes;
+    Safe[] public safes;
     Safe private safe;
     bool private safeLock = true;
 
@@ -24,14 +24,26 @@ abstract contract MultiSig {
     event Unsigned(address indexed _signer, bool _confirmedStatus);
     event Confirmed(address indexed _contract, bool indexed _confirmedStatus);
 
+    address contractOwner;
+
     constructor(uint256 _required) {
         required = _required;
+        contractOwner = msg.sender;
 
         // Lock out first safe.
         safes.push();
         for (uint256 i; i < required; i++) {
             safes[0].signers[i] = address(0);
         }
+    }
+
+    function getSafesLength() external view returns(uint256) {
+        return safes.length;
+    }
+
+
+    function getSafesSigner(uint256 _safeId, uint256 i) external view returns(address) {
+        return safes[_safeId].signers[i];
     }
 
     function getSigner(uint256 _safeId, uint256 _position)
@@ -44,7 +56,7 @@ abstract contract MultiSig {
     }
 
     function _getSignStatus(uint256 _safeId, address _signer)
-        internal
+        public
         view
         returns (bool)
     {
@@ -59,32 +71,32 @@ abstract contract MultiSig {
         _isSigner_ = safe.signers[2] == msg.sender ? true : _isSigner_;
     }
 
-    function _createSafe() internal {
+    function _createSafe(address borrower) public onlyOwnerOrContract {
         uint256 _safeId = safes.length;
         safes.push();
 
-        safes[_safeId].signers[0] = msg.sender;
+        safes[_safeId].signers[0] = borrower;
     }
 
-    function _sign(uint256 _safeId)
-        internal
+    function _sign(uint256 _safeId, address signer)
+        public
         safeKey(_safeId)
-        onlySigner(msg.sender)
+        onlySigner(signer)
         returns (bool _isSigned)
     {
-        console.log(msg.sender);
+        console.log("who is signer?",signer);
         require(safe.signers[0] != address(0), "Borrower must be set.");
-        safe.signStatus[msg.sender] = true;
-        emit Signed(msg.sender, safe.confirmed);
-
-        _isSigned = safe.signStatus[msg.sender];
+        safe.signStatus[signer] = true;
+        emit Signed(signer, safe.confirmed);
+        console.log("status confirmed to:",safe.signStatus[signer]);
+        _isSigned = safe.signStatus[signer];
     }
 
     function _removeSignature(uint256 _safeId, address _signer)
-        internal
+        public
         safeKey(_safeId)
-        onlySigner(msg.sender)
         onlySigner(_signer)
+        onlyOwnerOrContract
     {
         safe.signStatus[_signer] = false;
 
@@ -97,7 +109,7 @@ abstract contract MultiSig {
         uint256 _safeId,
         address _signer,
         uint256 _position
-    ) internal safeKey(_safeId) {
+    ) public safeKey(_safeId) onlyOwnerOrContract {
         // Either _position is safe creator,
         // or creator is not equal to _signer
         require(
@@ -117,7 +129,7 @@ abstract contract MultiSig {
             emit Staffed(safe.signers[0], safe.signers[1], _safeId);
     }
 
-    function _setConfirmedStatus(uint256 _safeId) internal safeKey(_safeId) {
+    function _setConfirmedStatus(uint256 _safeId) public safeKey(_safeId) onlyOwnerOrContract {
         __setConfirmedStatus();
     }
 
@@ -170,6 +182,7 @@ abstract contract MultiSig {
     }
 
     modifier safeKey(uint256 _safeId) {
+        console.log("runs here", msg.sender);
         safeLock = false;
         __setSafe(_safeId);
         _;
@@ -179,8 +192,14 @@ abstract contract MultiSig {
     }
 
     modifier onlySigner(address _signer) {
+        console.log(msg.sender, _signer);
         require(_signer != address(0), "Address 0 is invalid.");
         require(_isSigner() == true, "You are not a valid signer.");
+        _;
+    }
+
+    modifier onlyOwnerOrContract() {
+        require(msg.sender == contractOwner || msg.sender == address(this));
         _;
     }
 }
