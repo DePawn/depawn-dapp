@@ -4,6 +4,7 @@ import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config.js';
 import { capitalizeWords } from '../../utils/stringUtils';
 import { getSubAddress } from '../../utils/addressUtils';
+import { displayContractTime } from '../../utils/timeUtils';
 import { updateTable } from '../../external/tablelandInterface';
 
 export default function LenderExistingLoanForm(props) {
@@ -13,25 +14,42 @@ export default function LenderExistingLoanForm(props) {
 
     // console.log(props)
 
-    async function removeSignatureFromLoanRequest() {
-        // // Sign LoanRequest contract
-        // try {
-        //     console.log(props)
-        //     const tx = await props.loanRequestContract.removeSignature(
-        //         props.currentAccount, ethers.BigNumber.from(offsetLoanNumber)
-        //     );
-        //     await tx.wait();
-        //     return false;
-        // }
-        // catch (err) {
-        //     console.log(err);
-        //     return currentLenderSignStatus;
-        // }
+    async function currentSignStatusSetter() {
+        // Get Borrower sign status
+        setCurrentLenderSignStatus(props.lender_signed);
     }
 
-    function removeLender() {
-        // const lenderElement = document.getElementById("input-available-loan-lender-" + offsetLoanNumber);
-        // lenderElement.value = ethers.constants.AddressZero;
+    useEffect(() => {
+        currentSignStatusSetter();
+        // eslint-disable-next-line
+    }, []);
+
+    async function removeSignatureFromLoanRequest() {
+        const { dbTableName } = config(props.currentNetwork);
+
+        // Remove sign off of LoanRequest contract
+        try {
+            console.log(props)
+            const tx = await props.loanRequestContract.removeSignature(
+                props.borrower, ethers.BigNumber.from(offsetLoanNumber)
+            );
+            await tx.wait();
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: props.collateral,
+                token_id: props.tokenId,
+                lender_signed: false
+            };
+
+            await updateTable(dbTableName, dbParams);
+
+            return false;
+        }
+        catch (err) {
+            console.log(err);
+            return currentLenderSignStatus;
+        }
     }
 
     function renderNftImage() {
@@ -164,8 +182,7 @@ export default function LenderExistingLoanForm(props) {
                     type="string"
                     id={"input-available-loan-expiration-" + offsetLoanNumber}
                     className="input input-available-loan-expiration"
-                    placeholder='YYYY/MM/DD...'
-                    defaultValue={props.expiration}
+                    defaultValue={displayContractTime(props.expiration)}
                     readOnly={true}>
                 </input>
             </div>
@@ -187,9 +204,13 @@ export default function LenderExistingLoanForm(props) {
                 <div
                     id={"button-available-loan-sign-" + offsetLoanNumber}
                     className="button button-available-loan button-available-loan-sign"
-                    onClick={() => { props.sponsorLoanRequestFunc(props) }}
+                    onClick={() => {
+                        !!currentLenderSignStatus
+                            ? removeSignatureFromLoanRequest().then((res) => { setCurrentLenderSignStatus(res) })
+                            : props.sponsorLoanRequestFunc(props).then((res) => { setCurrentLenderSignStatus(res) })
+                    }}
                 >
-                    {!currentLenderSignStatus ? "Sign" : "Unsign"}
+                    {!!currentLenderSignStatus ? "Unsign" : "Sign"}
                 </div>
 
             </div>

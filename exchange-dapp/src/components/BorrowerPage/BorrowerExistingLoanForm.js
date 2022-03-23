@@ -4,6 +4,7 @@ import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config.js';
 import { capitalizeWords } from '../../utils/stringUtils';
 import { getSubAddress } from '../../utils/addressUtils';
+import { displayContractTime } from '../../utils/timeUtils';
 import { updateTable } from '../../external/tablelandInterface';
 
 const edit_emoji = "✍🏽";
@@ -31,6 +32,7 @@ export default function BorrowerExistingLoanForm(props) {
             /* If the change button ("✍️") is hit... */
             // Set currentEdit to the field being editted
             setCurrentEdit(name);
+            console.log(name)
 
             // If lender, set to address 0
             if (name === 'lender') removeLender();
@@ -45,7 +47,7 @@ export default function BorrowerExistingLoanForm(props) {
 
         // Get ERC721 contract
         const nftContract = new ethers.Contract(props.collateral, erc721, borrower);
-        let nftOwner = await nftContract.ownerOf(ethers.BigNumber.from(props.tokenId));
+        let nftOwner = await nftContract.ownerOf(props.tokenId);
 
         nftContract.on('Transfer', async (ev) => { })
 
@@ -76,7 +78,7 @@ export default function BorrowerExistingLoanForm(props) {
         if (exclusion !== "token-id") tokenIdElement.value = props.tokenId;
         if (exclusion !== "value") valueElement.value = ethers.utils.formatEther(props.initial_loan_value);
         if (exclusion !== "rate") rateElement.value = props.rate;
-        if (exclusion !== "expiration") durationElement.value = props.expiration;
+        if (exclusion !== "expiration") durationElement.value = displayContractTime(props.expiration);
         if (exclusion !== "lender") lenderElement.value = !!parseInt(props.lender, 16) ? props.lender : "Unassigned 😞";
     }
 
@@ -168,7 +170,7 @@ export default function BorrowerExistingLoanForm(props) {
     async function removeSignatureFromLoanRequest() {
         const { dbTableName } = config(props.currentNetwork);
 
-        // Sign LoanRequest contract
+        // Remove sign off of LoanRequest contract
         try {
             console.log(props)
             const tx = await props.currentLoanRequestContract.removeSignature(
@@ -271,12 +273,15 @@ export default function BorrowerExistingLoanForm(props) {
                     }}>
                     {currentNftCommitStatus ? "Withdraw NFT" : "Commit NFT"}
                 </div>
+
                 <div
                     id={"button-existing-loan-update-" + props.loanNumber}
-                    className="button button-existing-loan button-existing-loan-update button-enabled"
+                    className={`button button-existing-loan button-existing-loan-update ${!!currentEdit ? " button-enabled" : " button-disabled"}`}
                     onClick={() => {
-                        props.updateLoanFunc(props.loanNumber, currentEdit, props)
-                            .then(() => { setCurrentEdit(''); });
+                        if (!!currentEdit) {
+                            props.updateLoanFunc(currentEdit, props)
+                                .then(() => { setCurrentEdit(''); });
+                        }
                     }}>
                     Update
                 </div>
@@ -433,11 +438,11 @@ export default function BorrowerExistingLoanForm(props) {
             <div className="container-existing-loan-component">
                 <div className="label label-expiration">Maturity:</div>
                 <input
-                    type="string"
+                    type="date"
                     id={"input-existing-loan-expiration-" + props.loanNumber}
                     className="input input-existing-loan-expiration"
-                    placeholder='YYYY/MM/DD...'
-                    defaultValue={props.expiration}
+                    min={displayContractTime(props.expiration)}
+                    defaultValue={displayContractTime(props.expiration)}
                     readOnly={currentEdit !== "expiration"}
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>

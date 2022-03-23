@@ -205,10 +205,6 @@ export default function BorrowerPage() {
             if (borrower === account) {
                 throw new Error("Lender cannot be the borrower for a loan!");
             }
-
-            // console.log(ethers.BigNumber.from(props))
-
-            console.log('z')
             console.log(initial_loan_value)
 
             const tx = await loanRequestContract.setLender(

@@ -60,7 +60,7 @@ export const config = (network) => {
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,
         erc721: erc721.abi,
-        erc1155: "",
+        erc1155: erc1155.abi,
         dbTableName: name,
         dbController: controller,
         rpcProvider: 'ALCHEMY',

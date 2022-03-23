@@ -37,12 +37,15 @@ contract MultiSig {
         }
     }
 
-    function getSafesLength() external view returns(uint256) {
+    function getSafesLength() external view returns (uint256) {
         return safes.length;
     }
 
-
-    function getSafesSigner(uint256 _safeId, uint256 i) external view returns(address) {
+    function getSafesSigner(uint256 _safeId, uint256 i)
+        external
+        view
+        returns (address)
+    {
         return safes[_safeId].signers[i];
     }
 
@@ -84,11 +87,11 @@ contract MultiSig {
         onlySigner(signer)
         returns (bool _isSigned)
     {
-        console.log("who is signer?",signer);
+        console.log("who is signer?", signer);
         require(safe.signers[0] != address(0), "Borrower must be set.");
         safe.signStatus[signer] = true;
         emit Signed(signer, safe.confirmed);
-        console.log("status confirmed to:",safe.signStatus[signer]);
+        console.log("status confirmed to:", safe.signStatus[signer]);
         _isSigned = safe.signStatus[signer];
     }
 
@@ -129,7 +132,11 @@ contract MultiSig {
             emit Staffed(safe.signers[0], safe.signers[1], _safeId);
     }
 
-    function _setConfirmedStatus(uint256 _safeId) public safeKey(_safeId) onlyOwnerOrContract {
+    function _setConfirmedStatus(uint256 _safeId)
+        public
+        safeKey(_safeId)
+        onlyOwnerOrContract
+    {
         __setConfirmedStatus();
     }
 
@@ -179,6 +186,10 @@ contract MultiSig {
         safes[_safeId].signStatus[_borrower] = safe.signStatus[_borrower];
         safes[_safeId].signStatus[_lender] = safe.signStatus[_lender];
         safes[_safeId].signStatus[_arbiter] = safe.signStatus[_arbiter];
+    }
+
+    function onlyBorrower(uint256 _safeId) public safeKey(_safeId) {
+        require(msg.sender == safe.signers[0], "You are not the borrower.");
     }
 
     modifier safeKey(uint256 _safeId) {
