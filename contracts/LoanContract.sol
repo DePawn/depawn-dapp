@@ -47,8 +47,8 @@ contract LoanContract {
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
 
-        //start = block.timestamp;
-        start = 1644202800;// 2022-02-7
+        start = block.timestamp;
+        //start = 1644202800;// 2022-02-7
     }
 
     function onERC721Received(
