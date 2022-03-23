@@ -6,26 +6,32 @@ require("@nomiclabs/hardhat-ethers");
 const erc721 = require("../exchange-dapp/src/artifacts/31337/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json").abi;
 
 transferibles = [
-
     {
-        ownerAddress: "0x5f7bd8e190d30b9db5656749c745b8988ab69cd0",
+        ownerAddress: "0x8bc47be1e3abbaba182069c89d08a61fa6c2b292",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-        tokenId: 5465,
+        tokenId: 7894,
         recipient: "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6",
         abi: erc721
     },
     {
-        ownerAddress: "0xb855567a17c266c1d82a52bb093ef5b6a66deb01",
-        nft: "0x3ba8c518530B8217a810eDaC019455F110923Cdc",
-        tokenId: 22,
-        recipient: "0x2d35bd9bec501955e82437c1a96e4baade2b8eeb",
+        ownerAddress: "0x9ca8749220a0d626098b38afa5dadeb3dbe30232",
+        nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+        tokenId: 212,
+        recipient: "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6",
         abi: erc721
     },
     {
-        ownerAddress: "0x8cb377959625e693986c6adef82fff01d4d91af8",
+        ownerAddress: "0xc0dc04aac2d5f1d35769e54b95c22194500a69f7",
         nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-        tokenId: 6482,
-        recipient: "0xb3010c222301a6f5479cad8fadd4d5c163fa7d8a",
+        tokenId: 3311,
+        recipient: "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6",
+        abi: erc721
+    },
+    {
+        ownerAddress: "0x5ea00bc260417e58087a010c85703683bfa6419f",
+        nft: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+        tokenId: 2838,
+        recipient: "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6",
         abi: erc721
     }
 
@@ -77,7 +83,6 @@ async function main() {
             method: "hardhat_stopImpersonatingAccount",
             params: [tr.ownerAddress],
         });
-
     }
 
     /*
@@ -97,8 +102,8 @@ async function main() {
     // Borrower with NFT"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     let borrowerAddress = "0xe67b33d7c5ff1db9bb12e5672c49db3eeb87f3c6";
     let borrowerNFT = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
-    let borrowerTokenId = 5465;
-    
+    let borrowerTokenId = 7894;
+
     let borrower = provider.getSigner(borrowerAddress);
 
     let nftContract = new hre.ethers.Contract(borrowerNFT, erc721, borrower);
@@ -114,7 +119,7 @@ async function main() {
         borrowerTokenId,
         ethers.utils.parseEther("2"),
         10,
-        Math.floor(new Date(2022,3,7).getTime() / 1000)
+        Math.floor(new Date(2022, 3, 7).getTime() / 1000)
     );
     await loanId.wait();
 
@@ -125,14 +130,13 @@ async function main() {
     let receipt = await tx.wait();
     console.log("ok");
 
-    let lenderAddress = "0x08922a1e2a0a760ac9b1ad6dcbc1d9ce6a07cd98";
+    let lenderAddress = "0x2d35bd9bec501955e82437c1a96e4baade2b8eeb";
     let lender = provider.getSigner(lenderAddress);
     // Signoff and create new contract
-    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, {value: ethers.utils.parseEther("2")});
+    tx = await loanRequestContract.connect(lender).setLender(borrowerAddress, loanId, { value: ethers.utils.parseEther("2") });
     receipt = await tx.wait();
 
-
-
+    console.log(receipt)
 
 
 

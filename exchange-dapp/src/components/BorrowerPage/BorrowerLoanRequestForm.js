@@ -24,36 +24,22 @@ export default function BorrowerLoanRequestForm(props) {
                             {props.currentAccountNfts.map((nft, i) => {
                                 return (
                                     <option
-                                        value={nft.contract_address}
+                                        value={nft.collateral}
                                         key={i}
                                     >
-                                        {nft.contract_address}
+                                        {nft.collateral}
                                     </option>
                                 )
                             })}
                         </select>
                     ) : (
-                        !!props._dev ? (
-                            // Dev ONLY
-                            <select
-                                id="datalist-nft"
-                                className="datalist datalist-loan-request datalist-nft">
-                                <option
-                                    value={props.defaultNft}
-                                    key={0}
-                                >
-                                    {props.defaultNft}
-                                </option>
-                            </select>
-                        ) : (
-                            // No NFTs for account
-                            <select
-                                id="datalist-nft"
-                                className="datalist datalist-loan-request datalist-nft"
-                            >
-                                ""
-                            </select>
-                        )
+                        // No NFTs for account
+                        <select
+                            id="datalist-nft"
+                            className="datalist datalist-loan-request datalist-nft"
+                        >
+                            ""
+                        </select>
                     )}
                 </div>
             </div >
@@ -72,7 +58,7 @@ export default function BorrowerLoanRequestForm(props) {
                     className="input input-loan-request input-token-id"
                     placeholder='Token ID...'
                     value={!!props.currentAccountNfts.length
-                        ? props.currentAccountNfts[_currentNft].token_id
+                        ? props.currentAccountNfts[_currentNft].tokenId
                         : ""
                     }
                     readOnly={true}>
@@ -84,21 +70,17 @@ export default function BorrowerLoanRequestForm(props) {
     function renderNftImage() {
         const _currentNft = safeCurrentNft();
 
-        const imgUrl = !!props.currentAccountNfts.length
-            ? parseNftImageFromCurrentAccounts(_currentNft)
-            : props._dev
-                ? props.defaultImageUrl
-                : undefined;
+        console.log(_currentNft)
 
         return (
-            !!props.currentAccountNfts.length && !!imgUrl
+            !!props.currentAccountNfts.length && !!props.currentAccountNfts[_currentNft].img_url
                 ?
                 <div className="card">
                     <div className="card__inner" id="card__inner__request" onClick={setCardFlipEventListener}>
                         <div className="card__face card__face--front">
                             <img
-                                src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                alt={imgUrl}
+                                src={props.currentAccountNfts[_currentNft].img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                alt={props.currentAccountNfts[_currentNft].img_url}
                                 className="image image-loan-request image-loan-request-nft image-loan-request-nft-front"
                             />
                         </div>
@@ -108,8 +90,8 @@ export default function BorrowerLoanRequestForm(props) {
 
                                 <div className="card__header">
                                     <img
-                                        src={imgUrl.replace('ipfs://', 'https://ipfs.io/')}
-                                        alt={imgUrl}
+                                        src={props.currentAccountNfts[_currentNft].img_url.replace('ipfs://', 'https://ipfs.io/')}
+                                        alt={props.currentAccountNfts[_currentNft].img_url}
                                         className="image image-loan-request image-loan-request-nft image-loan-request-nft-back"
                                     />
                                     <h3 className="h3__header__back">{props.currentAccountNfts[_currentNft].name}</h3>
@@ -151,14 +133,6 @@ export default function BorrowerLoanRequestForm(props) {
         card.classList.toggle('is-flipped');
     }
 
-    function parseNftImageFromCurrentAccounts(idx) {
-        const imgUrl = !!props.currentAccountNfts[idx].cached_file_url
-            ? props.currentAccountNfts[idx].cached_file_url
-            : props.currentAccountNfts[idx].file_url;
-
-        return imgUrl;
-    }
-
     function safeCurrentNft() {
         // Needed to handle changes where currentNft === props.currentAccountNfts.length
         const _currentNft = currentNft <= props.currentAccountNfts.length - 1
@@ -177,9 +151,7 @@ export default function BorrowerLoanRequestForm(props) {
     return (
         <div className="container-loan-request-form-master">
 
-            <h2>
-                Loan Requests {props._dev && !props.currentAccountNfts ? "(dev)" : ""}
-            </h2>
+            <h2>Loan Requests</h2>
 
             <div className="container-loan-request-form">
 
@@ -187,7 +159,7 @@ export default function BorrowerLoanRequestForm(props) {
                 {renderTokenIdDropdown()}
 
                 <div className="container-loan-request-component">
-                    <div className="label label-value">Amount:</div>
+                    <div className="label label-value">Value:</div>
                     <input
                         type="string"
                         id="input-initial-value"
@@ -209,12 +181,12 @@ export default function BorrowerLoanRequestForm(props) {
                 </div>
 
                 <div className="container-loan-request-component">
-                    <div className="label label-duration">Duration:</div>
+                    <div className="label label-expiration">Maturity:</div>
                     <input
                         type="string"
-                        id="input-duration"
-                        className="input input-loan-request input-duration"
-                        placeholder='Duration (months)...'
+                        id="input-expiration"
+                        className="input input-loan-request input-expiration"
+                        placeholder='YYYY/MM/DD...'
                         defaultValue={props.defaultDuration}>
                     </input>
                 </div>

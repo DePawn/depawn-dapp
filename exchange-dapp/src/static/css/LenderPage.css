@@ -15,10 +15,6 @@ h1, h2, h3, .label, .button-edit {
   text-shadow: 1px 1px 3px #000;
 }
 
-h2 {
-  margin-bottom: 20px;
-}
-
 h3 {
   margin-top: 0;
 }
@@ -40,7 +36,7 @@ div {
 }
 
 .container-loan-request-form-master,
-.container-existing-loan-form-master,
+.container-available-loan-form-master,
 .container-loan-contracts-master {
   width: 50%;
   padding: 0 5%;
@@ -63,10 +59,10 @@ div {
 }
 
 .container-loan-request-form,
-.container-existing-loan-form,
+.container-available-loan-form,
 .container-loan-contracts {
   width: 510px;
-  margin: 20px auto 0 auto;
+  margin: 40px auto 0 auto;
   padding: 24px;
   position: relative;
   border-radius: 12px;
@@ -77,14 +73,7 @@ div {
 }
 
 .container-loan-request-component,
-.container-existing-loan-component {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: row;
-}
-
-.container-active-loan-component {
+.container-available-loan-component {
   margin: 0;
   padding: 0;
   display: flex;
@@ -118,6 +107,14 @@ div {
   margin: 4px 0 4px 4%;
   padding: 0;
   border: none;
+}
+
+.input-available-loan-borrower--signed {
+  border: 5px solid #080;
+}
+
+.input-available-loan-borrower--unsigned {
+  border: 5px solid #f04;
 }
 
 .datalist-nft {
@@ -165,10 +162,6 @@ div {
   box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
 }
 
-.button-loan-request {
-    width: 50px;
-}
-
 .button-connect-wallet,
 .button-connected-account {
   margin: 20px 50px 0 0;
@@ -185,7 +178,7 @@ div {
   top: 0;
 }
 
-.container-existing-loan-buttons {
+.container-available-loan-buttons {
   width: 400px;
   margin: 0 auto;
   padding: 0;
@@ -193,44 +186,20 @@ div {
   flex-direction: row;
 }
 
-.button-existing-loan {
+.button-available-loan {
   width: 100px;
   padding: 6px 0 8px 0;
 }
 
-.button-existing-loan-pay {
-  height: 25px;
-  width: 40px;
-  margin: 2px auto;     
-  padding: 6px 1rem 8px 1rem;
-  background: #5086bd;
-  color: white;
-  position: relative;
-  letter-spacing: 0.7px;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  -webkit-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  border: 1px solid #2e4d6d;
-  border-radius: 12px;
-  text-shadow: 1px 1px 2px rgba(1, 1, 1, 0.4);
-}
-
-.button-existing-loan-commit {
+.button-available-loan-commit {
   width: 120px;
   margin-left: 44px;
   margin-right: 10px;
 }
 
-.button-existing-loan-update {
+.button-available-loan-update {
   margin-left: 10px;
   margin-right: 10px;
-}
-
-.button-existing-loan-sign {
-  margin-left: 10px;
-  margin-right: 0;
 }
 
 .button-loan-request-create {
@@ -241,11 +210,10 @@ div {
     width: 140px;
 }
 
-.button-none {
+.button-edit-nft,
+.button-edit-token-id {
   width: 23px;
-  margin: 4px 4% 4px 0;
-  padding: 4px 8px;
-  opacity: 0;
+  background: none;
   border-color: none;
   border: none;
   box-shadow: none;
@@ -254,11 +222,8 @@ div {
   cursor: default;
 }
 
-.button-none:active {  
+.button-edit-nft:active, 
+.button-edit-token-id:active {  
   transform: none;
   box-shadow: none;
-}
-
-.container-active-loan {
-  border: 6px solid green;
 }

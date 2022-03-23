@@ -8,15 +8,15 @@ import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
-import { insertTableRow, updateTable } from '../../external/tablelandInterface';
+import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
     defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
     defaultTokenId: '6491',
-    defaultInitialLoanValue: '3.2',
-    defaultRate: '0.02',
+    defaultInitialLoanValue: '3',
+    defaultRate: '2',
     defaultDuration: '24',
     defaultImageUrl: 'https://storage.googleapis.com/sentinel-nft/raw-assets/e5a44a819a164708012efbb36298051ebf6453544c28a7ea358bc6547d7b1335.png',
     defaultNetwork: config('31337').network,
@@ -29,10 +29,9 @@ export default function BorrowerPage() {
     const [currentNetwork, setCurrentNetwork] = useState(null);
     const [currentLoanRequestContract, setCurrentLoanRequestContract] = useState(null);
     const [currentSubmitRequestStatus, setCurrentSubmitRequestStatus] = useState(false);
-    const [currentAccountNfts, setCurrentAccountNfts] = useState('');
     const [currentAccountLoans, setCurrentAccountLoans] = useState('');
-    const [loanRequestElement, setLoanRequestElement] = useState('');
-    const [existingLoanElements, setExistingLoanElements] = useState('');
+    const [currentLoanRequestElement, setCurrentLoanRequestElement] = useState('');
+    const [currentExistingLoanElements, setCurrentExistingLoanElements] = useState('');
 
     useEffect(() => {
         console.log('Page loading...');
@@ -58,25 +57,21 @@ export default function BorrowerPage() {
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
+        // Get LoanRequestContract
+        const loanRequestContract = getLoanRequestContract(account, chainId);
 
         // Set account loan and nft data
-        const { nfts, loans, loanRequestContract } = await setAccountData(account, chainId);
-        console.log('--pageLoadSequence-- NFTs: ', nfts);
+        const loans = await setAccountData(account, chainId);
         console.log('--pageLoadSequence-- Loans: ', loans);
 
-        // Set LoanRequest event listeners
-        setSubmittedLoanRequestListener(loanRequestContract);
-        setLoanRequestChangedListeners(loanRequestContract);
-        setLoanRequestLenderChangedListeners(loanRequestContract);
-
         // Render loan request elements for borrower
-        await renderLoanRequestElements(nfts, chainId);
+        await renderLoanRequestElements(loans, chainId);
 
         // Render existing loan elements for borrower
-        const _existingLoanElements = await renderExistingLoanElements(
+        const existingLoanElements = await renderExistingLoanElements(
             account, chainId, loans, loanRequestContract
         );
-        setExistingLoanElements(_existingLoanElements);
+        setCurrentExistingLoanElements(existingLoanElements);
 
         // Page-load flag needed to prevent events from
         // triggering on page-load
@@ -94,31 +89,24 @@ export default function BorrowerPage() {
          */
 
         // Submit loan request
-        const { success, collateral, tokenId } = await submitLoanRequest();
+        const success = await submitLoanRequest();
 
         // Set account loan and nft data
-        let nfts = currentAccountNfts;
         let loans = currentAccountLoans;
-        let loanRequestContract = currentLoanRequestContract;
 
         if (success) {
-            const accountData = await setAccountData(currentAccount, currentNetwork, collateral, tokenId);
-            nfts = accountData.nfts;
-            loans = accountData.loans;
-            loanRequestContract = accountData.loanRequestContract;
+            loans = await setAccountData(currentAccount, currentNetwork);
         }
-
-        console.log('--pageLoadSequence-- NFTs: ', nfts);
         console.log('--pageLoadSequence-- Loans: ', loans);
 
         // Render loan request elements for borrower
-        await renderLoanRequestElements(nfts, currentNetwork);
+        await renderLoanRequestElements(loans, currentNetwork);
 
         // Render existing loan elements for borrower
-        const _existingLoanElements = await renderExistingLoanElements(
-            currentAccount, currentNetwork, loans, loanRequestContract
+        const existingLoanElements = await renderExistingLoanElements(
+            currentAccount, currentNetwork, loans, currentLoanRequestContract
         );
-        setExistingLoanElements(_existingLoanElements);
+        setCurrentExistingLoanElements(existingLoanElements);
 
         // Reset currentSubmitRequestStatus
         setCurrentSubmitRequestStatus(false);
@@ -164,7 +152,24 @@ export default function BorrowerPage() {
         return { account, chainId };
     }
 
-    const setAccountData = async (account, network, collateral = undefined, tokenId = undefined) => {
+    const getLoanRequestContract = (account, network) => {
+        // Get LoanRequest contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(account);
+        const { loanRequestAddress, loanRequestABI } = config(network);
+
+        const loanRequestContract = new ethers.Contract(
+            loanRequestAddress,
+            loanRequestABI,
+            borrower
+        );
+
+        setCurrentLoanRequestContract(loanRequestContract);
+
+        return loanRequestContract
+    }
+
+    const setAccountData = async (account, network) => {
         /*
          * Set NFT, Loan, and Contract data.
          *
@@ -177,154 +182,101 @@ export default function BorrowerPage() {
          *  to existing Loan data, and trimmed accordingly.
          */
 
-        let nfts = null;
+        let nfts = [];
         let loans = [];
-        let loanRequestContract = null;
 
-        const { devFront, transferibles, dbTableName } = config(network);
-        if (devFront) account = transferibles[0].recipient;
+        const waitInsertTableRow = async (tblName, borrower, params) => {
+            setTimeout(await insertTableRow(tblName, borrower, params), 2000);
+        };
+
+        const { dbTableName } = config(network);
 
         if (!!account && !!network) {
-            /* Fetch and store the current NFT data from NFT Port */
+            console.log(account)
+            /* Fetch current account NFT data from NFT Port */
             console.log('Fetching account NFT data...');
             nfts = await fetchNftData(account, network);
+            console.log(nfts)
 
-            /* Get account loan data from LoanRequest contract */
-            console.log('Getting account loan data...');
-            const accountLoanRequests = await getAccountLoanRequests(account, network, nfts);
-            loans = accountLoanRequests.loans;
-            loanRequestContract = accountLoanRequests.loanRequestContract;
+            /* Fetch current account LoanRequest data from Tableland */
+            loans = await fetchBorrowerLoans(account, network);
+            console.log(loans)
 
-            /* Add contract statistics to NFTs */
-            nfts = await Promise.all(nfts.map(async (nft) => {
-                // Fetch NFTs from cookies
-                let cookieNft = loadNftCookies(nft);
+            loans = await Promise.all(nfts.map(async (nft) => {
+                let commonNft = loans.find((loan) => {
+                    return parseInt(nft.contract_address, 16) === parseInt(loan.collateral, 16) &&
+                        nft.token_id === loan.tokenId
+                })
+                console.log(commonNft)
 
-                if (!cookieNft) {
-                    // If cookies do not exist for NFT, fetch it from NFT Port
-                    console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from NFT Port...`);
+                if (!commonNft) {
 
-                    let stats = await fetchContractData(
+                    /* If NFTs do not exist in Tableland, fetch contract stats from NFT Port */
+                    console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} contract stats from NFT Port...`);
+
+                    const stats = await fetchContractData(
                         [nft.contract_address],
                         network
                     )
                     nft.contract_statistics = stats[0];
-                    saveNftCookies([nft]);
+                    nft.borrower = account.toLowerCase();
+                    nft.lender = ethers.constants.AddressZero;
+
+                    // console.log(nft)
+
+                    /* Store potential LoanRequest in Tableland */
+                    const dbParams = {
+                        collateral: nft.contract_address,
+                        token_id: nft.token_id,
+                        loan_requested: false,
+                        borrower: nft.borrower,
+                        lender: nft.lender,
+                        img_url: !!nft.cached_file_url ? nft.cached_file_url : nft.file_url,
+                        chain: nft.chain,
+                        contract_statistics: nft.contract_statistics,
+                        metadata: nft.metadata,
+                        mint_date: nft.mint_date,
+                        name: nft.name,
+                        symbol: nft.symbol,
+                        type: nft.type,
+                        committed: false,
+                        borrower_signed: false
+                    };
+
+                    await waitInsertTableRow(dbTableName, nft.borrower, dbParams);
+
+                    return nft;
                 }
                 else {
-                    console.log(`Fetching NFT ${nft.symbol}_${nft.token_id} from cookies...`);
-                    // If cookies do exist for NFT, replace nft with it and do
-                    // not fetch from NFT Port
-                    nft = cookieNft;
+                    return commonNft;
                 }
-
-                return nft;
             }));
         }
         else {
             console.log('disconnected');
         }
 
-        console.log(nfts)
-
-        /* Add NFTs of existing loan requests to loans */
-        loans = loans.map((loan) => {
-            loan.nft = nfts.find((nft) =>
-                parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
-                loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
-            )
-
-            return loan;
-        });
-
-        /* Remove NFTs of existing loan requests */
-        nfts = nfts.filter((nft) =>
-            !loans.find((loan) =>
-                parseInt(loan.collateral, 16) === parseInt(nft.contract_address) &&
-                loan.tokenId.eq(ethers.BigNumber.from(nft.token_id))
-            )
-        );
-
-        // Update Tableland database
-        if (!!collateral && !!tokenId) {
-            const newLoan = loans.find((loan) => {
-                return parseInt(loan.collateral, 16) === parseInt(collateral) &&
-                    loan.tokenId.eq(ethers.BigNumber.from(tokenId))
-            });
-
-            console.log(newLoan);
-
-            // Store new LoanRequest in Tableland
-            const dbParams = {
-                collateral: collateral,
-                token_id: newLoan.tokenId,
-                lender: ethers.constants.AddressZero,
-                duration: newLoan.duration,
-                imgUrl: newLoan.imgUrl,
-                initialLoanValue: newLoan.initialLoanValue,
-                chain: newLoan.nft.chain,
-                contract_statistics: newLoan.nft.contract_statistics,
-                metadata: newLoan.nft.metadata,
-                mint_date: newLoan.nft.mint_date,
-                name: newLoan.nft.name,
-                symbol: newLoan.nft.symbol,
-                type: newLoan.nft.type,
-                rate: newLoan.rate,
-                committed: false,
-                borrower_signed: false,
-                lender_signed: false
-            }
-
-            await insertTableRow(dbTableName, currentAccount, dbParams);
-        }
-
-        setCurrentAccountNfts(nfts);
+        console.log(loans)
         setCurrentAccountLoans(loans);
 
-        return { nfts, loans, loanRequestContract };
+        return loans;
     }
 
-    const getAccountLoanRequests = async (account, network, nfts) => {
-        /*
-         * Get all loan request parameters for each loan submitted by user.
-         */
-        if (account === '' || network === '') { return; }
+    const fetchBorrowerLoans = async (account, network) => {
+        const { dbTableName } = config(network);
+        console.log(dbTableName)
+        console.log(account)
 
-        // Get contract
-        const provider = getProvider();
-        const borrower = provider.getSigner(account);
-        const { loanRequestAddress, loanRequestABI } = config(network);
+        const colsInclude = ['borrower'];
+        const valsInclude = [[account]];
+        const conjInclude = [''];
 
-        const loanRequestContract = new ethers.Contract(
-            loanRequestAddress,
-            loanRequestABI,
-            borrower
+        const loans = await fetchRowsWhere(
+            dbTableName, [colsInclude, valsInclude, conjInclude]
         );
+        console.log(loans)
 
-        // Get loan requests and nft image url
-        const loanRequests = await loanRequestContract.getLoans(account);
-        const loans = loanRequests.map((loan) => {
-            // Loan request data
-            const { collateral, tokenId, initialLoanValue, rate, duration, lender } = loan;
-
-            // Nft image url
-            const nftData = [...nfts].find(nft =>
-                parseInt(collateral, 16) === parseInt(nft.contract_address, 16) &&
-                tokenId.eq(ethers.BigNumber.from(nft.token_id))
-            )
-
-            // If no NFT matched, exit
-            if (!nftData) return {};
-
-            // Get image URL
-            const imgUrl = !!nftData.cached_file_url ? nftData.cached_file_url : nftData.file_url;
-
-            return { collateral, tokenId, initialLoanValue, rate, duration, lender, imgUrl };
-        });
-
-        setCurrentLoanRequestContract(loanRequestContract);
-
-        return { loanRequestContract, loans };
+        return loans;
     }
 
     const submitLoanRequest = async () => {
@@ -336,22 +288,21 @@ export default function BorrowerPage() {
         // Get input values
         const nft = document.getElementById('datalist-nft').value;
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
-        const initialLoanValue = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
-        const rate = ethers.utils.parseUnits(document.getElementById('input-rate').value);
-        const duration = document.getElementById('input-duration').value;
+        const initial_loan_value = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+        const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
+        const expiration = document.getElementById('input-expiration').value;
 
         // Get contract
         const {
             loanRequestAddress,
             loanRequestABI,
-            devFront,
-            transferibles
+            dbTableName,
+            erc721
         } = config(currentNetwork);
 
         const provider = getProvider();
-        const borrower = provider.getSigner(
-            !devFront ? currentAccount : transferibles[0].recipient
-        );
+        const borrower = provider.getSigner(currentAccount);
+        console.log(borrower)
 
         const loanRequestContract = new ethers.Contract(
             loanRequestAddress,
@@ -360,23 +311,45 @@ export default function BorrowerPage() {
         );
 
         try {
-            // Create new loan request
-            const tx = await loanRequestContract.createLoanRequest(
+            console.log('Submitting loan request...');
+
+            // Approve transfer of NFT to LoanRequest from Borrower
+            const nftContract = new ethers.Contract(nft, erc721, borrower);
+            let tx = await nftContract.approve(loanRequestAddress, tokenId);
+            await tx.wait();
+
+            // Create new LoanRequest
+            tx = await loanRequestContract.createLoanRequest(
                 nft,
                 tokenId,
-                initialLoanValue,
+                initial_loan_value,
                 rate,
-                duration,
+                expiration,
             );
+
             const receipt = await tx.wait();
             console.log('receipt: ', receipt);
+
+            // Update Tableland with newly submitted LoanRequest parameters
+            const dbParams = {
+                collateral: nft,
+                token_id: tokenId,
+                loan_requested: true,
+                expiration: expiration,
+                initial_loan_value: initial_loan_value,
+                rate: rate,
+                committed: true,
+                unpaid_balance: initial_loan_value
+            }
+
+            await updateTable(dbTableName, dbParams);
         }
         catch (err) {
             console.log(err);
-            return { success: false, collateral: undefined, tokenId: undefined };
+            return false;
         }
 
-        return { success: true, collateral: nft, tokenId: tokenId };
+        return true;
     }
 
     /* ---------------------------------------  *
@@ -437,7 +410,7 @@ export default function BorrowerPage() {
 
         try {
             switch (attribute) {
-                case 'duration':
+                case 'expiration':
                     tx = await loanRequestContract.setLoanParam(
                         loanId,
                         attribute,
@@ -450,10 +423,10 @@ export default function BorrowerPage() {
                     dbParams = {
                         collateral: params.collateral,
                         token_id: params.tokenId,
-                        duration: ethers.BigNumber.from(paramElement.value)
+                        expiration: ethers.BigNumber.from(paramElement.value)
                     };
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 case 'value':
@@ -470,9 +443,9 @@ export default function BorrowerPage() {
                         collateral: params.collateral,
                         token_id: params.tokenId,
                     };
-                    dbParams[attribute === 'value' ? 'initialLoanValue' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
+                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 case 'lender':
@@ -486,7 +459,7 @@ export default function BorrowerPage() {
                         lender: paramElement.value
                     };
 
-                    await updateTable(dbTableName, currentAccount, dbParams);
+                    await updateTable(dbTableName, dbParams);
 
                     break;
                 default:
@@ -499,44 +472,15 @@ export default function BorrowerPage() {
     }
 
     /* ---------------------------------------  *
-     *            EVENT LISTENERS               *
-     * ---------------------------------------  */
-    const setSubmittedLoanRequestListener = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('SubmittedLoanRequest', () => {
-            if (!isPageLoad) {
-                console.log('SUBMITTED_LOAN_REQUEST LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    const setLoanRequestLenderChangedListeners = (loanRequestContract) => {
-        // Set loan request listener
-        loanRequestContract.on('LoanRequestLenderChanged', () => {
-            if (!isPageLoad) {
-                console.log('LOAN_REQUEST_LENDER_CHANGED LISTENER TRIGGERED!');
-            }
-        });
-    }
-
-    /* ---------------------------------------  *
      *           FRONTEND RENDERING             *
      * ---------------------------------------  */
-    const renderLoanRequestElements = async (nfts, network) => {
+    const renderLoanRequestElements = async (loans, network) => {
         const { devFront } = config(network);
+        const potentialLoans = loans.filter(loan => !loan.loan_requested);
 
-        setLoanRequestElement(
+        setCurrentLoanRequestElement(
             <BorrowerLoanRequestForm
-                currentAccountNfts={nfts}
+                currentAccountNfts={potentialLoans}
                 submitCallback={callback__SubmitLoanRequest}
                 {...DEFAULT_LOAN_REQUEST_PARAMETERS}
                 _dev={devFront}
@@ -546,22 +490,52 @@ export default function BorrowerPage() {
 
     const renderExistingLoanElements = async (account, network, loans, loanRequestContract) => {
         const getExistingLoanElements = async () => {
-            const existingLoanElements = loans.map((loan, i) => {
-                return (
-                    <BorrowerExistingLoanForm
-                        key={i}
-                        loanNumber={i}
-                        currentAccount={account}
-                        currentNetwork={network}
-                        currentLoanRequestContract={loanRequestContract}
-                        updateLoanFunc={callback__UpdateLoan}
-                        fetchNftFunc={fetchNftData}
-                        {...loan}
-                    />
-                )
-            });
+            const activeLoans = loans.filter(loan => loan.loan_requested && !!loan.contract_address);
+            const requestedLoans = loans.filter(loan => loan.loan_requested && !loan.contract_address);
 
-            return existingLoanElements;
+            const numActiveLoans = activeLoans.length;
+            console.log(numActiveLoans)
+
+            const currentExistingLoanElements = [];
+            currentExistingLoanElements.push(
+                activeLoans.map((loan, i) => {
+                    return (
+                        <BorrowerExistingLoanForm
+                            key={i}
+                            loanNumber={i}
+                            offset={0}
+                            currentAccount={account}
+                            currentNetwork={network}
+                            currentLoanRequestContract={loanRequestContract}
+                            updateLoanFunc={callback__UpdateLoan}
+                            fetchNftFunc={fetchNftData}
+                            {...loan}
+                        />
+                    )
+                })
+            );
+
+            currentExistingLoanElements.push(
+                requestedLoans.map((loan, i) => {
+                    console.log(i)
+                    console.log(i + numActiveLoans)
+                    return (
+                        <BorrowerExistingLoanForm
+                            key={i + numActiveLoans}
+                            loanNumber={i + numActiveLoans}
+                            offset={numActiveLoans}
+                            currentAccount={account}
+                            currentNetwork={network}
+                            currentLoanRequestContract={loanRequestContract}
+                            updateLoanFunc={callback__UpdateLoan}
+                            fetchNftFunc={fetchNftData}
+                            {...loan}
+                        />
+                    )
+                })
+            );
+
+            return currentExistingLoanElements;
         }
 
         return (
@@ -585,11 +559,11 @@ export default function BorrowerPage() {
 
                 <div className="container">
                     <div className="container-loan-forms">
-                        {loanRequestElement}
+                        {currentLoanRequestElement}
                         <div className="wedge"></div>
                         <div className="container-loan-contracts-master">
                             <h2>Existing Loans</h2>
-                            {!!existingLoanElements && existingLoanElements}
+                            {!!currentExistingLoanElements && currentExistingLoanElements}
                         </div>
                     </div>
                 </div>
