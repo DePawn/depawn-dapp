@@ -125,7 +125,7 @@ contract LoanContract {
             currentLoanValue = 0;
             console.log("accrued interes", accruedInterest);
         }
-        payable(lender).transfer(msg.value);
+        //payable(lender).transfer(msg.value);
 
         if(currentLoanValue + accruedInterest == 0 )
             status = LoanStatus.PAID;
