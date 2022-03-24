@@ -15,6 +15,7 @@ export default function BorrowerExistingLoanForm(props) {
     const [currentLoanContract, setCurrentLoanContract] = useState('');
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentSignStatus, setCurrentSignStatus] = useState(undefined);
+    const [currentLoanContractStatus, setCurrentLoanContractStatus] = useState(undefined);
     const [currentEdit, setCurrentEdit] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
@@ -54,10 +55,52 @@ export default function BorrowerExistingLoanForm(props) {
         if (!!props.contract_address) setCurrentLoanContract(props.contract_address);
     }
 
+    async function currentLoanContractStatusSetter() {
+        if (!!props.contract_address) {
+            // Get contract
+            const provider = getProvider();
+            const borrower = provider.getSigner(props.currentAccount);
+
+            const { loanContractABI } = config(props.currentNetwork);
+
+            const loanContract = new ethers.Contract(
+                props.contract_address,
+                loanContractABI,
+                borrower
+            );
+
+            const status = await loanContract.getStatus();
+            setCurrentLoanContractStatus(status.toLowerCase());
+            console.log(status)
+        }
+    }
+
+    async function calcRedemeption() {
+        if (!!props.contract_address) {
+            // Get contract
+            const provider = getProvider();
+            const borrower = provider.getSigner(props.currentAccount);
+
+            const { loanContractABI } = config(props.currentNetwork);
+
+            const loanContract = new ethers.Contract(
+                props.contract_address,
+                loanContractABI,
+                borrower
+            );
+
+            const status = await loanContract.calculateRedemption();
+            // setCurrentLoanContractStatus(status.toLowerCase());
+            console.log(status)
+        }
+    }
+
     useEffect(() => {
         currentNftCommitStatusSetter();
         currentSignStatusSetter();
         currentLoanContractSetter();
+        currentLoanContractStatusSetter();
+        calcRedemeption();
         // eslint-disable-next-line
     }, []);
 
@@ -234,6 +277,93 @@ export default function BorrowerExistingLoanForm(props) {
         lenderElement.value = ethers.constants.AddressZero;
     }
 
+    async function receiveFunds() {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+
+        const { loanContractABI } = config(props.currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            props.contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        // Retrieve funds from loan
+        const tx = await loanContract.getMyLoan();
+        await tx.wait();
+
+        // Update LoanContract state locally
+        currentLoanContractStatusSetter();
+    }
+
+    async function payLoan() {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+
+        const { loanContractABI } = config(props.currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            props.contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        // Get payment from UI
+        let payment = document.getElementById(`input-existing-loan-pay-${props.loan_number}`).value;
+        payment = ethers.utils.parseEther(payment);
+
+        // Make payment
+        const tx = await loanContract.payLoan({ value: payment });
+        const receipt = await tx.wait();
+
+        // Get unpaid balance on loan
+        const topic = loanContract.interface.getEventTopic('UnpaidBalance');
+        const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+        console.log(log);
+
+        // Update LoanContract state locally
+        currentLoanContractStatusSetter();
+    }
+
+    async function withdrawCollateral() {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+
+        const { loanContractABI, dbTableName } = config(props.currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            props.contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        // Make payment
+        const tx = await loanContract.withdrawNFTBorrower();
+        const receipt = await tx.wait();
+
+        // Get unpaid balance on loan
+        const topic = loanContract.interface.getEventTopic('NFTEvent');
+        const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+        console.log(log);
+
+        // Update Tableland database
+        const dbParams = {
+            collateral: props.collateral,
+            token_id: props.tokenId,
+            committed: false
+        };
+
+        await updateTable(dbTableName, dbParams);
+
+        setCurrentNftCommitStatus(false);
+    }
+
     function renderNftImage() {
         return (
             !!props.img_url
@@ -325,6 +455,20 @@ export default function BorrowerExistingLoanForm(props) {
         );
     }
 
+    function renderWithdrawableContractElement() {
+        return (
+            <div className="container-existing-loan-buttons">
+                <div
+                    id={`button-existing-loan-distribute-${props.loan_number}`}
+                    className="button button-existing-loan button-existing-loan-distribute button-enabled"
+                    onClick={receiveFunds}
+                >
+                    Distribute
+                </div>
+            </div>
+        );
+    }
+
     function renderActiveLoanContractElement() {
         return (
             <div className="container-existing-loan-component">
@@ -343,13 +487,32 @@ export default function BorrowerExistingLoanForm(props) {
         );
     }
 
+    function renderPaidContractElement() {
+        return (
+            <div className="container-existing-loan-buttons">
+                <div
+                    id={`button-existing-loan-withdraw-nft-${props.loan_number}`}
+                    className="button button-existing-loan button-existing-loan-withdraw-nft button-enabled"
+                    onClick={withdrawCollateral}
+                >
+                    Withdraw NFT
+                </div>
+            </div>
+        );
+    }
+
     function renderPayLoanElements() {
         return (
             <div className="container-active-loan-component">
-                <div className="button-existing-loan-pay button-enabled">Pay</div>
+                <div
+                    className="button-existing-loan-pay button-enabled"
+                    onClick={payLoan}
+                >
+                    Pay
+                </div>
                 <input
                     type="string"
-                    id={"input-existing-loan-lender-" + props.loan_number}
+                    id={`input-existing-loan-pay-${props.loan_number}`}
                     className="input input-existing-loan-pay"
                     placeholder='(ETH)...'>
                 </input>
@@ -505,10 +668,17 @@ export default function BorrowerExistingLoanForm(props) {
                 </div>
             </div>
 
-            {!!currentLoanContract
-                ? renderActiveLoanContractElement() && renderPayLoanElements()
-                : renderLoanRequestButtons()
-            }
+            {currentLoanContractStatus === undefined
+                && renderLoanRequestButtons()}
+
+            {(currentLoanContractStatus === 'active' || currentLoanContractStatus === 'default')
+                && renderActiveLoanContractElement() && renderPayLoanElements()}
+
+            {currentLoanContractStatus === 'withdrawable'
+                && renderWithdrawableContractElement()}
+
+            {currentLoanContractStatus === 'paid' && currentNftCommitStatus
+                && renderPaidContractElement()}
 
             <div className="container-existing-loan-img">
                 {renderNftImage()}

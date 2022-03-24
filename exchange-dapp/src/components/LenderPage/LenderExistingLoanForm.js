@@ -185,13 +185,14 @@ export default function LenderExistingLoanForm(props) {
         card.classList.toggle('is-flipped');
     }
 
+    console.log(currentLoanContract)
     return (
         <div className={`container-available-loan-form ${!!currentLoanContract ? 'container-active-loan' : ''}`}>
             <h3>
                 {!!currentLoanContract && 'Active Loan '}
                 {!!currentLoanContract
                     ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(`${props.contract_address}`)}</span>
-                    : `Loan #${parseInt(props.loan_number) + 1}`}
+                    : ''}
             </h3>
 
             <div className="container-available-loan-component">

@@ -4,7 +4,6 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 contract LoanContract {
     using SafeMath for uint256;
@@ -58,8 +57,6 @@ contract LoanContract {
         uint256 _rate,
         uint64 _expiration
     ) {
-        console.log("deploying contract...");
-
         borrower = _members[0];
         lender = _members[1];
         arbiter = address(this);
@@ -69,8 +66,6 @@ contract LoanContract {
         rate = _rate;
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
-
-        //start = block.timestamp;
         start = 1644202800; // 2022-02-7
     }
 
@@ -98,7 +93,7 @@ contract LoanContract {
 
     function calculateInterest() public view returns (uint256) {
         uint256 daysPassed = (block.timestamp - start) / 60 / 60 / 24;
-        console.log("days passed", daysPassed);
+
         return currentLoanValue.mul(rate).div(100).mul(daysPassed).div(365);
     }
 
@@ -125,21 +120,15 @@ contract LoanContract {
 
         uint256 currentInterest = calculateInterest();
 
-        console.log(currentLoanValue);
-        console.log(msg.value);
-
         accruedInterest += currentInterest;
         start = block.timestamp;
-        console.log("accrued interest", accruedInterest);
 
         if (currentLoanValue >= msg.value) {
             currentLoanValue = currentLoanValue - msg.value;
         } else {
             accruedInterest -= (msg.value - currentLoanValue);
             currentLoanValue = 0;
-            console.log("accrued interes", accruedInterest);
         }
-        //payable(lender).transfer(msg.value);
 
         if (currentLoanValue + accruedInterest == 0) status = LoanStatus.PAID;
 

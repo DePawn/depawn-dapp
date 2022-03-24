@@ -11,7 +11,6 @@ import { loanContractTime, displayContractTime } from '../../utils/timeUtils';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
 import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
-import { saveNftCookies, loadNftCookies } from '../../utils/cookieUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
     defaultNft: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
@@ -37,7 +36,7 @@ export default function BorrowerPage() {
 
     useEffect(() => {
         console.log('Page loading...');
-        pageLoadSequence();
+        if (isPageLoad) pageLoadSequence();
         // eslint-disable-next-line
     }, []);
 
@@ -126,9 +125,6 @@ export default function BorrowerPage() {
 
         const { dbTableName } = config(currentNetwork);
         const { attribute, loan_number, collateral, tokenId } = currentUpdateRequestStatus;
-
-        // // Set account
-        // const { account, chainId } = await checkIfWalletIsConnected();
 
         // Get LoanRequestContract
         const loanRequestContract = getLoanRequestContract(currentAccount, currentNetwork);
@@ -337,7 +333,7 @@ export default function BorrowerPage() {
         // Get input values
         const nft = document.getElementById('datalist-nft').value;
         const tokenId = ethers.BigNumber.from(document.getElementById('input-token-id').value);
-        const initial_loan_value = ethers.utils.parseUnits(document.getElementById('input-initial-value').value);
+        const initial_loan_value = ethers.utils.parseEther(document.getElementById('input-initial-value').value);
         const rate = ethers.BigNumber.from(document.getElementById('input-rate').value);
         const expiration = loanContractTime(...document.getElementById('input-expiration').value.split('-'));
         console.log(expiration)
@@ -447,16 +443,16 @@ export default function BorrowerPage() {
                     dbParams = {
                         collateral: collateral,
                         token_id: tokenId,
-                        expiration: loanContractTime(...paramElement.value.split('-'))
+                        expiration: loanContractTime(...paramElement.value.split('-')),
+                        lender_signed: false,
                     };
 
                     break;
                 case 'value':
-                case 'rate':
                     tx = await loanRequestContract.setLoanParam(
                         loan_number,
                         attribute,
-                        ethers.BigNumber.from(paramElement.value),
+                        ethers.utils.parseEther(paramElement.value),
                     );
                     receipt = await tx.wait();
 
@@ -464,20 +460,41 @@ export default function BorrowerPage() {
                     dbParams = {
                         collateral: collateral,
                         token_id: tokenId,
+                        initial_loan_value: ethers.utils.parseEther(paramElement.value),
+                        unpaid_balance: ethers.utils.parseEther(paramElement.value),
+                        lender_signed: false,
                     };
-                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = paramElement.value;
 
                     break;
-                case 'lender':
-                    tx = await loanRequestContract.setLender(account, loan_number);
+                case 'rate':
+                    tx = await loanRequestContract.setLoanParam(
+                        loan_number,
+                        attribute,
+                        ethers.utils.parseEther(paramElement.value),
+                    );
                     receipt = await tx.wait();
 
                     // Update Tableland database
                     dbParams = {
                         collateral: collateral,
                         token_id: tokenId,
+                        rate: paramElement.value,
+                        lender_signed: false,
+                    };
+
+                    break;
+                case 'lender':
+                    tx = await loanRequestContract.setLender(account, loan_number);
+                    receipt = await tx.wait();
+
+                    console.log('doin it')
+
+                    // Update Tableland database
+                    dbParams = {
+                        collateral: collateral,
+                        token_id: tokenId,
                         lender: ethers.constants.AddressZero,
-                        lender_signed: false
+                        lender_signed: false,
                     };
 
                     // Set UI
