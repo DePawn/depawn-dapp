@@ -176,7 +176,7 @@ export default function BorrowerLoanRequestForm(props) {
                         type="string"
                         id="input-rate"
                         className="input input-loan-request input-rate"
-                        placeholder='Rate...'
+                        placeholder='%...'
                         defaultValue={props.defaultRate}>
                     </input>
                 </div>

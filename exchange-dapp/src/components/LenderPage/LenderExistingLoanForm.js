@@ -8,6 +8,7 @@ import { updateTable } from '../../external/tablelandInterface';
 
 export default function LenderExistingLoanForm(props) {
     const [currentLenderSignStatus, setCurrentLenderSignStatus] = useState(undefined);
+    const [currentLoanContract, setCurrentLoanContract] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
     console.log(props)
@@ -17,8 +18,13 @@ export default function LenderExistingLoanForm(props) {
         setCurrentLenderSignStatus(props.lender_signed);
     }
 
+    async function currentLoanContractSetter() {
+        if (!!props.contract_address) setCurrentLoanContract(props.contract_address);
+    }
+
     useEffect(() => {
         currentSignStatusSetter();
+        currentLoanContractSetter();
         // eslint-disable-next-line
     }, []);
 
@@ -42,6 +48,8 @@ export default function LenderExistingLoanForm(props) {
 
             await updateTable(dbTableName, dbParams);
 
+            setCurrentLenderSignStatus(false);
+
             return false;
         }
         catch (err) {
@@ -60,7 +68,14 @@ export default function LenderExistingLoanForm(props) {
                         id={`card__inner__existing-${props.loan_number}`}
                         onClick={() => setCardFlipEventListener(props.loan_number)}
                     >
-                        <div className={`card__face card__face--front ${props.committed ? 'card__face--nft-committed' : 'card__face--nft-uncommitted'}`}>
+                        <div className={
+                            `card__face card__face--front ${props.committed && !currentLoanContract
+                                ? 'card__face--nft-committed'
+                                : !currentLoanContract
+                                    ? 'card__face--nft-uncommitted'
+                                    : ''
+                            }`
+                        }>
                             <img
                                 src={props.img_url.replace('ipfs://', 'https://ipfs.io/')}
                                 alt={props.img_url}
@@ -69,7 +84,14 @@ export default function LenderExistingLoanForm(props) {
                             />
                         </div>
 
-                        <div className={`card__face card__face--back ${props.committed ? 'card__face--nft-committed' : 'card__face--nft-uncommitted'}`}>
+                        <div className={
+                            `card__face card__face--back ${props.committed && !currentLoanContract
+                                ? 'card__face--nft-committed'
+                                : !currentLoanContract
+                                    ? 'card__face--nft-uncommitted'
+                                    : ''
+                            }`
+                        }>
                             <div className="card__content">
 
                                 <div className="card__header">
@@ -111,16 +133,65 @@ export default function LenderExistingLoanForm(props) {
         return contractStatsElements;
     }
 
+    function renderUnconfirmedButtons() {
+        return (
+            <div className="container-available-loan-buttons">
+                <div
+                    id={"button-available-loan-sign-" + props.loan_number}
+                    className="button button-available-loan button-available-loan-sign"
+                    onClick={!!currentLenderSignStatus
+                        ? removeSignatureFromLoanRequest
+                        : () => { props.sponsorLoanRequestFunc(props).then((res) => { setCurrentLenderSignStatus(res) }) }
+                    }
+                >
+                    {!!currentLenderSignStatus ? "Unsign" : "Sign"}
+                </div>
+            </div>
+        );
+    }
+
+    function renderContractElement() {
+        return (
+            <div className="container-available-loan-component">
+                <div className="label label-contract">Contract:</div>
+                <input
+                    type="string"
+                    id={"input-available-loan-contract-" + props.loan_number}
+                    className="input input-available-loan-contract"
+                    defaultValue={currentLoanContract}
+                    readOnly={true}>
+                </input>
+            </div>
+        );
+    }
+
+    function renderUnpaidBalanceElement() {
+        return (
+            <div className="container-available-loan-component">
+                <div className="label label-unpaid-balance">Balance:</div>
+                <input
+                    type="string"
+                    id={"input-available-loan-unpaid-balance-" + props.loan_number}
+                    className="input input-available-loan-unpaid-balance"
+                    defaultValue={ethers.utils.formatEther(props.unpaid_balance)}
+                    readOnly={true}>
+                </input>
+            </div>
+        );
+    }
+
     function setCardFlipEventListener(loanNumber) {
         const card = document.getElementById(`card__inner__existing-${loanNumber}`);
         card.classList.toggle('is-flipped');
     }
 
     return (
-        <div className="container-available-loan-form">
-            <h3>Loan {!!props.contract_address
-                ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(`${props.contract_address}`)}</span>
-                : `# ${parseInt(props.loan_number) + 1}`}
+        <div className={`container-available-loan-form ${!!currentLoanContract ? 'container-active-loan' : ''}`}>
+            <h3>
+                {!!currentLoanContract && 'Active Loan '}
+                {!!currentLoanContract
+                    ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(`${props.contract_address}`)}</span>
+                    : `Loan #${parseInt(props.loan_number) + 1}`}
             </h3>
 
             <div className="container-available-loan-component">
@@ -165,7 +236,7 @@ export default function LenderExistingLoanForm(props) {
                     type="string"
                     id={"input-available-loan-rate-" + props.loan_number}
                     className="input input-available-loan-rate"
-                    placeholder='Rate...'
+                    placeholder='%...'
                     value={props.rate}
                     readOnly={true}>
                 </input>
@@ -187,28 +258,23 @@ export default function LenderExistingLoanForm(props) {
                 <input
                     type="string"
                     id={"input-available-loan-borrower-" + props.loan_number}
-                    className={`input input-available-loan-borrower ${props.borrower_signed ? 'input-available-loan-borrower--signed' : 'input-available-loan-borrower--unsigned'}`}
+                    className={
+                        `input input-available-loan-borrower ${props.borrower_signed && !currentLoanContract
+                            ? 'input-available-loan-borrower--signed'
+                            : !currentLoanContract
+                                ? 'input-available-loan-borrower--unsigned'
+                                : ''}`
+                    }
                     placeholder='Not set...'
                     value={props.borrower}
                     readOnly={true}>
                 </input>
             </div>
 
-            <div className="container-available-loan-buttons">
-
-                <div
-                    id={"button-available-loan-sign-" + props.loan_number}
-                    className="button button-available-loan button-available-loan-sign"
-                    onClick={() => {
-                        !!currentLenderSignStatus
-                            ? removeSignatureFromLoanRequest().then((res) => { setCurrentLenderSignStatus(res) })
-                            : props.sponsorLoanRequestFunc(props).then((res) => { setCurrentLenderSignStatus(res) })
-                    }}
-                >
-                    {!!currentLenderSignStatus ? "Unsign" : "Sign"}
-                </div>
-
-            </div>
+            {!!currentLoanContract
+                ? renderContractElement() && renderUnpaidBalanceElement()
+                : renderUnconfirmedButtons()
+            }
 
             <div className="container-available-loan-img">
                 {renderNftImage()}

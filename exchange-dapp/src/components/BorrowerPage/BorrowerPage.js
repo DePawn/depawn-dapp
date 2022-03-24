@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
-import { loanContractTime } from '../../utils/timeUtils';
+import { loanContractTime, displayContractTime } from '../../utils/timeUtils';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
 import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
@@ -437,8 +437,8 @@ export default function BorrowerPage() {
                 case 'expiration':
                     tx = await loanRequestContract.setLoanParam(
                         loan_number,
-                        attribute,
-                        ethers.BigNumber.from(paramElement.value),
+                        'duration',
+                        loanContractTime(...paramElement.value.split('-')),
                     );
                     receipt = await tx.wait();
                     console.log(receipt);
@@ -447,7 +447,7 @@ export default function BorrowerPage() {
                     dbParams = {
                         collateral: collateral,
                         token_id: tokenId,
-                        expiration: ethers.BigNumber.from(paramElement.value)
+                        expiration: loanContractTime(...paramElement.value.split('-'))
                     };
 
                     break;
@@ -456,7 +456,7 @@ export default function BorrowerPage() {
                     tx = await loanRequestContract.setLoanParam(
                         loan_number,
                         attribute,
-                        ethers.utils.parseUnits(paramElement.value),
+                        ethers.BigNumber.from(paramElement.value),
                     );
                     receipt = await tx.wait();
 
@@ -465,7 +465,7 @@ export default function BorrowerPage() {
                         collateral: collateral,
                         token_id: tokenId,
                     };
-                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
+                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = paramElement.value;
 
                     break;
                 case 'lender':

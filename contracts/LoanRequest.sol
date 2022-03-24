@@ -170,17 +170,18 @@ contract LoanRequest {
 
         LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
         uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-
-        // Remove lender signature
-        multiSig._removeSignature(
+        address _lender = multiSig.getSafesSigner(
             _loanRequest.safeId,
-            multiSig.getSafesSigner(_loanRequest.safeId, lenderPosition)
+            lenderPosition
         );
 
-        // Return funds to lender
-        payable(multiSig.getSafesSigner(_safeId, lenderPosition)).transfer(
-            _loanRequest.initialLoanValue
-        );
+        if (_lender != address(0)) {
+            // Remove lender signature
+            multiSig._removeSignature(_loanRequest.safeId, _lender);
+
+            // Return funds to lender
+            payable(_lender).transfer(_loanRequest.initialLoanValue);
+        }
 
         bytes32 _paramHash = keccak256(bytes(_param));
         if (_paramHash == keccak256(bytes("value"))) {

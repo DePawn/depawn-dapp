@@ -1,13 +1,12 @@
 import '../../static/css/LenderPage.css';
 import '../../static/css/CardFlip.css';
-import LenderAvailableLoanForm from './LenderAvailableLoanForm';
 import LenderExistingLoanForm from './LenderExistingLoanForm';
 
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
-import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
+import { fetchRowsWhere, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 
 export default function BorrowerPage() {
