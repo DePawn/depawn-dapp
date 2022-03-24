@@ -1,13 +1,12 @@
 import '../../static/css/LenderPage.css';
 import '../../static/css/CardFlip.css';
-import LenderAvailableLoanForm from './LenderAvailableLoanForm';
 import LenderExistingLoanForm from './LenderExistingLoanForm';
 
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
-import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
+import { fetchRowsWhere, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 
 export default function BorrowerPage() {
@@ -49,7 +48,7 @@ export default function BorrowerPage() {
         // Render Sponsored loan elements
         const sponsoredLoans = await __fetchSponsoredLoans(account, chainId);
         const sponsoredLoanElements = await renderLoanElements(
-            account, chainId, sponsoredLoans, loanRequestContract, availableLoans.length
+            account, chainId, sponsoredLoans, loanRequestContract
         );
         setCurrentSponsoredLoanElements(sponsoredLoanElements);
     }
@@ -194,7 +193,7 @@ export default function BorrowerPage() {
         collateral,
         tokenId,
         borrower,
-        loanNumber,
+        loan_number,
         initial_loan_value,
 
     }) => {
@@ -205,14 +204,10 @@ export default function BorrowerPage() {
             if (borrower === account) {
                 throw new Error("Lender cannot be the borrower for a loan!");
             }
-
-            // console.log(ethers.BigNumber.from(props))
-
-            console.log('z')
             console.log(initial_loan_value)
 
             const tx = await loanRequestContract.setLender(
-                borrower, ethers.BigNumber.from(loanNumber),
+                borrower, ethers.BigNumber.from(loan_number),
                 { value: ethers.BigNumber.from(initial_loan_value) }
             );
             const receipt = await tx.wait();
@@ -371,14 +366,12 @@ export default function BorrowerPage() {
     /* ---------------------------------------  *
      *           FRONTEND RENDERING             *
      * ---------------------------------------  */
-    const renderLoanElements = async (account, network, loans, loanRequestContract, offset = 0) => {
+    const renderLoanElements = async (account, network, loans, loanRequestContract) => {
         const getExistingLoanElements = async () => {
             const currentSponsoredLoanElements = loans.map((loan, i) => {
                 return (
                     <LenderExistingLoanForm
                         key={i}
-                        loanNumber={i}
-                        offset={offset}
                         currentAccount={account}
                         currentNetwork={network}
                         loanRequestContract={loanRequestContract}
@@ -399,33 +392,6 @@ export default function BorrowerPage() {
                 : (<div><div className="container-existing-loan-form">☹️💀 No loans atm 💀☹️</div></div>)
         )
     }
-
-    // const renderExistingLoanElements = async (account, network, loans, loanRequestContract) => {
-    //     const getExistingLoanElements = async () => {
-    //         const currentSponsoredLoanElements = loans.map((loan, i) => {
-    //             return (
-    //                 <LenderExistingLoanForm
-    //                     key={i}
-    //                     loanNumber={i}
-    //                     currentAccount={account}
-    //                     currentNetwork={network}
-    //                     currentLoanRequestContract={loanRequestContract}
-    //                     updateLoanFunc={callback__UpdateLoan}
-    //                     fetchNftFunc={fetchNftData}
-    //                     {...loan}
-    //                 />
-    //             )
-    //         });
-
-    //         return currentSponsoredLoanElements;
-    //     }
-
-    //     return (
-    //         !!loans.length && !!account && !!network
-    //             ? (<div>{await getExistingLoanElements()}</div>)
-    //             : (<div><div className="container-existing-loan-form">☹️💀 No loans atm 💀☹️</div></div>)
-    //     )
-    // }
 
     /* ---------------------------------------  *
      *          LENDERPAGE.JS RETURN            *

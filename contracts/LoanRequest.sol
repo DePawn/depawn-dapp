@@ -3,8 +3,6 @@ pragma solidity ^0.8.5;
 
 import "./MultiSig.sol";
 import "./LoanContract.sol";
-import "./LoanRequestEvents.sol";
-//import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -24,8 +22,8 @@ contract LoanRequest {
     uint8 private lenderPosition = 1;
     address[] public borrowers;
     mapping(address => LoanStatus[]) public loanRequests;
-    
-    
+    MultiSig multiSig;
+
     event SubmittedLoanRequest(
         address indexed _borrower,
         uint256 indexed _loanId,
@@ -55,14 +53,10 @@ contract LoanRequest {
         address indexed _lender,
         uint256 loanId
     );
-    
-    
 
-    MultiSig multiSig;
     //LoanRequestEvents ctEvents;
     constructor() {
-        multiSig = new  MultiSig(2);
-        //ctEvents = LoanRequestEvents(_ctEvents);
+        multiSig = new MultiSig(2);
     }
 
     function createLoanRequest(
@@ -78,7 +72,6 @@ contract LoanRequest {
         uint256 _loanId = loanRequests[msg.sender].length;
 
         multiSig._createSafe(msg.sender);
-        
 
         // Append to borrower
         if (_loanId == 0) borrowers.push(msg.sender);
@@ -111,24 +104,19 @@ contract LoanRequest {
         return _loanId;
     }
 
-    
-    function withdrawNFT(uint256 _loanId)
-        external
-        
-    {
+    function withdrawNFT(uint256 _loanId) external {
         onlyHasLoan(msg.sender);
         onlyNotConfirmed(msg.sender, _loanId);
-        onlyBorrower(_loanId);
+
         address collateral = loanRequests[msg.sender][_loanId].collateral;
         uint256 tokenId = loanRequests[msg.sender][_loanId].tokenId;
+
         IERC721(collateral).safeTransferFrom(
             address(this),
             msg.sender,
             tokenId
         );
     }
-    
-    
 
     function onERC721Received(
         address,
@@ -142,7 +130,6 @@ contract LoanRequest {
             );
     }
 
-
     function isReady(address _borrower, uint256 _loanId)
         public
         view
@@ -152,18 +139,13 @@ contract LoanRequest {
 
         _isReady =
             multiSig._getSignStatus(_loanRequest.safeId, _borrower) &&
-            multiSig._getSignStatus(_loanRequest.safeId, multiSig.getSigner(_loanRequest.safeId, lenderPosition)) &&
+            multiSig._getSignStatus(
+                _loanRequest.safeId,
+                multiSig.getSigner(_loanRequest.safeId, lenderPosition)
+            ) &&
             _loanRequest.collateral != address(0) &&
             _loanRequest.initialLoanValue != 0 &&
             _loanRequest.duration != 0;
-    }
-
-    function getLoans(address _borrower)
-        external
-        view
-        returns (LoanStatus[] memory)
-    {
-        return loanRequests[_borrower];
     }
 
     function getSignStatus(
@@ -171,25 +153,35 @@ contract LoanRequest {
         address _borrower,
         uint256 _loanId
     ) external view returns (bool) {
-        //uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        return multiSig._getSignStatus(loanRequests[_borrower][_loanId].safeId, _signer);
+        return
+            multiSig._getSignStatus(
+                loanRequests[_borrower][_loanId].safeId,
+                _signer
+            );
     }
 
     function setLoanParam(
         uint256 _loanId,
         string memory _param,
         uint256 _value
-    )
-        external
-        
-    {
+    ) external {
         onlyHasLoan(msg.sender);
-        onlyBorrower(_loanId);
         onlyNotConfirmed(msg.sender, _loanId);
+
         LoanStatus storage _loanRequest = loanRequests[msg.sender][_loanId];
-        
-        multiSig._removeSignature(_loanRequest.safeId, multiSig.getSafesSigner(_loanRequest.safeId, 1));
-        
+        uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
+        address _lender = multiSig.getSafesSigner(
+            _loanRequest.safeId,
+            lenderPosition
+        );
+
+        if (_lender != address(0)) {
+            // Remove lender signature
+            multiSig._removeSignature(_loanRequest.safeId, _lender);
+
+            // Return funds to lender
+            payable(_lender).transfer(_loanRequest.initialLoanValue);
+        }
 
         bytes32 _paramHash = keccak256(bytes(_param));
         if (_paramHash == keccak256(bytes("value"))) {
@@ -211,41 +203,55 @@ contract LoanRequest {
      *   Borrower sets the loan's lender and rates. The borrower will
      *   automatically sign off.
      */
-    function setLender(address _borrower, uint256 _loanId)
-
-        external payable
-        
-    {
+    function setLender(address _borrower, uint256 _loanId) external payable {
         onlyHasLoan(_borrower);
         onlyNotConfirmed(_borrower, _loanId);
         uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
 
-        if (msg.sender != multiSig.getSafesSigner(_safeId,0)) {
-            // If msg.sender != borrower, set msg.sender to lender and
-            // sign off lender.
+        if (msg.sender != multiSig.getSafesSigner(_safeId, 0)) {
+            /*
+             * If msg.sender != borrower, set msg.sender to lender and
+             * sign off lender.
+             */
+
+            // Set lender
             multiSig._setSigner(_safeId, msg.sender, lenderPosition);
 
-            // Lender signs
+            // Sign off lender
             sign(_borrower, _loanId);
 
             emit LoanRequestLenderChanged(_borrower, _loanId, msg.sender);
         } else {
-            // If msg.sender == borrower, unsign lender and set lender
-            // to address(0).
-            
-            multiSig._removeSignature(_safeId, multiSig.getSafesSigner(_safeId, 1));
+            /*
+             * If msg.sender == borrower, unsign lender and set lender
+             * to address(0).
+             */
 
+            // Remove lender signature
+            multiSig._removeSignature(
+                _safeId,
+                multiSig.getSafesSigner(_safeId, lenderPosition)
+            );
+
+            // Return funds to lender
+            payable(multiSig.getSafesSigner(_safeId, lenderPosition)).transfer(
+                loanRequests[_borrower][_loanId].initialLoanValue
+            );
+
+            // Remove lender
             multiSig._setSigner(_safeId, address(0), lenderPosition);
+
             emit LoanRequestLenderChanged(msg.sender, _loanId, address(0));
         }
 
-        loanRequests[_borrower][_loanId].lender = multiSig.getSafesSigner(_safeId, 1);
+        loanRequests[_borrower][_loanId].lender = multiSig.getSafesSigner(
+            _safeId,
+            lenderPosition
+        );
     }
 
     function sign(address _borrower, uint256 _loanId) public payable {
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
-        //uint256 _safeId = _loanRequest.safeId;
-        //uint256 loanValue = _loanRequest.initialLoanValue;
 
         require(
             multiSig._getSignStatus(_loanRequest.safeId, msg.sender) == false,
@@ -253,42 +259,44 @@ contract LoanRequest {
         );
 
         multiSig._sign(_loanRequest.safeId, msg.sender);
-        
-        // Conditionally create contract
 
-        if (isReady(_borrower, _loanId)) {
-            __deployLoanContract(_borrower, _loanId);
-            console.log(_loanRequest.initialLoanValue, msg.value);
+        // Conditionally create contract
+        if (msg.sender != _borrower) {
             require(
                 _loanRequest.initialLoanValue == msg.value,
                 "loan value doesn't match amount sent"
             );
-            (bool success, ) = payable(_loanRequest.loanContract).call{
-                value: msg.value
-            }("");
-            require(success, "Transfer failed.");
+            payable(address(this)).transfer(msg.value);
+        }
+
+        if (isReady(_borrower, _loanId)) {
+            __deployLoanContract(_borrower, _loanId);
+            console.log(_loanRequest.initialLoanValue, msg.value);
+
+            payable(_loanRequest.loanContract).transfer(
+                _loanRequest.initialLoanValue
+            );
         }
     }
-    
-    function removeSignature(address _borrower, uint256 _loanId)
-        external
-        
-    {
+
+    function removeSignature(address _borrower, uint256 _loanId) external {
         onlyHasLoan(_borrower);
         onlyNotConfirmed(_borrower, _loanId);
-        //uint256 _safeId = loanRequests[_borrower][_loanId].safeId;
-        multiSig._removeSignature(loanRequests[_borrower][_loanId].safeId, msg.sender);
+
+        multiSig._removeSignature(
+            loanRequests[_borrower][_loanId].safeId,
+            msg.sender
+        );
     }
-    
-    
-    function __deployLoanContract(address _borrower, uint256 _loanId)
-        private
-        
-    {
+
+    function __deployLoanContract(address _borrower, uint256 _loanId) private {
         onlyHasLoan(_borrower);
         LoanStatus storage _loanRequest = loanRequests[_borrower][_loanId];
-        //uint256 _safeId = _loanRequest.safeId;
-        address _lender = multiSig.getSigner(_loanRequest.safeId, lenderPosition);
+
+        address _lender = multiSig.getSigner(
+            _loanRequest.safeId,
+            lenderPosition
+        );
         multiSig._setConfirmedStatus(_loanRequest.safeId);
 
         LoanContract _loanContract = new LoanContract(
@@ -322,28 +330,19 @@ contract LoanRequest {
         );
     }
 
-    function onlyBorrower(uint256 _loanId) private view {
-        //uint256 _safeId = loanRequests[msg.sender][_loanId].safeId;
-        require(
-            msg.sender == multiSig.getSafesSigner(loanRequests[msg.sender][_loanId].safeId, 0),
-            "You are not the borrower."
-        );
-        
-    }
-
     function onlyHasLoan(address _borrower) private view {
         require(
             loanRequests[_borrower].length > 0,
             "No loans exist for this borrower."
         );
-        
     }
 
-    function onlyNotConfirmed(address _borrower, uint256 _loanId) private view{
+    function onlyNotConfirmed(address _borrower, uint256 _loanId) private view {
         require(
             loanRequests[_borrower][_loanId].loanContract == address(0),
             "Only unconfirmed contracts can be accessed."
         );
-        
     }
+
+    receive() external payable {}
 }

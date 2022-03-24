@@ -4,7 +4,8 @@ import { capitalizeWords } from '../../utils/stringUtils';
 export default function BorrowerLoanRequestForm(props) {
     const [currentNft, setCurrentNft] = useState(0);
     const tabbedBullet = '\xa0\xa0- ';
-
+    const tomorrowDate = new Date().toISOString().split('T')[0];
+    console.log(tomorrowDate)
     console.log(props)
 
     function renderNftDropdown() {
@@ -175,7 +176,7 @@ export default function BorrowerLoanRequestForm(props) {
                         type="string"
                         id="input-rate"
                         className="input input-loan-request input-rate"
-                        placeholder='Rate...'
+                        placeholder='%...'
                         defaultValue={props.defaultRate}>
                     </input>
                 </div>
@@ -183,11 +184,12 @@ export default function BorrowerLoanRequestForm(props) {
                 <div className="container-loan-request-component">
                     <div className="label label-expiration">Maturity:</div>
                     <input
-                        type="string"
+                        type="date"
                         id="input-expiration"
                         className="input input-loan-request input-expiration"
-                        placeholder='YYYY/MM/DD...'
-                        defaultValue={props.defaultDuration}>
+                        min={tomorrowDate}
+                        defaultValue={tomorrowDate}
+                    >
                     </input>
                 </div>
 
@@ -202,6 +204,6 @@ export default function BorrowerLoanRequestForm(props) {
                 </div>
             </div>
 
-        </div>
+        </div >
     )
 }
