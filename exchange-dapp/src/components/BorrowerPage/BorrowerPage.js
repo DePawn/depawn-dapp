@@ -9,7 +9,7 @@ import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
 import { loanContractTime } from '../../utils/timeUtils';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
-import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
+import { fetchRowsWhere, insertTableRow, updateTable, fetchRowCount } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 
 const DEFAULT_LOAN_REQUEST_PARAMETERS = {
@@ -103,12 +103,18 @@ export default function BorrowerPage() {
          */
 
         // Submit loan request
-        const success = await submitLoanRequest();
+        console.log('here i am')
+        const { dbTableName } = config(currentNetwork);
+        const { success, dbParams } = await submitLoanRequest();
 
         // Set account loan and nft data
         let loans = currentAccountLoans;
 
         if (success) {
+            // Update Tableland with newly submitted LoanRequest parameters
+            await updateTable(dbTableName, dbParams);
+
+            // Reset account data
             loans = await setAccountData(currentAccount, currentNetwork);
         }
         console.log('--pageLoadSequence-- Loans: ', loans);
@@ -165,9 +171,6 @@ export default function BorrowerPage() {
         const { dbTableName } = config(currentNetwork);
         const { collateral, tokenId, contract_address } = currentNftWithdrawStatus;
 
-        // Get LoanRequestContract
-        const loanRequestContract = getLoanRequestContract(currentAccount, currentNetwork);
-
         // Update LoanRequest
         const { success, dbParams } = await withdrawCollateral(collateral, tokenId, contract_address);
 
@@ -175,22 +178,9 @@ export default function BorrowerPage() {
             // Update Tableland database
             console.log('updating tableland')
             await updateTable(dbTableName, dbParams);
-            
-            // Set account loan and nft data
-            let loans = await setAccountData(currentAccount, currentNetwork);
 
-            // Render loan request elements for borrower
-            await renderLoanRequestElements(loans, currentNetwork);
-
-            // Render existing loan elements for borrower
-            const existingLoanElements = await renderExistingLoanElements(
-                currentAccount, currentNetwork, loans, loanRequestContract
-            );
-            setCurrentExistingLoanElements(existingLoanElements);
+            window.location.reload();
         }
-
-        // Reset currentSubmitRequestStatus
-        setCurrentNftWithdrawStatus({});
     }
 
     /* ---------------------------------------  *
@@ -269,10 +259,12 @@ export default function BorrowerPage() {
         // This is kludgy. I know...
         const waitInsertTableRow = async (tblName, borrower, params) => {
             try {
+                params.table_id = await fetchRowCount(tblName, params.collateral, params.token_id);
+                params.table_id += 1;
                 setTimeout(await insertTableRow(tblName, borrower, params), 2000);
             }
             catch (__) {
-                setTimeout(await insertTableRow(tblName, borrower, params), 2000);
+                window.location.reload();
             }
         };
 
@@ -295,7 +287,7 @@ export default function BorrowerPage() {
                 })
                 console.log(commonNft)
 
-                /* If NFT does not exist in Tableland database */
+                /* If NFT does not exist in Tableland databasel */
                 if (!commonNft) {
 
                     // Fetch contract stats from NFT Port
@@ -325,7 +317,8 @@ export default function BorrowerPage() {
                         symbol: nft.symbol,
                         type: nft.type,
                         committed: false,
-                        borrower_signed: false
+                        borrower_signed: false,
+                        loan_completed: false,
                     };
 
                     await waitInsertTableRow(dbTableName, nft.borrower, dbParams);
@@ -356,8 +349,14 @@ export default function BorrowerPage() {
         const valsInclude = [[account]];
         const conjInclude = [''];
 
+        const colsExclude = ['loan_completed'];
+        const valsExclude = [[true]];
+        const conjExclude = [''];
+
         const loans = await fetchRowsWhere(
-            dbTableName, [colsInclude, valsInclude, conjInclude]
+            dbTableName,
+            [colsInclude, valsInclude, conjInclude],
+            [colsExclude, valsExclude, conjExclude]
         );
         console.log(loans)
 
@@ -379,12 +378,7 @@ export default function BorrowerPage() {
         console.log(expiration)
 
         // Get contract
-        const {
-            loanRequestAddress,
-            loanRequestABI,
-            dbTableName,
-            erc721
-        } = config(currentNetwork);
+        const { loanRequestAddress, loanRequestABI, erc721 } = config(currentNetwork);
 
         const provider = getProvider();
         const borrower = provider.getSigner(currentAccount);
@@ -396,6 +390,7 @@ export default function BorrowerPage() {
             borrower
         );
 
+        let dbParams;
         try {
             console.log('Submitting loan request...');
 
@@ -412,7 +407,6 @@ export default function BorrowerPage() {
                 rate,
                 expiration,
             );
-
             const receipt = await tx.wait();
             console.log('receipt: ', receipt);
 
@@ -423,7 +417,7 @@ export default function BorrowerPage() {
             const loan_number = triggeredEvent.args['_loanId'];
 
             // Update Tableland with newly submitted LoanRequest parameters
-            const dbParams = {
+            dbParams = {
                 collateral: nft,
                 token_id: tokenId,
                 loan_requested: true,
@@ -433,16 +427,16 @@ export default function BorrowerPage() {
                 rate: rate,
                 committed: true,
                 unpaid_balance: initial_loan_value
-            }
+            };
 
-            await updateTable(dbTableName, dbParams);
+            console.log('z')
         }
         catch (err) {
             console.log(err);
-            return false;
+            return { success: false };
         }
 
-        return true;
+        return { success: true, dbParams: dbParams };
     }
 
     const updateLoanRequest = async (
@@ -583,7 +577,8 @@ export default function BorrowerPage() {
                 collateral: collateral,
                 token_id: tokenId,
                 loan_requested: false,
-                committed: false
+                loan_completed: true,
+                committed: false,
             };
 
             return { success: true, dbParams: dbParams };

@@ -135,7 +135,7 @@ export default function BorrowerPage() {
         console.log(dbTableName)
 
         const colsInclude = ['lender', 'loan_requested'];
-        const valsInclude = [[ethers.constants.AddressZero], ['true']];
+        const valsInclude = [[ethers.constants.AddressZero], [true]];
         const conjInclude = ['AND', ''];
 
         const colsExclude = ['borrower'];
@@ -157,9 +157,9 @@ export default function BorrowerPage() {
     const fetchSponsoredLoans = async (account, network) => {
         const { dbTableName } = config(network);
 
-        const colsInclude = ['lender', 'loan_requested'];
-        const valsInclude = [[account.toLowerCase()], ['true']];
-        const conjInclude = ['AND', ''];
+        const colsInclude = ['lender'];
+        const valsInclude = [[account.toLowerCase()]];
+        const conjInclude = ['AND'];
 
         const nfts = await fetchRowsWhere(
             dbTableName,
@@ -280,10 +280,10 @@ export default function BorrowerPage() {
      * ---------------------------------------  */
     const renderLoanElements = async (account, network, loans, loanRequestContract) => {
         const getExistingLoanElements = async () => {
-            const currentSponsoredLoanElements = loans.map((loan) => {
+            const currentSponsoredLoanElements = loans.map((loan, i) => {
                 return (
                     <LenderExistingLoanForm
-                        key={loan.loan_number}
+                        key={`${loan.loan_number}_${i}`}
                         currentAccount={account}
                         currentNetwork={network}
                         loanRequestContract={loanRequestContract}

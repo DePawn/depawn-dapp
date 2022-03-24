@@ -27,6 +27,7 @@ const formatParams = (params) => {
     // Reformat param values to fit database types
     params.collateral = params.collateral.toLowerCase();
     params.token_id = params.token_id.toString();
+    params.table_id = params.table_id.toString();
     params.loan_requested = params.loan_requested !== undefined ? params.loan_requested.toString() : undefined;
     params.loan_number = params.loan_number !== undefined ? params.loan_number.toString() : undefined;
     params.borrower = !!params.borrower ? params.borrower.toLowerCase() : undefined;
@@ -44,6 +45,7 @@ const formatParams = (params) => {
     params.lender_signed = params.lender_signed !== undefined ? params.lender_signed.toString() : undefined;
     params.contract_address = !!params.contract_address ? params.contract_address.toLowerCase() : undefined;
     params.unpaid_balance = params.unpaid_balance !== undefined ? params.unpaid_balance.toString() : undefined;
+    params.loan_completed = params.loan_completed !== undefined ? params.loan_completed.toString() : undefined;
 
     return params;
 }
@@ -51,6 +53,7 @@ const formatParams = (params) => {
 export const insertTableRow = async (tableName, account, params = {
     collateral: undefined,
     token_id: undefined,
+    table_id: undefined,
     loan_requested: undefined,
     loan_number: undefined,
     lender: undefined,
@@ -69,9 +72,10 @@ export const insertTableRow = async (tableName, account, params = {
     borrower_signed: undefined,
     lender_signed: undefined,
     contract_address: undefined,
-    unpaid_balance: undefined
+    unpaid_balance: undefined,
+    loan_completed: undefined,
 }) => {
-    if (!params.collateral || !params.token_id) {
+    if (!params.collateral || !params.token_id || !params.table_id) {
         console.log('Cannot add row to table. Collateral or Token ID not provided.');
         return;
     }
@@ -80,7 +84,7 @@ export const insertTableRow = async (tableName, account, params = {
 
     // Set row values
     let cols =
-        `collateral_tokenid, ` +
+        `collateral_tokenid_tableid, ` +
         `borrower, ` +
         `${!!params.loan_requested ? "loan_requested, " : ''}` +
         `${!!params.loan_number ? "loan_number, " : ''}` +
@@ -100,11 +104,12 @@ export const insertTableRow = async (tableName, account, params = {
         `${!!params.borrower_signed ? "borrower_signed, " : ''}` +
         `${!!params.lender_signed ? "lender_signed, " : ''}` +
         `${!!params.contract_address ? "contract_address, " : ''}` +
-        `${!!params.unpaid_balance ? "unpaid_balance, " : ''}`;
+        `${!!params.unpaid_balance ? "unpaid_balance, " : ''}` +
+        `${!!params.loan_completed ? "loan_completed, " : ''}`;
     cols = cols.slice(0, -2);
 
     let vals =
-        `'${params.collateral}_${params.token_id}', ` +
+        `'${params.collateral}_${params.token_id}_${params.table_id}', ` +
         `'${account.toLowerCase()}', ` +
         `${!!params.loan_requested ? "'" + params.loan_requested + "', " : ''}` +
         `${!!params.loan_number ? "'" + params.loan_number + "', " : ''}` +
@@ -124,10 +129,12 @@ export const insertTableRow = async (tableName, account, params = {
         `${!!params.borrower_signed ? params.borrower_signed + ", " : ''}` +
         `${!!params.lender_signed ? params.lender_signed + ", " : ''}` +
         `${!!params.contract_address ? "'" + params.contract_address + "', " : ''}` +
-        `${!!params.unpaid_balance ? "'" + params.unpaid_balance + "', " : ''}`;
+        `${!!params.unpaid_balance ? "'" + params.unpaid_balance + "', " : ''}` +
+        `${!!params.loan_completed ? "'" + params.loan_completed + "', " : ''}`;
     vals = vals.slice(0, -2);
 
     // Perform update
+    console.log('---------: ', tableName);
     const query = `INSERT INTO ${tableName} (${cols}) VALUES (${vals});`;
     console.log(query)
     const conn = await connectTableland('https://testnet.tableland.network');
@@ -158,17 +165,21 @@ export const updateTable = async (tableName, params = {
     borrower_signed: undefined,
     lender_signed: undefined,
     contract_address: undefined,
-    unpaid_balance: undefined
+    unpaid_balance: undefined,
+    loan_completed: undefined,
 }) => {
     if (!params.collateral || !params.token_id) {
         console.log('Cannot update table. Collateral or Token ID not provided.');
         return;
     }
 
+    // This doesn't accept a teable_id input. This keeps us from updating old tables.
+    params.table_id = await fetchRowCount(tableName, params.collateral, params.token_id);
     params = formatParams(params);
+    console.log(params)
 
     // Set row values
-    const primaryKey = `collateral_tokenid='${params.collateral}_${params.token_id}'`;
+    const primaryKey = `collateral_tokenid_tableid='${params.collateral}_${params.token_id}_${params.table_id}'`;
     let updates =
         `${!!params.loan_requested ? "loan_requested='" + params.loan_requested + "', " : ''}` +
         `${!!params.loan_number ? "loan_number='" + params.loan_number + "', " : ''}` +
@@ -189,7 +200,8 @@ export const updateTable = async (tableName, params = {
         `${!!params.borrower_signed ? "borrower_signed=" + params.borrower_signed + ", " : ''}` +
         `${!!params.lender_signed ? "lender_signed=" + params.lender_signed + ", " : ''}` +
         `${!!params.contract_address ? "contract_address='" + params.contract_address + "', " : ''}` +
-        `${!!params.unpaid_balance ? "unpaid_balance='" + params.unpaid_balance + "', " : ''}`;
+        `${!!params.unpaid_balance ? "unpaid_balance='" + params.unpaid_balance + "', " : ''}` +
+        `${!!params.loan_completed ? "loan_completed='" + params.loan_completed + "', " : ''}`;
     updates = updates.slice(0, -2);
 
     // Perform update
@@ -245,11 +257,12 @@ export const fetchRowsWhere = async (tableName, includes, excludes = []) => {
     const res = await conn.query(query);
     const cols = res.data.columns;
     const rows = res.data.rows;
+    console.log(res)
 
     const data = rows.map((row) => {
         const elem = {};
         row.forEach((val, i) => elem[cols[i].name] = val);
-        [elem.collateral, elem.tokenId] = elem.collateral_tokenid.split('_');
+        [elem.collateral, elem.tokenId, elem.tableId] = elem.collateral_tokenid_tableid.split('_');
 
         return elem;
     });
@@ -267,9 +280,17 @@ export const insertTableEntry = async (tableName, key, val) => {
     return out;
 };
 
+export const fetchRowCount = async (tableName, collateral, tokenId) => {
+    const conn = await connectTableland('https://testnet.tableland.network');
+    const query = `SELECT COUNT('collateral_tokenid_tableid') from ${tableName} WHERE collateral_tokenid_tableid LIKE '${collateral}_${tokenId}_%';`;
+    const res = await conn.query(query);
+
+    return res.data.rows[0][0];
+}
+
 export const createTable = async (tableName) => {
     const cols =
-        'collateral_tokenid text, ' +
+        'collateral_tokenid_tableid text, ' +
         'loan_requested bool, ' +
         'loan_number text, ' +
         'borrower text, ' +
@@ -289,9 +310,10 @@ export const createTable = async (tableName) => {
         'borrower_signed bool, ' +
         'lender_signed bool, ' +
         'contract_address text, ' +
-        'unpaid_balance text';
+        'unpaid_balance text, ' +
+        'loan_completed bool';
 
-    const query = `CREATE TABLE ${tableName} (${cols}, primary key(collateral_tokenid)); `;
+    const query = `CREATE TABLE ${tableName} (${cols}, primary key(collateral_tokenid_tableid)); `;
     console.log(query);
 
     const conn = await connect({ network: 'testnet' });
