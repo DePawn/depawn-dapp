@@ -29,6 +29,27 @@ contract LoanContract {
         CLOSED
     }
 
+    event UnpaidBalance(
+        uint256 balance,
+        string status,
+        address contractAddress
+    );
+
+    event NFTEvent(
+        address indexed addr,
+        address indexed lender_borrower,
+        address nft,
+        uint256 tokenId,
+        string status
+    );
+
+    event ETHEvent(
+        address indexed addr,
+        address indexed lender,
+        uint256 amount_withdrawn,
+        uint256 contractBalance
+    );
+
     constructor(
         address[2] memory _members,
         address _collateral,
@@ -49,8 +70,8 @@ contract LoanContract {
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
 
-        start = block.timestamp;
-        //start = 1644202800;// 2022-02-7
+        //start = block.timestamp;
+        start = 1644202800; // 2022-02-7
     }
 
     function onERC721Received(
@@ -65,7 +86,7 @@ contract LoanContract {
             );
     }
 
-    function getStatus() external view returns (string memory) {
+    function getStatus() public view returns (string memory) {
         string memory result;
         if (status == LoanStatus.WITHDRAWABLE) result = "WITHDRAWABLE";
         if (status == LoanStatus.ACTIVE) result = "ACTIVE";
@@ -118,9 +139,12 @@ contract LoanContract {
             currentLoanValue = 0;
             console.log("accrued interes", accruedInterest);
         }
-        payable(lender).transfer(msg.value);
+        //payable(lender).transfer(msg.value);
 
         if (currentLoanValue + accruedInterest == 0) status = LoanStatus.PAID;
+
+        emit UnpaidBalance(address(this).balance, getStatus(), address(this));
+        emit ETHEvent(address(this), lender, msg.value, address(this).balance);
     }
 
     function withdrawLoanLender() external checkMaturity {
@@ -129,15 +153,18 @@ contract LoanContract {
             "Only lender can call withdrawLoanLender"
         );
 
-        if (status == LoanStatus.PAID) {
+        if (address(this).balance >= 0) {
+            emit ETHEvent(address(this), lender, address(this).balance, 0);
             payable(lender).transfer(address(this).balance);
-        } else if (status == LoanStatus.DEFAULT) {
+        }
+        if (status == LoanStatus.DEFAULT) {
             //Take NFT
             IERC721(collateral).safeTransferFrom(
                 address(this),
                 lender,
                 tokenId
             );
+            emit NFTEvent(address(this), lender, collateral, tokenId, "DEFAULT");
 
             status = LoanStatus.CLOSED;
         } else require(false, "Not available for withdraw at the moment");
@@ -155,6 +182,7 @@ contract LoanContract {
                 borrower,
                 tokenId
             );
+            emit NFTEvent(address(this), borrower, collateral, tokenId, "PAID");
         } else require(false, "Not available for withdraw at the moment");
     }
 
