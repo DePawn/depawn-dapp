@@ -64,6 +64,14 @@
     transform: rotateY(180deg);
   }
   
+  .card__face--nft-committed {
+    border: 6px solid #080;
+  }
+  
+  .card__face--nft-uncommitted {
+    border: 6px solid #f04;
+  }
+  
   .card__content {
     width: 100%;
     height: 100%;
@@ -87,11 +95,13 @@
     border-radius: 0px 0px 50% 0px;
   }
   
+  .image-available-loan-nft-front,
   .image-existing-loan-nft-front,
   .image-loan-request-nft-front {
     width: 450px;
   }
   
+  .image-available-loan-nft-back,
   .image-existing-loan-nft-back,
   .image-loan-request-nft-back {
     display: block;

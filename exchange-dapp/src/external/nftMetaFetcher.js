@@ -61,6 +61,7 @@ export const fetchNftData = async (nfts, network) => {
 
     // If nfts is passed as empty and in dev mode, swap to dev nfts
     if (!!nfts && devFront) [nfts, transferibles] = [transferibles, nfts];
+    if (!!nfts && !devFront) return [];
 
     // Get NFT metadata
     const nftMetaResponse = {

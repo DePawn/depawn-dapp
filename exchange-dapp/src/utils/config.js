@@ -7,7 +7,7 @@ export const alchemy = (ALCHEMY_MAINNET_URL) => {
 export const config = (network) => {
     /* DEV ONLY */
     const DEV_FRONT = true;
-    const DEV_BACK = true;
+    const DEV_BACK = false;
     /* ******** */
 
     network = DEV_FRONT || DEV_BACK ? '31337' : network;
@@ -18,8 +18,8 @@ export const config = (network) => {
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
     const loanRequestConfig = require(`../static/${network}/LoanRequestConfig.json`);
     const erc721 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json`);
-    //const erc1155 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC1155/IERC1155.sol/IERC1155.json`);
-    const { name } = require('../static/tableland/tableland_depawn.json');
+    const erc1155 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC1155/IERC1155.sol/IERC1155.json`);
+    const { controller, name } = require('../static/tableland/tableland_depawn.json');
 
     const rpc_port = {
         HARDHAT: '8545',
@@ -60,8 +60,9 @@ export const config = (network) => {
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,
         erc721: erc721.abi,
-        erc1155: "",
+        erc1155: erc1155.abi,
         dbTableName: name,
+        dbController: controller,
         rpcProvider: 'ALCHEMY',
         network: network,
         gasLimit: 100000,

@@ -58,6 +58,8 @@ contract LoanContract {
         uint256 _rate,
         uint64 _expiration
     ) {
+        console.log("deploying contract...");
+
         borrower = _members[0];
         lender = _members[1];
         arbiter = address(this);
