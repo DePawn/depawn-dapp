@@ -29,6 +29,27 @@ contract LoanContract {
         CLOSED
     }
 
+    event UnpaidBalance(
+        uint256 balance,
+        string status,
+        address contractAddress
+    );
+
+    event NFTEvent(
+        address indexed addr,
+        address indexed lender_borrower,
+        address nft,
+        uint256 tokenId,
+        string status
+    );
+
+    event ETHEvent(
+        address indexed addr,
+        address indexed lender,
+        uint256 amount_withdrawn,
+        uint256 contractBalance
+    );
+
     constructor(
         address[2] memory _members,
         address _collateral,
@@ -47,8 +68,8 @@ contract LoanContract {
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
 
-        start = block.timestamp;
-        //start = 1644202800;// 2022-02-7
+        //start = block.timestamp;
+        start = 1644202800; // 2022-02-7
     }
 
     function onERC721Received(
@@ -63,7 +84,7 @@ contract LoanContract {
             );
     }
 
-    function getStatus() external view returns (string memory) {
+    function getStatus() public view returns (string memory) {
         string memory result;
         if (status == LoanStatus.WITHDRAWABLE) result = "WITHDRAWABLE";
         if (status == LoanStatus.ACTIVE) result = "ACTIVE";
@@ -73,20 +94,14 @@ contract LoanContract {
         return result;
     }
 
-    function calculateInterest() public view returns(uint256) {
+    function calculateInterest() public view returns (uint256) {
         uint256 daysPassed = (block.timestamp - start) / 60 / 60 / 24;
         console.log("days passed", daysPassed);
-        return currentLoanValue
-            .mul(rate)
-            .div(100)
-            .mul(daysPassed)
-            .div(365);
+        return currentLoanValue.mul(rate).div(100).mul(daysPassed).div(365);
     }
 
     function calculateRedemption() public view returns (uint256) {
-
         return calculateInterest() + currentLoanValue + accruedInterest;
-
     }
 
     function getMyLoan() external checkMaturity {
@@ -102,9 +117,8 @@ contract LoanContract {
             status == LoanStatus.ACTIVE || status == LoanStatus.DEFAULT,
             "Loan should be active or default to be paid"
         );
-        
 
-        uint redemption = calculateRedemption();
+        uint256 redemption = calculateRedemption();
         require(redemption >= msg.value, "Borrower can't pay more than owed");
 
         uint256 currentInterest = calculateInterest();
@@ -116,20 +130,19 @@ contract LoanContract {
         start = block.timestamp;
         console.log("accrued interest", accruedInterest);
 
-        if(currentLoanValue >= msg.value) {
-            currentLoanValue = currentLoanValue - msg.value;    
-        }
-            
-        else {
+        if (currentLoanValue >= msg.value) {
+            currentLoanValue = currentLoanValue - msg.value;
+        } else {
             accruedInterest -= (msg.value - currentLoanValue);
             currentLoanValue = 0;
             console.log("accrued interes", accruedInterest);
         }
         //payable(lender).transfer(msg.value);
 
-        if(currentLoanValue + accruedInterest == 0 )
-            status = LoanStatus.PAID;
+        if (currentLoanValue + accruedInterest == 0) status = LoanStatus.PAID;
 
+        emit UnpaidBalance(address(this).balance, getStatus(), address(this));
+        emit ETHEvent(address(this), lender, msg.value, address(this).balance);
     }
 
     function withdrawLoanLender() external checkMaturity {
@@ -138,17 +151,21 @@ contract LoanContract {
             "Only lender can call withdrawLoanLender"
         );
 
-        if (status == LoanStatus.PAID) {
+        if (address(this).balance >= 0) {
+            emit ETHEvent(address(this), lender, address(this).balance, 0);
             payable(lender).transfer(address(this).balance);
         }
-        else if (status == LoanStatus.DEFAULT) {
+        if (status == LoanStatus.DEFAULT) {
             //Take NFT
-            IERC721(collateral).safeTransferFrom(address(this), lender, tokenId);
+            IERC721(collateral).safeTransferFrom(
+                address(this),
+                lender,
+                tokenId
+            );
+            emit NFTEvent(address(this), lender, collateral, tokenId, "DEFAULT");
 
             status = LoanStatus.CLOSED;
-        }
-        else
-            require(false, "Not available for withdraw at the moment");
+        } else require(false, "Not available for withdraw at the moment");
     }
 
     function withdrawNFTBorrower() external checkMaturity {
@@ -158,10 +175,13 @@ contract LoanContract {
         );
         if (status == LoanStatus.PAID) {
             // Take NFT back
-            IERC721(collateral).safeTransferFrom(address(this), borrower, tokenId);
-        }
-        else
-            require(false, "Not available for withdraw at the moment");
+            IERC721(collateral).safeTransferFrom(
+                address(this),
+                borrower,
+                tokenId
+            );
+            emit NFTEvent(address(this), borrower, collateral, tokenId, "PAID");
+        } else require(false, "Not available for withdraw at the moment");
     }
 
     modifier checkMaturity() {
