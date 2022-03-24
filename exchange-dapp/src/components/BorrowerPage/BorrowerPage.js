@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config';
-import { loanContractTime, displayContractTime } from '../../utils/timeUtils';
+import { loanContractTime } from '../../utils/timeUtils';
 import { fetchNftData, fetchContractData } from '../../external/nftMetaFetcher';
 import { fetchRowsWhere, insertTableRow, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
@@ -30,6 +30,7 @@ export default function BorrowerPage() {
     const [currentLoanRequestContract, setCurrentLoanRequestContract] = useState(null);
     const [currentSubmitRequestStatus, setCurrentSubmitRequestStatus] = useState(false);
     const [currentUpdateRequestStatus, setCurrentUpdateRequestStatus] = useState({});
+    const [currentNftWithdrawStatus, setCurrentNftWithdrawStatus] = useState({});
     const [currentAccountLoans, setCurrentAccountLoans] = useState('');
     const [currentLoanRequestElement, setCurrentLoanRequestElement] = useState('');
     const [currentExistingLoanElements, setCurrentExistingLoanElements] = useState('');
@@ -50,6 +51,12 @@ export default function BorrowerPage() {
         if (!!Object.keys(currentUpdateRequestStatus).length) updateLoanRequestSequence();
         // eslint-disable-next-line
     }, [currentUpdateRequestStatus]);
+
+    useEffect(() => {
+        console.log('here i am')
+        if (!!Object.keys(currentNftWithdrawStatus).length) withdrawNftSequence();
+        // eslint-disable-next-line
+    }, [currentNftWithdrawStatus]);
 
     /* ---------------------------------------  *
      *       EVENT SEQUENCE FUNCTIONS           *
@@ -120,7 +127,6 @@ export default function BorrowerPage() {
     }
 
     const updateLoanRequestSequence = async () => {
-        console.log('i made it')
         console.log(currentAccount, currentNetwork)
 
         const { dbTableName } = config(currentNetwork);
@@ -151,6 +157,40 @@ export default function BorrowerPage() {
 
         // Reset currentSubmitRequestStatus
         setCurrentUpdateRequestStatus({});
+    }
+
+    const withdrawNftSequence = async () => {
+        console.log(currentAccount, currentNetwork)
+
+        const { dbTableName } = config(currentNetwork);
+        const { collateral, tokenId, contract_address } = currentNftWithdrawStatus;
+
+        // Get LoanRequestContract
+        const loanRequestContract = getLoanRequestContract(currentAccount, currentNetwork);
+
+        // Update LoanRequest
+        const { success, dbParams } = await withdrawCollateral(collateral, tokenId, contract_address);
+
+        if (success) {
+            // Update Tableland database
+            console.log('updating tableland')
+            await updateTable(dbTableName, dbParams);
+            
+            // Set account loan and nft data
+            let loans = await setAccountData(currentAccount, currentNetwork);
+
+            // Render loan request elements for borrower
+            await renderLoanRequestElements(loans, currentNetwork);
+
+            // Render existing loan elements for borrower
+            const existingLoanElements = await renderExistingLoanElements(
+                currentAccount, currentNetwork, loans, loanRequestContract
+            );
+            setCurrentExistingLoanElements(existingLoanElements);
+        }
+
+        // Reset currentSubmitRequestStatus
+        setCurrentNftWithdrawStatus({});
     }
 
     /* ---------------------------------------  *
@@ -514,6 +554,46 @@ export default function BorrowerPage() {
         return { success: true, dbParams: dbParams };
     }
 
+    const withdrawCollateral = async (collateral, tokenId, contract_address) => {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(currentAccount);
+
+        const { loanContractABI } = config(currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        try {
+            // Make payment
+            const tx = await loanContract.withdrawNFTBorrower();
+            const receipt = await tx.wait();
+
+            // Get unpaid balance on loan
+            const topic = loanContract.interface.getEventTopic('NFTEvent');
+            const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+            console.log(log);
+
+            // Update Tableland database
+            const dbParams = {
+                collateral: collateral,
+                token_id: tokenId,
+                loan_requested: false,
+                committed: false
+            };
+
+            return { success: true, dbParams: dbParams };
+        }
+        catch (err) {
+            console.log(err);
+            return { success: false };
+        }
+    }
+
     /* ---------------------------------------  *
      *           FRONTEND CALLBACKS             *
      * ---------------------------------------  */
@@ -550,8 +630,11 @@ export default function BorrowerPage() {
     }
 
     const callback__UpdateLoan = async (attribute, params) => {
-        console.log('start point')
         setCurrentUpdateRequestStatus({ ...{ effect: true, attribute: attribute }, ...params });
+    }
+
+    const callback__WithdrawNft = async (params) => {
+        setCurrentNftWithdrawStatus({ ...{ effect: true }, ...params });
     }
 
     /* ---------------------------------------  *
@@ -575,10 +658,6 @@ export default function BorrowerPage() {
         const getExistingLoanElements = async () => {
             const activeLoans = loans.filter(loan => loan.loan_requested && !!loan.contract_address);
             const requestedLoans = loans.filter(loan => loan.loan_requested && !loan.contract_address);
-            console.log(requestedLoans)
-
-            const numActiveLoans = activeLoans.length;
-            console.log(numActiveLoans)
 
             const currentExistingLoanElements = [];
             currentExistingLoanElements.push(
@@ -590,6 +669,7 @@ export default function BorrowerPage() {
                             currentNetwork={network}
                             currentLoanRequestContract={loanRequestContract}
                             updateLoanFunc={callback__UpdateLoan}
+                            withdrawNftFunc={callback__WithdrawNft}
                             fetchNftFunc={fetchNftData}
                             {...loan}
                         />
@@ -598,7 +678,7 @@ export default function BorrowerPage() {
             );
 
             currentExistingLoanElements.push(
-                requestedLoans.map((loan, i) => {
+                requestedLoans.map((loan) => {
                     return (
                         <BorrowerExistingLoanForm
                             key={loan.loan_number}
