@@ -241,6 +241,10 @@ div {
     width: 140px;
 }
 
+.button-existing-loan-withdraw-nft {
+  width: 120px;
+}
+
 .button-none {
   width: 23px;
   margin: 4px 4% 4px 0;

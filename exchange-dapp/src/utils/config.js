@@ -16,6 +16,7 @@ export const config = (network) => {
     // console.log(`Grabbing contract address from ../static/${network}`);
 
     const loanRequestABI = require(`../artifacts/${network}/contracts/LoanRequest.sol/LoanRequest.json`);
+    const loanContractABI = require(`../artifacts/${network}/contracts/LoanContract.sol/LoanContract.json`);
     const loanRequestConfig = require(`../static/${network}/LoanRequestConfig.json`);
     const erc721 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC721/IERC721.sol/IERC721.json`);
     const erc1155 = require(`../artifacts/${network}/@openzeppelin/contracts/token/ERC1155/IERC1155.sol/IERC1155.json`);
@@ -57,6 +58,7 @@ export const config = (network) => {
         devBack: DEV_BACK,
         devBoth: DEV_FRONT && DEV_BACK,
         loanRequestABI: loanRequestABI.abi,
+        loanContractABI: loanContractABI.abi,
         loanRequestAddress: loanRequestConfig.loanRequestAddress,
         transferibles: loanRequestConfig.transferibles,
         erc721: erc721.abi,
