@@ -57,6 +57,7 @@ contract LoanContract {
         uint256 _rate,
         uint64 _expiration
     ) {
+
         borrower = _members[0];
         lender = _members[1];
         arbiter = address(this);
@@ -179,6 +180,10 @@ contract LoanContract {
             );
             emit NFTEvent(address(this), borrower, collateral, tokenId, "PAID");
         } else require(false, "Not available for withdraw at the moment");
+    }
+
+    function setStatus() external checkMaturity {
+        //console.log(block.timestamp, expiration + 5 days);
     }
 
     modifier checkMaturity() {
