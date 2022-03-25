@@ -1,10 +1,16 @@
-function loadNftCookies() {
+export const loadAccountNftCookies = () => {
     const cookies = JSON.parse(window.localStorage.getItem("nftCookieData"));
 
     return cookies;
 }
 
-function saveNftCookies(currentAccountNfts) {
+export const loadNftCookies = ({contract_address, token_id}) => {
+    const cookies = JSON.parse(window.localStorage.getItem(`${contract_address}_${token_id}`));
+
+    return cookies;
+}
+
+export const saveAccountNftCookies = (currentAccountNfts) => {
     const cookies = [...currentAccountNfts].map((nft, i) => {
         let { contract: { type }, contract_address, token_id } = nft;
 
@@ -15,4 +21,11 @@ function saveNftCookies(currentAccountNfts) {
     return cookies;
 }
 
-module.exports = { loadNftCookies, saveNftCookies };
+export const saveNftCookies = (nfts) => {
+    nfts.map((nft) =>
+        window.localStorage.setItem(
+            `${nft.contract_address}_${nft.token_id}`,
+            JSON.stringify(nft)
+        )
+    );
+}

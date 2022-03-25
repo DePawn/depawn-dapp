@@ -4,9 +4,19 @@ html {
   background: #222;
 }
 
+.borrower-page {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+}
+
 h1, h2, h3, .label, .button-edit {  
   font-weight: bold;
   text-shadow: 1px 1px 3px #000;
+}
+
+h2 {
+  margin-bottom: 20px;
 }
 
 h3 {
@@ -19,13 +29,13 @@ div {
 
 .container {
   margin: 0;
-  padding: 24px;
+  padding: 10px 24px 0 24px;
   border: none;
 }
 
 .container-loan-forms {
   width: 90%;
-  margin: 40px auto 0 auto;
+  margin: 25px auto 0 auto;
   display: flex;
 }
 
@@ -34,6 +44,12 @@ div {
 .container-loan-contracts-master {
   width: 50%;
   padding: 0 5%;
+}
+
+.container-loan-contracts-master {
+  overflow-y: auto;
+  height: 90vh;
+  margin-top: 0;
 }
 
 .wedge {
@@ -50,7 +66,7 @@ div {
 .container-existing-loan-form,
 .container-loan-contracts {
   width: 510px;
-  margin: 40px auto;
+  margin: 20px auto 0 auto;
   padding: 24px;
   position: relative;
   border-radius: 12px;
@@ -62,6 +78,13 @@ div {
 
 .container-loan-request-component,
 .container-existing-loan-component {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.container-active-loan-component {
   margin: 0;
   padding: 0;
   display: flex;
@@ -101,15 +124,7 @@ div {
   width: 100%;
   margin: 0;
   border: node;
-}
-
-.image-loan-request-nft {
-  width: 450px;
-  margin: 25px 0 17px 0;
-  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  -webkit-box-shadow: 0 1px 1px 2px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
-  border-radius: 15px;
+  cursor: pointer;
 }
 
 .container-no-image {
@@ -183,9 +198,28 @@ div {
   padding: 6px 0 8px 0;
 }
 
+.button-existing-loan-pay {
+  height: 25px;
+  width: 40px;
+  margin: 2px auto;     
+  padding: 6px 1rem 8px 1rem;
+  background: #5086bd;
+  color: white;
+  position: relative;
+  letter-spacing: 0.7px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -webkit-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  -moz-box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.19);
+  border: 1px solid #2e4d6d;
+  border-radius: 12px;
+  text-shadow: 1px 1px 2px rgba(1, 1, 1, 0.4);
+}
+
 .button-existing-loan-commit {
   width: 120px;
-  margin-left: 31px;
+  margin-left: 44px;
   margin-right: 10px;
 }
 
@@ -207,10 +241,15 @@ div {
     width: 140px;
 }
 
-.button-edit-nft,
-.button-edit-token-id {
+.button-existing-loan-withdraw-nft {
+  width: 120px;
+}
+
+.button-none {
   width: 23px;
-  background: none;
+  margin: 4px 4% 4px 0;
+  padding: 4px 8px;
+  opacity: 0;
   border-color: none;
   border: none;
   box-shadow: none;
@@ -219,8 +258,11 @@ div {
   cursor: default;
 }
 
-.button-edit-nft:active, 
-.button-edit-token-id:active {  
+.button-none:active {  
   transform: none;
   box-shadow: none;
+}
+
+.container-active-loan {
+  border: 6px solid green;
 }

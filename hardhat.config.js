@@ -13,10 +13,15 @@ module.exports = {
   defaultNetwork: 'localhost',
   networks: {
     hardhat: {
+      accounts: {
+        mnemonic: process.env.MNEMONIC
+      },
+      gas: 12000000,
+      //allowUnlimitedContractSize: true,
       forking: {
         chainId: 31337,
         url: process.env.ALCHEMY_MAINNET_URL,
-        blockNumber: 14398385
+        blockNumber: 14343332 //14343332 // Jason's 14407300 doesn't work :(
       }
     }
   }

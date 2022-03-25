@@ -9,9 +9,9 @@ describe("0-0 :: LoanRequest signer functions", function () {
     let borrower, lender, otherLender, nonMember, nft, nft2;
 
     let collateral;
-    let initialLoanValue;
+    let initial_loan_value;
     let rate;
-    let duration;
+    let expiration;
     let initialLender;
     let loanId;
 
@@ -22,9 +22,9 @@ describe("0-0 :: LoanRequest signer functions", function () {
 
         collateral = ethers.constants.AddressZero;
         tokenId = ethers.constants.Zero;
-        initialLoanValue = ethers.constants.Zero;
+        initial_loan_value = ethers.constants.Zero;
         rate = ethers.constants.Zero;
-        duration = ethers.constants.Zero;
+        expiration = ethers.constants.Zero;
         initialLender = ethers.constants.AddressZero;
         loanId = ethers.constants.Zero;
 
@@ -35,9 +35,9 @@ describe("0-0 :: LoanRequest signer functions", function () {
         await loanRequestContract.createLoanRequest(
             nft,
             tokenId,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             initialLender
         );
     });
@@ -68,9 +68,9 @@ describe("0-0 :: LoanRequest signer functions", function () {
             loanRequestContract.connect(borrower).createLoanRequest(
                 nft,
                 tokenId,
-                initialLoanValue,
+                initial_loan_value,
                 rate,
-                duration,
+                expiration,
                 borrower.address
             ),
             "Lender cannot be the borrower."
@@ -200,8 +200,8 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isTrue(lenderSignStatus, "Lender sign status should be true.");
 
         // Update initial loan value
-        initialLoanValue = ethers.constants.One;
-        await loanRequestContract.setInitialLoanValue(loanId, initialLoanValue);
+        initial_loan_value = ethers.constants.One;
+        await loanRequestContract.setInitialLoanValue(loanId, initial_loan_value);
 
         // Validate lender signoff removal
         lenderSignStatus = await loanRequestContract.getSignStatus(
@@ -240,7 +240,7 @@ describe("0-0 :: LoanRequest signer functions", function () {
         assert.isFalse(lenderSignStatus, "Lender sign status is not false.");
     });
 
-    it("0-0-08 :: LoanRequest should remove lender signature if borrower changes duration", async function () {
+    it("0-0-08 :: LoanRequest should remove lender signature if borrower changes expiration", async function () {
         await loanRequestContract.setLender(loanId, lender.address);
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
 
@@ -253,9 +253,9 @@ describe("0-0 :: LoanRequest signer functions", function () {
 
         assert.isTrue(lenderSignStatus, "Lender sign status should be true.");
 
-        // Update duration
-        duration = ethers.constants.One;
-        await loanRequestContract.setDuration(loanId, duration);
+        // Update expiration
+        expiration = ethers.constants.One;
+        await loanRequestContract.setDuration(loanId, expiration);
 
         // Validate lender signoff removal
         lenderSignStatus = await loanRequestContract.getSignStatus(
@@ -300,9 +300,9 @@ describe("0-1 :: LoanRequest components functions", function () {
     let loanRequests;
 
     const collateral = ethers.constants.AddressZero;
-    const initialLoanValue = ethers.constants.Zero;
+    const initial_loan_value = ethers.constants.Zero;
     const rate = ethers.constants.One;
-    const duration = ethers.constants.Two;
+    const expiration = ethers.constants.Two;
     const initialLender = ethers.constants.AddressZero;
     const loanId = ethers.constants.Zero;
 
@@ -318,9 +318,9 @@ describe("0-1 :: LoanRequest components functions", function () {
         await loanRequestContract.deployed();
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             initialLender
         );
         loanRequests = await loanRequestContract.getLoans(borrower.address);
@@ -349,8 +349,8 @@ describe("0-1 :: LoanRequest components functions", function () {
 
     it("0-1-01 :: LoanRequest initial loan value should only be changed by borrower", async function () {
         // Verify current initial loan value
-        const currentInitialLoanValue = loanRequests[loanId].initialLoanValue;
-        assert.equal(initialLoanValue.toNumber(), currentInitialLoanValue.toNumber(), "Current initial loan value should equal initial loan value.");
+        const currentInitialLoanValue = loanRequests[loanId].initial_loan_value;
+        assert.equal(initial_loan_value.toNumber(), currentInitialLoanValue.toNumber(), "Current initial loan value should equal initial loan value.");
 
         // Verify nonMember cannot change initial loan value
         const newInitialLoanValue = ethers.constants.One;
@@ -364,8 +364,8 @@ describe("0-1 :: LoanRequest components functions", function () {
 
         // Verify initial loan value changed
         loanRequests = await loanRequestContract.getLoans(borrower.address);
-        const changedInitialLoanValue = loanRequests[loanId].initialLoanValue;
-        assert.notEqual(initialLoanValue.toNumber(), changedInitialLoanValue.toNumber(), "Changed initial loan value should not equal initial loan value.");
+        const changedInitialLoanValue = loanRequests[loanId].initial_loan_value;
+        assert.notEqual(initial_loan_value.toNumber(), changedInitialLoanValue.toNumber(), "Changed initial loan value should not equal initial loan value.");
     });
 
     it("0-1-02 :: LoanRequest rate should only be changed by borrower", async function () {
@@ -389,25 +389,25 @@ describe("0-1 :: LoanRequest components functions", function () {
         assert.notEqual(rate, changedRate.toNumber(), "Changed rate should not equal rate.");
     });
 
-    it("0-1-03 :: LoanRequest duration should only be changed by borrower", async function () {
+    it("0-1-03 :: LoanRequest expiration should only be changed by borrower", async function () {
         // Verify current durations
-        const currentDuration = loanRequests[loanId].duration;
-        assert.equal(duration, currentDuration.toNumber(), "Current duration should equal duration.");
+        const currentDuration = loanRequests[loanId].expiration;
+        assert.equal(expiration, currentDuration.toNumber(), "Current expiration should equal expiration.");
 
-        // Verify nonMember cannot change duration
+        // Verify nonMember cannot change expiration
         const newDuration = ethers.BigNumber.from('70');
         await truffleAssert.reverts(
             loanRequestContract.connect(nonMember).setDuration(loanId, newDuration),
             "No loans exist for this borrower."
         );
 
-        // Change duration
+        // Change expiration
         await loanRequestContract.setDuration(loanId, newDuration);
 
-        // Verify duration changed
+        // Verify expiration changed
         loanRequests = await loanRequestContract.getLoans(borrower.address);
-        const changedDuration = loanRequests[loanId].duration;
-        assert.notEqual(duration, changedDuration.toNumber(), "Changed duration should not equal duration.");
+        const changedDuration = loanRequests[loanId].expiration;
+        assert.notEqual(expiration, changedDuration.toNumber(), "Changed expiration should not equal expiration.");
     });
 });
 
@@ -415,9 +415,9 @@ describe("0-2 :: LoanRequest signed off functions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember, nft;
 
-    let initialLoanValue = ethers.constants.One;
+    let initial_loan_value = ethers.constants.One;
     let rate = ethers.constants.One;
-    let duration = ethers.constants.One;
+    let expiration = ethers.constants.One;
     let loanId = ethers.constants.Zero;
 
     beforeEach(async () => {
@@ -429,9 +429,9 @@ describe("0-2 :: LoanRequest signed off functions", function () {
         await loanRequestContract.deployed();
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             lender.address
         );
         await loanRequestContract.connect(lender).sign(borrower.address, loanId);
@@ -458,7 +458,7 @@ describe("0-2 :: LoanRequest signed off functions", function () {
         );
     });
 
-    it("0-2-03 :: LoanRequest should not allow duration change if safe is confirmed", async function () {
+    it("0-2-03 :: LoanRequest should not allow expiration change if safe is confirmed", async function () {
         await truffleAssert.reverts(
             loanRequestContract.setDuration(loanId, ethers.constants.Two),
             "Only unconfirmed contracts can be accessed."
@@ -477,9 +477,10 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember, nft;
 
-    let initialLoanValue;
+    let tokenId;
+    let initial_loan_value;
     let rate;
-    let duration;
+    let expiration;
     let loanId = ethers.constants.Zero;
 
     beforeEach(async () => {
@@ -493,27 +494,32 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
 
     afterEach(async () => {
         // Zero out parameters
-        initialLoanValue = ethers.constants.Zero;
+        tokenId = ethers.constants.Zero;
+        initial_loan_value = ethers.constants.Zero;
         rate = ethers.constants.Zero;
-        duration = ethers.constants.Zero;
+        expiration = ethers.constants.Zero;
     })
 
     it("0-3-00 :: LoanRequest should deploy loan contract when all parameters are finalized via createLoanRequest()", async function () {
-        initialLoanValue = ethers.constants.One;
+        tokenId = ethers.constants.One;
+        initial_loan_value = ethers.constants.One;
         rate = ethers.constants.One;
-        duration = ethers.constants.One;
+        expiration = ethers.constants.One;
 
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            tokenId,
+            initial_loan_value,
             rate,
-            duration,
-            lender.address
+            expiration,
         );
 
+        let tx = await loanRequestContract.sign(borrower.address, loanId);
+        let receipt = await tx.wait();
+
         // Signoff and create new contract
-        const tx = await loanRequestContract.connect(lender).sign(borrower.address, loanId);
-        const receipt = await tx.wait();
+        tx = await loanRequestContract.connect(lender).setLender(borrower.address, loanId);
+        receipt = await tx.wait();
         const events = receipt.events.map(ev => ev.event);
 
         expect(events).to.include('DeployedLoanContract');
@@ -529,15 +535,15 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     });
 
     it("0-3-01 :: LoanRequest should deploy loan contract when all parameters are finalized via setInitialLoanValue()", async function () {
-        initialLoanValue = ethers.constants.Zero;
+        initial_loan_value = ethers.constants.Zero;
         rate = ethers.constants.One;
-        duration = ethers.constants.One;
+        expiration = ethers.constants.One;
 
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             lender.address
         );
 
@@ -569,15 +575,15 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     });
 
     it("0-3-02 :: LoanRequest should deploy loan contract when all parameters are finalized via setRate()", async function () {
-        initialLoanValue = ethers.constants.One;
+        initial_loan_value = ethers.constants.One;
         rate = ethers.constants.Zero;
-        duration = ethers.constants.One;
+        expiration = ethers.constants.One;
 
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             lender.address
         );
 
@@ -609,15 +615,15 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     });
 
     it("0-3-03 :: LoanRequest should deploy loan contract when all parameters are finalized via setDuration()", async function () {
-        initialLoanValue = ethers.constants.One;
+        initial_loan_value = ethers.constants.One;
         rate = ethers.constants.One;
-        duration = ethers.constants.Zero;
+        expiration = ethers.constants.Zero;
 
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             lender.address
         );
 
@@ -628,7 +634,7 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
 
         expect(events).to.not.include('DeployedLoanContract');
 
-        // Add duration
+        // Add expiration
         await loanRequestContract.setDuration(loanId, ethers.constants.One);
 
         // Signoff and create new contract
@@ -649,15 +655,15 @@ describe("0-3 :: LoanRequest loan creation functions", function () {
     });
 
     it("0-3-04 :: LoanRequest should deploy loan contract when all parameters are finalized via setLender()", async function () {
-        initialLoanValue = ethers.constants.One;
+        initial_loan_value = ethers.constants.One;
         rate = ethers.constants.One;
-        duration = ethers.constants.One;
+        expiration = ethers.constants.One;
 
         let tx = await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             ethers.constants.AddressZero
         );
         let receipt = await tx.wait();
@@ -690,18 +696,18 @@ describe("0-4 :: LoanRequest loan components retrictions", function () {
     let loanRequestContract;
     let borrower, lender, nonMember, nft;
 
-    let initialLoanValue;
+    let initial_loan_value;
     let rate;
-    let duration;
+    let expiration;
     let loanId = ethers.constants.Zero;
 
     beforeEach(async () => {
         [borrower, lender, nonMember, nft, ..._] = await hre.ethers.getSigners();
         nft = nft.address;
 
-        initialLoanValue = ethers.constants.Zero;
+        initial_loan_value = ethers.constants.Zero;
         rate = ethers.constants.Zero;
-        duration = ethers.constants.Zero;
+        expiration = ethers.constants.Zero;
         initialLender = ethers.constants.AddressZero;
         loanId = ethers.constants.Zero;
 
@@ -712,17 +718,17 @@ describe("0-4 :: LoanRequest loan components retrictions", function () {
     });
 
     it("0-4-00 :: LoanRequest should not allow borrower to set collateral to address 0", async function () {
-        initialLoanValue = ethers.constants.One;
+        initial_loan_value = ethers.constants.One;
         rate = ethers.constants.One;
-        duration = ethers.constants.One;
+        expiration = ethers.constants.One;
 
         // Expected revert via createLoanRequest()
         await truffleAssert.reverts(
             loanRequestContract.createLoanRequest(
                 ethers.constants.AddressZero,
-                initialLoanValue,
+                initial_loan_value,
                 rate,
-                duration,
+                expiration,
                 lender.address
             ),
             "Collateral cannot be address 0."
@@ -731,9 +737,9 @@ describe("0-4 :: LoanRequest loan components retrictions", function () {
         // Expected revert via setCollateral()
         await loanRequestContract.createLoanRequest(
             nft,
-            initialLoanValue,
+            initial_loan_value,
             rate,
-            duration,
+            expiration,
             initialLender
         );
 
