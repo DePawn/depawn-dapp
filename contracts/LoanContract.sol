@@ -4,7 +4,7 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract LoanContract {
     using SafeMath for uint256;
@@ -58,7 +58,7 @@ contract LoanContract {
         uint256 _rate,
         uint64 _expiration
     ) {
-        console.log("deploying contract...");
+        //console.log("deploying contract...");
 
         borrower = _members[0];
         lender = _members[1];
@@ -70,8 +70,8 @@ contract LoanContract {
         expiration = _expiration;
         status = LoanStatus.WITHDRAWABLE;
 
-        //start = block.timestamp;
-        start = 1644202800; // 2022-02-7
+        start = block.timestamp;
+        //start = 1644202800; // 2022-02-7
     }
 
     function onERC721Received(
@@ -98,7 +98,7 @@ contract LoanContract {
 
     function calculateInterest() public view returns (uint256) {
         uint256 daysPassed = (block.timestamp - start) / 60 / 60 / 24;
-        console.log("days passed", daysPassed);
+        //console.log("days passed", daysPassed);
         return currentLoanValue.mul(rate).div(100).mul(daysPassed).div(365);
     }
 
@@ -125,19 +125,19 @@ contract LoanContract {
 
         uint256 currentInterest = calculateInterest();
 
-        console.log(currentLoanValue);
-        console.log(msg.value);
+        //console.log(currentLoanValue);
+        //console.log(msg.value);
 
         accruedInterest += currentInterest;
         start = block.timestamp;
-        console.log("accrued interest", accruedInterest);
+        //console.log("accrued interest", accruedInterest);
 
         if (currentLoanValue >= msg.value) {
             currentLoanValue = currentLoanValue - msg.value;
         } else {
             accruedInterest -= (msg.value - currentLoanValue);
             currentLoanValue = 0;
-            console.log("accrued interes", accruedInterest);
+            //console.log("accrued interes", accruedInterest);
         }
         //payable(lender).transfer(msg.value);
 
@@ -167,7 +167,7 @@ contract LoanContract {
             emit NFTEvent(address(this), lender, collateral, tokenId, "DEFAULT");
 
             status = LoanStatus.CLOSED;
-        } else require(false, "Not available for withdraw at the moment");
+        }
     }
 
     function withdrawNFTBorrower() external checkMaturity {
@@ -184,6 +184,10 @@ contract LoanContract {
             );
             emit NFTEvent(address(this), borrower, collateral, tokenId, "PAID");
         } else require(false, "Not available for withdraw at the moment");
+    }
+
+    function setStatus() external checkMaturity {
+        //console.log(block.timestamp, expiration + 5 days);
     }
 
     modifier checkMaturity() {

@@ -22,7 +22,7 @@ contract LoanRequest {
     uint8 private lenderPosition = 1;
     address[] public borrowers;
     mapping(address => LoanStatus[]) public loanRequests;
-    MultiSig multiSig;
+    MultiSig public multiSig;
 
     event SubmittedLoanRequest(
         address indexed _borrower,
@@ -104,6 +104,7 @@ contract LoanRequest {
         return _loanId;
     }
 
+    
     function withdrawNFT(uint256 _loanId) external {
         onlyHasLoan(msg.sender);
         onlyNotConfirmed(msg.sender, _loanId);
@@ -117,6 +118,8 @@ contract LoanRequest {
             tokenId
         );
     }
+    
+    
 
     function onERC721Received(
         address,
@@ -153,6 +156,7 @@ contract LoanRequest {
         address _borrower,
         uint256 _loanId
     ) external view returns (bool) {
+        console.log(loanRequests[_borrower][_loanId].safeId,_signer);
         return
             multiSig._getSignStatus(
                 loanRequests[_borrower][_loanId].safeId,
