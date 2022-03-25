@@ -12,15 +12,48 @@ const delete_emoji = "🗑️";
 const cancel_emoji = "\u{274c}";
 
 export default function BorrowerExistingLoanForm(props) {
+    const [isPageLoad, setIsPageLoad] = useState(true);
     const [currentLoanContract, setCurrentLoanContract] = useState('');
     const [currentNftCommitStatus, setCurrentNftCommitStatus] = useState(false);
     const [currentSignStatus, setCurrentSignStatus] = useState(undefined);
+    const [currentLoanContractStatus, setCurrentLoanContractStatus] = useState(undefined);
+    const [currentLoanContractBalance, setCurrentLoanContractBalance] = useState(undefined);
+    const [currentUnpaidBalanceElement, setCurrentUnpaidBalanceElement] = useState(null);
+    const [currentWithdrawableElements, setCurrentWithdrawableElements] = useState(null);
+    const [currentPayLoanElements, setCurrentPayLoanElements] = useState(null);
+    const [currentPaidLoanElements, setCurrentPaidLoanElements] = useState(null);
     const [currentEdit, setCurrentEdit] = useState('');
     const tabbedBullet = '\xa0\xa0- ';
 
     console.log(props)
 
-    function setEditName(name) {
+    useEffect(() => {
+        if (isPageLoad) {
+            currentNftCommitStatusSetter();
+            currentSignStatusSetter();
+            currentLoanContractSetter();
+            currentLoanContractStatusSetter()
+            currentLoanContractBalanceSetter();
+            renderUnpaidBalanceElement();
+            renderWithdrawableContractElement();
+            renderPayLoanElements();
+            renderPaidContractElement();
+            setIsPageLoad(false);
+        }
+        // eslint-disable-next-line
+    }, []);
+
+    useEffect(() => {
+        if (!isPageLoad) currentLoanContractBalanceSetter();
+        // eslint-disable-next-line
+    }, [currentLoanContractStatus]);
+
+    useEffect(() => {
+        if (!!currentLoanContractBalance) updateUnpaidBalanceElement();
+        // eslint-disable-next-line
+    }, [currentLoanContractBalance])
+
+    function currentEditSetter(name) {
         if (name === currentEdit) {
             /* If the cancel button ("❌") is hit... */
             // Restore currentEdit to default
@@ -40,26 +73,65 @@ export default function BorrowerExistingLoanForm(props) {
         }
     }
 
-    async function currentNftCommitStatusSetter() {
+    function currentNftCommitStatusSetter() {
         // Identify if LoanRequest contract currently owns ERC721
         setCurrentNftCommitStatus(!!props.committed);
     }
 
-    async function currentSignStatusSetter() {
+    function currentSignStatusSetter() {
         // Get Borrower sign status
         setCurrentSignStatus(props.borrower_signed);
     }
 
-    async function currentLoanContractSetter() {
+    function currentLoanContractSetter() {
         if (!!props.contract_address) setCurrentLoanContract(props.contract_address);
     }
 
-    useEffect(() => {
-        currentNftCommitStatusSetter();
-        currentSignStatusSetter();
-        currentLoanContractSetter();
-        // eslint-disable-next-line
-    }, []);
+    async function currentLoanContractStatusSetter() {
+        if (!!props.contract_address) {
+            // Get contract
+            const provider = getProvider();
+            const borrower = provider.getSigner(props.currentAccount);
+
+            const { loanContractABI } = config(props.currentNetwork);
+
+            const loanContract = new ethers.Contract(
+                props.contract_address,
+                loanContractABI,
+                borrower
+            );
+
+            const status = await loanContract.getStatus();
+            setCurrentLoanContractStatus(status.toLowerCase());
+            console.log(status)
+        }
+    }
+
+    async function currentLoanContractBalanceSetter() {
+        const balance = await calcRedemeption();
+        setCurrentLoanContractBalance(!!currentLoanContractStatus ? balance : props.unpaid_balance);
+    }
+
+    async function calcRedemeption() {
+        if (!!props.contract_address) {
+            // Get contract
+            const provider = getProvider();
+            const borrower = provider.getSigner(props.currentAccount);
+
+            const { loanContractABI } = config(props.currentNetwork);
+
+            const loanContract = new ethers.Contract(
+                props.contract_address,
+                loanContractABI,
+                borrower
+            );
+
+            // Get redemption balance
+            const redemption = await loanContract.calculateRedemption();
+
+            return redemption;
+        }
+    }
 
     function restoreVals(exclusion) {
         const nftElement = document.getElementById("input-existing-loan-nft-" + props.loan_number);
@@ -186,7 +258,9 @@ export default function BorrowerExistingLoanForm(props) {
 
             await updateTable(dbTableName, dbParams);
 
+            // Update local state variables
             setCurrentSignStatus(true);
+            await currentLoanContractStatusSetter();
 
             return true;
         }
@@ -232,6 +306,81 @@ export default function BorrowerExistingLoanForm(props) {
     function removeLender() {
         const lenderElement = document.getElementById("input-existing-loan-lender-" + props.loan_number);
         lenderElement.value = ethers.constants.AddressZero;
+    }
+
+    async function receiveFunds() {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+
+        const { loanContractABI } = config(props.currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            props.contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        // Retrieve funds from loan
+        const tx = await loanContract.getMyLoan();
+        await tx.wait();
+
+        // Update LoanContract state locally
+        currentLoanContractStatusSetter();
+        renderPayLoanElements();
+    }
+
+    async function payLoan() {
+        // Get contract
+        const provider = getProvider();
+        const borrower = provider.getSigner(props.currentAccount);
+
+        const { loanContractABI, dbTableName } = config(props.currentNetwork);
+
+        const loanContract = new ethers.Contract(
+            props.contract_address,
+            loanContractABI,
+            borrower
+        );
+
+        // Get payment from UI
+        let payment = document.getElementById(`input-existing-loan-pay-${props.loan_number}`).value;
+        payment = ethers.utils.parseEther(payment);
+
+        // Make payment
+        const tx = await loanContract.payLoan({ value: payment });
+        const receipt = await tx.wait();
+
+        // Get unpaid balance on loan
+        const topic = loanContract.interface.getEventTopic('UnpaidBalance');
+        const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+        console.log(log);
+
+        const redemption = await calcRedemeption();
+
+        // Update Tableland database
+        const dbParams = {
+            collateral: props.collateral,
+            token_id: props.tokenId,
+            unpaid_balance: redemption,
+        };
+
+        await updateTable(dbTableName, dbParams);
+
+        // Update LoanContract state locally
+        await currentLoanContractStatusSetter()
+        await currentLoanContractBalanceSetter();
+    }
+
+    async function updateUnpaidBalanceElement() {
+        // Update UI
+        const redemption = await calcRedemeption();
+        const balanceElement = document.getElementById(`input-existing-loan-unpaid-balance-${props.loan_number}`);
+        if (!!redemption && !!balanceElement) balanceElement.value = ethers.utils.formatEther(redemption);
+
+        const payLoanElement = document.getElementById(`input-existing-loan-pay-${props.loan_number}`);
+        if (!!payLoanElement) payLoanElement.value = '';
     }
 
     function renderNftImage() {
@@ -308,7 +457,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={() => {
                         if (!!currentEdit) {
                             props.updateLoanFunc(currentEdit, props)
-                                .then(() => { setCurrentEdit(''); });
+                                .then(() => {setCurrentEdit('');s });
                         }
                     }}>
                     Update
@@ -325,31 +474,69 @@ export default function BorrowerExistingLoanForm(props) {
         );
     }
 
-    function renderActiveLoanContractElement() {
-        return (
+    function renderUnpaidBalanceElement() {
+        if (currentLoanContractBalance || !props.contract_address) return;
+
+        setCurrentUnpaidBalanceElement(
             <div className="container-existing-loan-component">
-                <div className="label label-contract">Contract:</div>
+                <div className="label label-unpaid-balance">Balance:</div>
                 <input
                     type="string"
-                    id={"input-existing-loan-contract-" + props.loan_number}
-                    className="input input-existing-loan-contract"
-                    defaultValue={currentLoanContract}
-                    readOnly={true}>
+                    id={`input-existing-loan-unpaid-balance-${props.loan_number}`}
+                    className="input input-existing-loan-unpaid-balance"
+                    defaultValue={ethers.utils.formatEther(currentLoanContractBalance || props.contract_address)}
+                    readOnly={true}
+                >
                 </input>
                 <div
-                    className="button-none">
+                    id={`edit-unpaid-balance-${props.loan_number}`}
+                    className="button-none"
+                >
+                </div>
+            </div>
+        );
+    }
+
+    function renderWithdrawableContractElement() {
+        setCurrentWithdrawableElements(
+            <div className="container-existing-loan-buttons">
+                <div
+                    id={`button-existing-loan-distribute-${props.loan_number}`}
+                    className="button button-existing-loan button-existing-loan-distribute button-enabled"
+                    onClick={receiveFunds}
+                >
+                    Distribute
+                </div>
+            </div>
+        );
+    }
+
+    function renderPaidContractElement() {
+        setCurrentPaidLoanElements(
+            <div className="container-existing-loan-buttons">
+                <div
+                    id={`button-existing-loan-withdraw-nft-${props.loan_number}`}
+                    className="button button-existing-loan button-existing-loan-withdraw-nft button-enabled"
+                    onClick={() => props.withdrawNftFunc(props)}
+                >
+                    Withdraw NFT
                 </div>
             </div>
         );
     }
 
     function renderPayLoanElements() {
-        return (
+        setCurrentPayLoanElements(
             <div className="container-active-loan-component">
-                <div className="button-existing-loan-pay button-enabled">Pay</div>
+                <div
+                    className="button-existing-loan-pay button-enabled"
+                    onClick={payLoan}
+                >
+                    Pay
+                </div>
                 <input
                     type="string"
-                    id={"input-existing-loan-lender-" + props.loan_number}
+                    id={`input-existing-loan-pay-${props.loan_number}`}
                     className="input input-existing-loan-pay"
                     placeholder='(ETH)...'>
                 </input>
@@ -366,7 +553,7 @@ export default function BorrowerExistingLoanForm(props) {
     return (
         <div className={`container-existing-loan-form ${!!currentLoanContract ? 'container-active-loan' : ''}`}>
             <h3>
-                {!!currentLoanContract && 'Active Loan '}
+                {!!currentLoanContract && `${capitalizeWords(currentLoanContractStatus)} Loan `}
                 {!!currentLoanContract
                     ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(currentLoanContract)}</span>
                     : `Loan Request #${parseInt(props.loan_number) + 1}`}
@@ -407,13 +594,13 @@ export default function BorrowerExistingLoanForm(props) {
             </div>
 
             <div className="container-existing-loan-component">
-                <div className="label label-value">{!!currentLoanContract ? 'Balance:' : 'Amount:'}</div>
+                <div className="label label-value">Value</div>
                 <input
                     type="string"
                     id={"input-existing-loan-value-" + props.loan_number}
                     className="input input-existing-loan-value"
                     placeholder='Loan Value (ETH)...'
-                    defaultValue={ethers.utils.formatEther(props.unpaid_balance)}
+                    defaultValue={ethers.utils.formatEther(props.initial_loan_value)}
                     readOnly={currentEdit !== "value"}
                     onClick={(ev) => navigator.clipboard.writeText(ev.target.value)}>
                 </input>
@@ -422,7 +609,7 @@ export default function BorrowerExistingLoanForm(props) {
                     className={`${!!currentLoanContract ? 'button-none' : 'button button-edit button-edit-value'}`}
                     onClick={() => {
                         if (!currentLoanContract) {
-                            setEditName("value");
+                            currentEditSetter("value");
                             restoreVals("value");
                         }
                     }}>
@@ -449,7 +636,7 @@ export default function BorrowerExistingLoanForm(props) {
                     className={`${!!currentLoanContract ? 'button-none' : 'button button-edit button-edit-rate button-enabled'}`}
                     onClick={() => {
                         if (!currentLoanContract) {
-                            setEditName("rate");
+                            currentEditSetter("rate");
                             restoreVals("rate");
                         }
                     }}>
@@ -473,7 +660,7 @@ export default function BorrowerExistingLoanForm(props) {
                     className={`${!!currentLoanContract ? 'button-none' : 'button button-edit button-edit-expiration button-enabled'}`}
                     onClick={() => {
                         if (!currentLoanContract) {
-                            setEditName("expiration");
+                            currentEditSetter("expiration");
                             restoreVals("expiration");
                         }
                     }}>
@@ -497,7 +684,7 @@ export default function BorrowerExistingLoanForm(props) {
                     className={`${!!currentLoanContract ? 'button-none' : 'button button-edit button-edit-lender button-enabled'}`}
                     onClick={() => {
                         if (!currentLoanContract) {
-                            setEditName("lender");
+                            currentEditSetter("lender");
                             restoreVals("lender");
                         }
                     }}>
@@ -505,10 +692,20 @@ export default function BorrowerExistingLoanForm(props) {
                 </div>
             </div>
 
-            {!!currentLoanContract
-                ? renderActiveLoanContractElement() && renderPayLoanElements()
-                : renderLoanRequestButtons()
-            }
+            {(currentLoanContractBalance || !props.contract_address)
+                && currentUnpaidBalanceElement}
+
+            {currentLoanContractStatus === undefined
+                && renderLoanRequestButtons()}
+
+            {(currentLoanContractStatus === 'active' || currentLoanContractStatus === 'default')
+                && currentPayLoanElements}
+
+            {currentLoanContractStatus === 'withdrawable'
+                && currentWithdrawableElements}
+
+            {currentLoanContractStatus === 'paid' && currentNftCommitStatus
+                && currentPaidLoanElements}
 
             <div className="container-existing-loan-img">
                 {renderNftImage()}

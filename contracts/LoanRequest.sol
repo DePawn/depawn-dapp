@@ -271,7 +271,6 @@ contract LoanRequest {
 
         if (isReady(_borrower, _loanId)) {
             __deployLoanContract(_borrower, _loanId);
-            console.log(_loanRequest.initialLoanValue, msg.value);
 
             payable(_loanRequest.loanContract).transfer(
                 _loanRequest.initialLoanValue
@@ -308,7 +307,6 @@ contract LoanRequest {
             _loanRequest.duration
         );
         address _loanContractAddress = address(_loanContract);
-        console.log(_loanContractAddress);
 
         IERC721(_loanRequest.collateral).approve(
             _loanContractAddress,

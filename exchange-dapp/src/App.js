@@ -20,7 +20,7 @@ export default function App() {
       <div>
         <Link to="/borrower" className='link'>Borrowing</Link>{sep}
         <Link to="/lending" className='link'>Lending</Link>{sep}
-        <Link to="/" className='link'>Table Generator</Link>
+        <Link to="/" className='link'>Debug</Link>
       </div>
 
       <Routes>

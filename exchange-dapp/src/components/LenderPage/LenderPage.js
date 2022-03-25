@@ -10,11 +10,10 @@ import { fetchRowsWhere, updateTable } from '../../external/tablelandInterface';
 import { getSubAddress } from '../../utils/addressUtils';
 
 export default function BorrowerPage() {
-    const [isPageLoad, setIsPageLoad] = useState(true);
     const [currentAccount, setCurrentAccount] = useState(null);
     const [currentNetwork, setCurrentNetwork] = useState(null);
-    const [currentAccountNfts, setCurrentAccountNfts] = useState('');
     const [currentAvailableLoans, setCurrentAvailableLoans] = useState({});
+    const [currentWithdrawStatus, setCurrentWithdrawStatus] = useState({});
     const [currentAvailableLoanElements, setCurrentAvailableLoanElements] = useState('');
     const [currentSponsoredLoanElements, setCurrentSponsoredLoanElements] = useState('');
 
@@ -23,6 +22,12 @@ export default function BorrowerPage() {
         pageLoadSequence();
         // eslint-disable-next-line
     }, []);
+
+    useEffect(() => {
+        console.log('here i am')
+        if (!!Object.keys(currentWithdrawStatus).length) withdrawSequence();
+        // eslint-disable-next-line
+    }, [currentWithdrawStatus]);
 
     /* ---------------------------------------  *
      *       EVENT SEQUENCE FUNCTIONS           *
@@ -33,20 +38,20 @@ export default function BorrowerPage() {
          */
 
         // Set account, network, and LoanRequest contract info
-        const { account, chainId } = await __checkIfWalletIsConnected();
-        const loanRequestContract = __getLoanRequestContract(account, chainId);
+        const { account, chainId } = await checkIfWalletIsConnected();
+        const loanRequestContract = getLoanRequestContract(account, chainId);
         console.log('--pageLoadSequence-- Account: ', account);
         console.log('--pageLoadSequence-- Network: ', chainId);
 
         // Render Available loan elements
-        const availableLoans = await __fetchAvailableLoans(account, chainId);
+        const availableLoans = await fetchAvailableLoans(account, chainId);
         const availableLoanElements = await renderLoanElements(
             account, chainId, availableLoans, loanRequestContract
         );
         setCurrentAvailableLoanElements(availableLoanElements);
 
         // Render Sponsored loan elements
-        const sponsoredLoans = await __fetchSponsoredLoans(account, chainId);
+        const sponsoredLoans = await fetchSponsoredLoans(account, chainId);
         const sponsoredLoanElements = await renderLoanElements(
             account, chainId, sponsoredLoans, loanRequestContract
         );
@@ -64,15 +69,15 @@ export default function BorrowerPage() {
          */
 
         // Set account, network, and LoanRequest contract info
-        const { account, chainId } = await __checkIfWalletIsConnected();
-        const loanRequestContract = __getLoanRequestContract(account, chainId);
+        const { account, chainId } = await checkIfWalletIsConnected();
+        const loanRequestContract = getLoanRequestContract(account, chainId);
 
         // Sign loan request
-        const success = await __sponsorLoanRequest(account, chainId, loanRequestContract, props);
+        const success = await sponsorLoanRequest(account, chainId, loanRequestContract, props);
         if (!success) return;
 
         // Render Available loan elements
-        const availableLoans = await __fetchAvailableLoans(account, chainId);
+        const availableLoans = await fetchAvailableLoans(account, chainId);
 
         console.log(availableLoans);
 
@@ -82,7 +87,7 @@ export default function BorrowerPage() {
         setCurrentAvailableLoanElements(availableLoanElements);
 
         // Render Sponsored loan elements
-        const sponsoredLoans = await __fetchSponsoredLoans(account, chainId);
+        const sponsoredLoans = await fetchSponsoredLoans(account, chainId);
 
         console.log(sponsoredLoans);
 
@@ -92,10 +97,44 @@ export default function BorrowerPage() {
         setCurrentSponsoredLoanElements(sponsoredLoanElements);
     }
 
+    const withdrawSequence = async () => {
+        console.log(currentAccount, currentNetwork)
+        const loanRequestContract = getLoanRequestContract(currentAccount, currentNetwork);
+        const { collateral, tokenId, tableId, contract_address, unpaid_balance } = currentWithdrawStatus;
+
+        // Update LoanRequest
+        const { success } = withdrawFromLoan(
+            currentAccount, currentNetwork, collateral, tokenId, tableId, contract_address, unpaid_balance
+        );
+
+        if (success) {
+
+            // Render Available loan elements
+            const availableLoans = await fetchAvailableLoans(currentAccount, currentNetwork);
+
+            console.log(availableLoans);
+
+            const availableLoanElements = await renderLoanElements(
+                currentAccount, currentNetwork, availableLoans, loanRequestContract
+            );
+            setCurrentAvailableLoanElements(availableLoanElements);
+
+            // Render Sponsored loan elements
+            const sponsoredLoans = await fetchSponsoredLoans(currentAccount, currentNetwork);
+
+            console.log(sponsoredLoans);
+
+            const sponsoredLoanElements = await renderLoanElements(
+                currentAccount, currentNetwork, sponsoredLoans, loanRequestContract
+            );
+            setCurrentSponsoredLoanElements(sponsoredLoanElements);
+        }
+    }
+
     /* ---------------------------------------  *
      *        PAGE MODIFIED FUNCTIONS           *
      * ---------------------------------------  */
-    const __checkIfWalletIsConnected = async () => {
+    const checkIfWalletIsConnected = async () => {
         /*
          * Connect Wallet State Change Function
          */
@@ -132,12 +171,12 @@ export default function BorrowerPage() {
         return { account, chainId };
     }
 
-    const __fetchAvailableLoans = async (account, network) => {
+    const fetchAvailableLoans = async (account, network) => {
         const { dbTableName } = config(network);
         console.log(dbTableName)
 
         const colsInclude = ['lender', 'loan_requested'];
-        const valsInclude = [[ethers.constants.AddressZero], ['true']];
+        const valsInclude = [[ethers.constants.AddressZero], [true]];
         const conjInclude = ['AND', ''];
 
         const colsExclude = ['borrower'];
@@ -156,16 +195,21 @@ export default function BorrowerPage() {
         return nfts;
     }
 
-    const __fetchSponsoredLoans = async (account, network) => {
+    const fetchSponsoredLoans = async (account, network) => {
         const { dbTableName } = config(network);
 
-        const colsInclude = ['lender', 'loan_requested'];
-        const valsInclude = [[account.toLowerCase()], ['true']];
-        const conjInclude = ['AND', ''];
+        const colsInclude = ['lender'];
+        const valsInclude = [[account.toLowerCase()]];
+        const conjInclude = [''];
+
+        const colsExclude = ['borrower'];
+        const valsExclude = [[ethers.constants.AddressZero]];
+        const conjExclude = [''];
 
         const nfts = await fetchRowsWhere(
             dbTableName,
             [colsInclude, valsInclude, conjInclude],
+            [colsExclude, valsExclude, conjExclude],
         );
         console.log(nfts)
 
@@ -174,7 +218,7 @@ export default function BorrowerPage() {
         return nfts;
     }
 
-    const __getLoanRequestContract = (account, network) => {
+    const getLoanRequestContract = (account, network) => {
         // Get contract
         const provider = getProvider();
         const borrower = provider.getSigner(account);
@@ -189,7 +233,7 @@ export default function BorrowerPage() {
         return loanRequestContract;
     }
 
-    const __sponsorLoanRequest = async (account, network, loanRequestContract, {
+    const sponsorLoanRequest = async (account, network, loanRequestContract, {
         collateral,
         tokenId,
         borrower,
@@ -204,11 +248,11 @@ export default function BorrowerPage() {
             if (borrower === account) {
                 throw new Error("Lender cannot be the borrower for a loan!");
             }
-            console.log(initial_loan_value)
+            console.log('------------: ', initial_loan_value)
 
             const tx = await loanRequestContract.setLender(
                 borrower, ethers.BigNumber.from(loan_number),
-                { value: ethers.BigNumber.from(initial_loan_value) }
+                { value: initial_loan_value }
             );
             const receipt = await tx.wait();
 
@@ -216,8 +260,6 @@ export default function BorrowerPage() {
             const topic = loanRequestContract.interface.getEventTopic('DeployedLoanContract');
             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
             let dbParams;
-
-            console.log(log)
 
             dbParams = {
                 collateral: collateral,
@@ -244,6 +286,51 @@ export default function BorrowerPage() {
         }
     }
 
+    const withdrawFromLoan = async (
+        account, network, collateral, tokenId, tableId, contract_address, unpaid_balance
+    ) => {
+        console.log(account, network, collateral, tokenId, tableId, contract_address, unpaid_balance)
+        // Get contract
+        const provider = getProvider();
+        const lender = provider.getSigner(account);
+
+        const { loanContractABI, dbTableName } = config(network);
+
+        try {
+            const loanContract = new ethers.Contract(
+                contract_address,
+                loanContractABI,
+                lender
+            );
+
+            // Make payment
+            const tx = await loanContract.withdrawLoanLender();
+            const receipt = await tx.wait();
+
+            // Get unpaid balance on loan
+            const topic = loanContract.interface.getEventTopic('ETHEvent');
+            const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+            console.log(log);
+
+            const dbParams = {
+                collateral: collateral,
+                token_id: tokenId,
+                table_id: tableId,
+                borrower: ethers.constants.AddressZero,
+            };
+
+            console.log('removing loan from sponsored...')
+            await updateTable(dbTableName, dbParams);
+
+            return { success: true };
+        }
+        catch (err) {
+            console.log(err);
+            return { success: false };
+        }
+    }
+
     /* ---------------------------------------  *
      *           FRONTEND CALLBACKS             *
      * ---------------------------------------  */
@@ -263,7 +350,7 @@ export default function BorrowerPage() {
             setCurrentAccount(accounts[0]);
 
             ethereum.on('accountsChanged', async (_) => {
-                await __checkIfWalletIsConnected();
+                await checkIfWalletIsConnected();
             });
         }
         catch (err) {
@@ -271,7 +358,7 @@ export default function BorrowerPage() {
         }
     }
 
-    const __callback__SponsorLoanRequest = async (props) => {
+    const callback__SponsorLoanRequest = async (props) => {
         /*
          * Submit Loan Request Button Callback
          */
@@ -279,88 +366,12 @@ export default function BorrowerPage() {
         sponsorLoanRequestSequence(props);
     }
 
-    const callback__UpdateLoan = async (loanId, attribute, params) => {
-        // Get parameter to change
-        const paramElement = document.getElementById(`input-existing-loan-${attribute}-${loanId}`);
+    const callback__Withdraw = async (props) => {
+        /*
+         * Submit Loan Request Button Callback
+         */
 
-        // Get contract
-        const provider = getProvider();
-        const borrower = provider.getSigner(currentAccount);
-
-        const { loanRequestAddress, loanRequestABI, dbTableName } = config(currentNetwork);
-
-        const loanRequestContract = new ethers.Contract(
-            loanRequestAddress,
-            loanRequestABI,
-            borrower
-        );
-
-        // Update parameter
-        let tx;
-        let receipt;
-        let dbParams;
-
-        try {
-            switch (attribute) {
-                case 'expiration':
-                    tx = await loanRequestContract.setLoanParam(
-                        loanId,
-                        attribute,
-                        ethers.BigNumber.from(paramElement.value),
-                    );
-                    receipt = await tx.wait();
-                    console.log(receipt);
-
-                    // Update Tableland database
-                    dbParams = {
-                        collateral: params.collateral,
-                        token_id: params.tokenId,
-                        expiration: ethers.BigNumber.from(paramElement.value)
-                    };
-
-                    await updateTable(dbTableName, currentAccount, dbParams);
-
-                    break;
-                case 'value':
-                case 'rate':
-                    tx = await loanRequestContract.setLoanParam(
-                        loanId,
-                        attribute,
-                        ethers.utils.parseUnits(paramElement.value),
-                    );
-                    receipt = await tx.wait();
-
-                    // Update Tableland database
-                    dbParams = {
-                        collateral: params.collateral,
-                        token_id: params.tokenId,
-                    };
-                    dbParams[attribute === 'value' ? 'initial_loan_value' : 'rate'] = ethers.utils.parseUnits(paramElement.value);
-
-                    await updateTable(dbTableName, currentAccount, dbParams);
-
-                    break;
-                case 'lender':
-                    tx = await loanRequestContract.setLender(currentAccount, loanId);
-                    receipt = await tx.wait();
-
-                    // Update Tableland database
-                    dbParams = {
-                        collateral: params.collateral,
-                        token_id: params.tokenId,
-                        lender: paramElement.value
-                    };
-
-                    await updateTable(dbTableName, currentAccount, dbParams);
-
-                    break;
-                default:
-                    console.log("Incorrect params string for callback__UpdateLoan().");
-            }
-        }
-        catch (err) {
-            console.log(err);
-        }
+        setCurrentWithdrawStatus(props);
     }
 
     /* ---------------------------------------  *
@@ -371,12 +382,13 @@ export default function BorrowerPage() {
             const currentSponsoredLoanElements = loans.map((loan, i) => {
                 return (
                     <LenderExistingLoanForm
-                        key={i}
+                        key={`${loan.loan_number}_${i}`}
                         currentAccount={account}
                         currentNetwork={network}
                         loanRequestContract={loanRequestContract}
-                        sponsorLoanRequestFunc={__callback__SponsorLoanRequest}
                         updateLoanFunc={() => console.log('Do nothing')}
+                        sponsorLoanRequestFunc={callback__SponsorLoanRequest}
+                        withdrawFunc={callback__Withdraw}
                         fetchNftFunc={() => console.log('Do nothing fetchNftFunc')}
                         {...loan}
                     />
