@@ -146,6 +146,7 @@ export const insertTableRow = async (tableName, account, params = {
 export const updateTable = async (tableName, params = {
     collateral: undefined,
     token_id: undefined,
+    table_id: undefined,
     loan_requested: undefined,
     loan_number: undefined,
     borrower: undefined,
@@ -173,9 +174,13 @@ export const updateTable = async (tableName, params = {
         return;
     }
 
+    console.log(!!params.borrower)
+
     // This doesn't accept a teable_id input. This keeps us from updating old tables.
-    params.table_id = await fetchRowCount(tableName, params.collateral, params.token_id);
+    params.table_id = !!params.table_id ? params.table_id : await fetchRowCount(tableName, params.collateral, params.token_id);
     params = formatParams(params);
+
+    console.log(!!params.borrower)
     console.log(params)
 
     // Set row values

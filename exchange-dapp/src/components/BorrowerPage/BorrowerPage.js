@@ -626,6 +626,8 @@ export default function BorrowerPage() {
 
     const callback__UpdateLoan = async (attribute, params) => {
         setCurrentUpdateRequestStatus({ ...{ effect: true, attribute: attribute }, ...params });
+
+        return attribute;
     }
 
     const callback__WithdrawNft = async (params) => {

@@ -153,10 +153,16 @@ contract LoanContract {
                 lender,
                 tokenId
             );
-            emit NFTEvent(address(this), lender, collateral, tokenId, "DEFAULT");
+            emit NFTEvent(
+                address(this),
+                lender,
+                collateral,
+                tokenId,
+                "DEFAULT"
+            );
 
             status = LoanStatus.CLOSED;
-        } else require(false, "Not available for withdraw at the moment");
+        }
     }
 
     function withdrawNFTBorrower() external checkMaturity {

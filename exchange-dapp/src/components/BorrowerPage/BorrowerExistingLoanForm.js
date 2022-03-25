@@ -373,45 +373,6 @@ export default function BorrowerExistingLoanForm(props) {
         await currentLoanContractBalanceSetter();
     }
 
-    // async function withdrawCollateral() {
-    //     // Get contract
-    //     const provider = getProvider();
-    //     const borrower = provider.getSigner(props.currentAccount);
-
-    //     const { loanContractABI, dbTableName } = config(props.currentNetwork);
-
-    //     const loanContract = new ethers.Contract(
-    //         props.contract_address,
-    //         loanContractABI,
-    //         borrower
-    //     );
-
-    //     // Make payment
-    //     const tx = await loanContract.withdrawNFTBorrower();
-    //     const receipt = await tx.wait();
-
-    //     // Get unpaid balance on loan
-    //     const topic = loanContract.interface.getEventTopic('NFTEvent');
-    //     const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-
-    //     console.log(log);
-
-    //     // Update Tableland database
-    //     const dbParams = {
-    //         collateral: props.collateral,
-    //         token_id: props.tokenId,
-    //         loan_requested: false,
-    //         committed: false
-    //     };
-
-    //     await updateTable(dbTableName, dbParams);
-
-    //     // Update LoanContract state locally
-    //     setCurrentNftCommitStatus(false);
-
-    //     window.location.reload();
-    // }
-
     async function updateUnpaidBalanceElement() {
         // Update UI
         const redemption = await calcRedemeption();
@@ -496,7 +457,7 @@ export default function BorrowerExistingLoanForm(props) {
                     onClick={() => {
                         if (!!currentEdit) {
                             props.updateLoanFunc(currentEdit, props)
-                                .then(() => { setCurrentEdit(''); });
+                                .then(() => {setCurrentEdit('');s });
                         }
                     }}>
                     Update
@@ -592,7 +553,7 @@ export default function BorrowerExistingLoanForm(props) {
     return (
         <div className={`container-existing-loan-form ${!!currentLoanContract ? 'container-active-loan' : ''}`}>
             <h3>
-                {!!currentLoanContract && 'Active Loan '}
+                {!!currentLoanContract && `${capitalizeWords(currentLoanContractStatus)} Loan `}
                 {!!currentLoanContract
                     ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(currentLoanContract)}</span>
                     : `Loan Request #${parseInt(props.loan_number) + 1}`}

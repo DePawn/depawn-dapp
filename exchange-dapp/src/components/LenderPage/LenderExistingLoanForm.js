@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
+import getProvider from '../../utils/getProvider';
 import { config } from '../../utils/config.js';
 import { capitalizeWords } from '../../utils/stringUtils';
 import { getSubAddress } from '../../utils/addressUtils';
@@ -7,11 +8,26 @@ import { displayContractTime } from '../../utils/timeUtils';
 import { updateTable } from '../../external/tablelandInterface';
 
 export default function LenderExistingLoanForm(props) {
+    const [isPageLoad, setIsPageLoad] = useState(true);
     const [currentLenderSignStatus, setCurrentLenderSignStatus] = useState(undefined);
     const [currentLoanContract, setCurrentLoanContract] = useState('');
+    const [currentWithdrawLoanElements, setCurrentWithdrawLoanElements] = useState(null);
+    const [currentLoanContractStatus, setCurrentLoanContractStatus] = useState(null);
+
     const tabbedBullet = '\xa0\xa0- ';
 
     console.log(props)
+
+    useEffect(() => {
+        if (isPageLoad) {
+            currentSignStatusSetter();
+            currentLoanContractSetter();
+            currentLoanContractStatusSetter();
+            renderWithdrawLoanElements();
+            setIsPageLoad(false);
+        }
+        // eslint-disable-next-line
+    }, []);
 
     async function currentSignStatusSetter() {
         // Get Borrower sign status
@@ -22,11 +38,34 @@ export default function LenderExistingLoanForm(props) {
         if (!!props.contract_address) setCurrentLoanContract(props.contract_address);
     }
 
-    useEffect(() => {
-        currentSignStatusSetter();
-        currentLoanContractSetter();
-        // eslint-disable-next-line
-    }, []);
+    async function currentLoanContractStatusSetter() {
+        if (!!props.contract_address) {
+            // Get contract
+            const provider = getProvider();
+            const lender = provider.getSigner(props.currentAccount);
+
+            const { loanContractABI } = config(props.currentNetwork);
+
+            const loanContract = new ethers.Contract(
+                props.contract_address,
+                loanContractABI,
+                lender
+            );
+
+            const status = await loanContract.getStatus();
+            setCurrentLoanContractStatus(status.toLowerCase());
+            console.log(status)
+        }
+    }
+
+    async function calcContractBalance() {
+        // Get contract
+        const provider = getProvider();
+        const balance = await provider.getBalance(props.contract_address);
+        console.log(ethers.utils.formatEther(balance))
+
+        return balance;
+    }
 
     async function removeSignatureFromLoanRequest() {
         const { dbTableName } = config(props.currentNetwork);
@@ -180,6 +219,24 @@ export default function LenderExistingLoanForm(props) {
         );
     }
 
+    async function renderWithdrawLoanElements() {
+        setCurrentWithdrawLoanElements(
+            <div className="container-active-loan-component">
+                <div
+                    className="button button-active-loan-withdraw"
+                    onClick={() => props.withdrawFunc(props)}
+                >Pull</div>
+                <input
+                    type="string"
+                    id={"input-available-loan-withdraw-" + props.loan_number}
+                    className="input input-available-loan-withdraw"
+                    value={ethers.utils.formatEther(await calcContractBalance())}
+                    readOnly={true}>
+                </input>
+            </div>
+        );
+    }
+
     function setCardFlipEventListener(loanNumber) {
         const card = document.getElementById(`card__inner__existing-${loanNumber}`);
         card.classList.toggle('is-flipped');
@@ -189,7 +246,7 @@ export default function LenderExistingLoanForm(props) {
     return (
         <div className={`container-available-loan-form ${!!currentLoanContract ? 'container-active-loan' : ''}`}>
             <h3>
-                {!!currentLoanContract && 'Active Loan '}
+                {!!currentLoanContract && `${capitalizeWords(currentLoanContractStatus)} Loan `}
                 {!!currentLoanContract
                     ? <span style={{ 'textDecoration': 'underline' }}>{getSubAddress(`${props.contract_address}`)}</span>
                     : ''}
@@ -275,6 +332,11 @@ export default function LenderExistingLoanForm(props) {
             {!!currentLoanContract
                 ? renderContractElement() && renderUnpaidBalanceElement()
                 : renderUnconfirmedButtons()
+            }
+
+            {!!currentLoanContract && ['active', 'paid', 'default'].includes(currentLoanContractStatus)
+                ? currentWithdrawLoanElements
+                : null
             }
 
             <div className="container-available-loan-img">

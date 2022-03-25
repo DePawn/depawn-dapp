@@ -13,6 +13,7 @@ export default function BorrowerPage() {
     const [currentAccount, setCurrentAccount] = useState(null);
     const [currentNetwork, setCurrentNetwork] = useState(null);
     const [currentAvailableLoans, setCurrentAvailableLoans] = useState({});
+    const [currentWithdrawStatus, setCurrentWithdrawStatus] = useState({});
     const [currentAvailableLoanElements, setCurrentAvailableLoanElements] = useState('');
     const [currentSponsoredLoanElements, setCurrentSponsoredLoanElements] = useState('');
 
@@ -21,6 +22,12 @@ export default function BorrowerPage() {
         pageLoadSequence();
         // eslint-disable-next-line
     }, []);
+
+    useEffect(() => {
+        console.log('here i am')
+        if (!!Object.keys(currentWithdrawStatus).length) withdrawSequence();
+        // eslint-disable-next-line
+    }, [currentWithdrawStatus]);
 
     /* ---------------------------------------  *
      *       EVENT SEQUENCE FUNCTIONS           *
@@ -88,6 +95,40 @@ export default function BorrowerPage() {
             account, chainId, sponsoredLoans, loanRequestContract
         );
         setCurrentSponsoredLoanElements(sponsoredLoanElements);
+    }
+
+    const withdrawSequence = async () => {
+        console.log(currentAccount, currentNetwork)
+        const loanRequestContract = getLoanRequestContract(currentAccount, currentNetwork);
+        const { collateral, tokenId, tableId, contract_address, unpaid_balance } = currentWithdrawStatus;
+
+        // Update LoanRequest
+        const { success } = withdrawFromLoan(
+            currentAccount, currentNetwork, collateral, tokenId, tableId, contract_address, unpaid_balance
+        );
+
+        if (success) {
+
+            // Render Available loan elements
+            const availableLoans = await fetchAvailableLoans(currentAccount, currentNetwork);
+
+            console.log(availableLoans);
+
+            const availableLoanElements = await renderLoanElements(
+                currentAccount, currentNetwork, availableLoans, loanRequestContract
+            );
+            setCurrentAvailableLoanElements(availableLoanElements);
+
+            // Render Sponsored loan elements
+            const sponsoredLoans = await fetchSponsoredLoans(currentAccount, currentNetwork);
+
+            console.log(sponsoredLoans);
+
+            const sponsoredLoanElements = await renderLoanElements(
+                currentAccount, currentNetwork, sponsoredLoans, loanRequestContract
+            );
+            setCurrentSponsoredLoanElements(sponsoredLoanElements);
+        }
     }
 
     /* ---------------------------------------  *
@@ -159,11 +200,16 @@ export default function BorrowerPage() {
 
         const colsInclude = ['lender'];
         const valsInclude = [[account.toLowerCase()]];
-        const conjInclude = ['AND'];
+        const conjInclude = [''];
+
+        const colsExclude = ['borrower'];
+        const valsExclude = [[ethers.constants.AddressZero]];
+        const conjExclude = [''];
 
         const nfts = await fetchRowsWhere(
             dbTableName,
             [colsInclude, valsInclude, conjInclude],
+            [colsExclude, valsExclude, conjExclude],
         );
         console.log(nfts)
 
@@ -240,6 +286,51 @@ export default function BorrowerPage() {
         }
     }
 
+    const withdrawFromLoan = async (
+        account, network, collateral, tokenId, tableId, contract_address, unpaid_balance
+    ) => {
+        console.log(account, network, collateral, tokenId, tableId, contract_address, unpaid_balance)
+        // Get contract
+        const provider = getProvider();
+        const lender = provider.getSigner(account);
+
+        const { loanContractABI, dbTableName } = config(network);
+
+        try {
+            const loanContract = new ethers.Contract(
+                contract_address,
+                loanContractABI,
+                lender
+            );
+
+            // Make payment
+            const tx = await loanContract.withdrawLoanLender();
+            const receipt = await tx.wait();
+
+            // Get unpaid balance on loan
+            const topic = loanContract.interface.getEventTopic('ETHEvent');
+            const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+
+            console.log(log);
+
+            const dbParams = {
+                collateral: collateral,
+                token_id: tokenId,
+                table_id: tableId,
+                borrower: ethers.constants.AddressZero,
+            };
+
+            console.log('removing loan from sponsored...')
+            await updateTable(dbTableName, dbParams);
+
+            return { success: true };
+        }
+        catch (err) {
+            console.log(err);
+            return { success: false };
+        }
+    }
+
     /* ---------------------------------------  *
      *           FRONTEND CALLBACKS             *
      * ---------------------------------------  */
@@ -275,6 +366,14 @@ export default function BorrowerPage() {
         sponsorLoanRequestSequence(props);
     }
 
+    const callback__Withdraw = async (props) => {
+        /*
+         * Submit Loan Request Button Callback
+         */
+
+        setCurrentWithdrawStatus(props);
+    }
+
     /* ---------------------------------------  *
      *           FRONTEND RENDERING             *
      * ---------------------------------------  */
@@ -287,8 +386,9 @@ export default function BorrowerPage() {
                         currentAccount={account}
                         currentNetwork={network}
                         loanRequestContract={loanRequestContract}
-                        sponsorLoanRequestFunc={callback__SponsorLoanRequest}
                         updateLoanFunc={() => console.log('Do nothing')}
+                        sponsorLoanRequestFunc={callback__SponsorLoanRequest}
+                        withdrawFunc={callback__Withdraw}
                         fetchNftFunc={() => console.log('Do nothing fetchNftFunc')}
                         {...loan}
                     />
